@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/Noooste/azuretls-go"
+	"github.com/Noooste/azuretls-client"
 	http "github.com/Noooste/fhttp"
 )
 
