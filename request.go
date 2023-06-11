@@ -67,10 +67,6 @@ func (s *Session) prepareRequest(request *Request, args ...any) error {
 		request.TimeOut = s.TimeOut
 	}
 
-	if request.TimeOut == 0 {
-		request.TimeOut = 30 * time.Second
-	}
-
 	if s.PreHook != nil {
 		return s.PreHook(request)
 	}

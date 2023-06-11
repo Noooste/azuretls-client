@@ -3,7 +3,6 @@ package azuretls
 import "testing"
 
 func TestPins(t *testing.T) {
-	t.Parallel()
 
 	session := NewSession()
 
@@ -19,11 +18,11 @@ func TestPins(t *testing.T) {
 		t.Fatal("TestPins failed, expected: 200, got: ", response.StatusCode)
 	}
 
-	if len(session.conns) == 0 {
+	if len(session.conns.hosts) == 0 {
 		t.Fatal("TestPins failed, Conn is empty")
 	}
 
-	if len(session.conns[0].pins) == 0 {
+	if len(session.conns.hosts["httpbin.org:443"].pins) == 0 {
 		t.Fatal("TestPins failed, Pins is empty")
 	}
 

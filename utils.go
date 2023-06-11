@@ -10,6 +10,13 @@ import (
 	"time"
 )
 
+const (
+	SchemeHttp  = "http"
+	SchemeHttps = "https"
+	SchemeWs    = "ws"
+	SchemeWss   = "wss"
+)
+
 func (s *Session) buildRequest(ctx context.Context, req *Request) (*http.Request, error) {
 	var newReq *http.Request
 	var err error

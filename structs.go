@@ -29,7 +29,7 @@ type Session struct {
 	CookieJar *cookiejar.Jar
 	Browser   string
 
-	conns []*sessionConn
+	conns *requestConnPool
 
 	tr2 *http2.Transport
 	tr  *http.Transport
@@ -96,6 +96,8 @@ type Request struct {
 
 	retries uint8
 	ctx     context.Context
+
+	conn *requestConn
 }
 
 type Response struct {

@@ -6,8 +6,6 @@ import (
 )
 
 func TestSessionConn(t *testing.T) {
-	t.Parallel()
-
 	session := NewSession()
 
 	response, err := session.Get("https://httpbin.org/get")
@@ -20,12 +18,12 @@ func TestSessionConn(t *testing.T) {
 		t.Fatal("TestHeader failed, expected: 200, got: ", response.StatusCode)
 	}
 
-	if len(session.conns) == 0 {
+	if len(session.conns.hosts) == 0 {
 		t.Fatal("TestSessionConn failed, Conn is empty")
 	}
 
-	firstConn := session.conns[0]
-	if !firstConn.conn.CanTakeNewRequest() {
+	firstConn := session.conns.hosts["httpbin.org:443"]
+	if !firstConn.http2Conn.CanTakeNewRequest() {
 		t.Fatal("TestSessionConn failed, Conn is not reusable")
 	}
 
@@ -43,17 +41,16 @@ func TestSessionConn(t *testing.T) {
 		t.Fatal("TestHeader failed, expected: 200, got: ", response.StatusCode)
 	}
 
-	if len(session.conns) != 1 {
+	if len(session.conns.hosts) != 1 {
 		t.Fatal("TestSessionConn failed, Conn is not reused")
 	}
 
-	if firstConn != session.conns[0] {
+	if firstConn != session.conns.hosts["httpbin.or:443"] {
 		t.Fatal("TestSessionConn failed, Conn is not reused")
 	}
 }
 
 func TestHTTP1Conn(t *testing.T) {
-	t.Parallel()
 
 	session := NewSession()
 
@@ -65,7 +62,6 @@ func TestHTTP1Conn(t *testing.T) {
 }
 
 func TestHighConcurrency(t *testing.T) {
-	t.Parallel()
 
 	session := NewSession()
 
@@ -78,11 +74,12 @@ func TestHighConcurrency(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		go func() {
 			defer wait.Done()
-			_, err2 := session.Get("https://httpbin.org/get")
+			_, err2 := session.Get("https://example.com")
 
 			if err2 != nil {
-				t.Error(err2)
 				err = err2
+				t.Error(ok)
+				t.Fatal(err2)
 				return
 			}
 

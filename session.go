@@ -5,9 +5,7 @@ import (
 	"fmt"
 	http "github.com/Noooste/fhttp"
 	"github.com/Noooste/fhttp/cookiejar"
-	"github.com/Noooste/fhttp/http2"
 	"github.com/Noooste/go-utils"
-	"github.com/Noooste/utls"
 	"net/url"
 	"regexp"
 	"strings"
@@ -20,13 +18,6 @@ const (
 	http2errClientConnUnusable  = "http2: client conn not usable"
 	http2errClientConnGotGoAway = "http2: Transport received Server's graceful shutdown GOAWAY"
 )
-
-type sessionConn struct {
-	tlsConn *tls.UConn
-	conn    *http2.ClientConn
-
-	pins []string
-}
 
 /*
 NewSession creates a new session
@@ -48,7 +39,7 @@ func NewSessionWithContext(ctx context.Context) *Session {
 		CookieJar: cookieJar,
 		Browser:   Chrome,
 
-		conns:              []*sessionConn{},
+		conns:              newRequestConnPool(),
 		GetClientHelloSpec: GetLastChromeVersion,
 
 		mu: &sync.Mutex{},
@@ -117,20 +108,22 @@ func (s *Session) send(request *Request) (*Response, error) {
 		return nil, err
 	}
 
-	var sConn *sessionConn
-	if sConn, err = s.initConn(request); err != nil {
+	var rConn *requestConn
+	if rConn, err = s.initConn(request); err != nil {
 		utils.SafeGoRoutine(func() {
 			s.saveVerbose(request, nil, err)
 		})
 		return nil, err
 	}
 
+	request.conn = rConn
+
 	var httpResponse *http.Response
 
 	var roundTripper http.RoundTripper
 
-	if sConn.conn != nil {
-		roundTripper = sConn.conn
+	if rConn.http2Conn != nil {
+		roundTripper = rConn.http2Conn
 	} else {
 		roundTripper = s.tr
 	}
@@ -140,13 +133,9 @@ func (s *Session) send(request *Request) (*Response, error) {
 		if err != nil {
 			switch err.Error() {
 			case http2errClientConnClosed, http2errClientConnUnusable, http2errClientConnGotGoAway:
-				if sConn.conn != nil {
-					_ = sConn.conn.Close()
-					sConn.conn = nil
-				}
-				if sConn.tlsConn != nil {
-					_ = sConn.tlsConn.Close()
-					sConn.tlsConn = nil
+				if rConn.http2Conn != nil {
+					_ = rConn.http2Conn.Close()
+					rConn.http2Conn = nil
 				}
 				request.retries++
 				utils.SafeGoRoutine(func() {
@@ -328,27 +317,48 @@ func (s *Session) Put(url string, data []byte, args ...any) (*Response, error) {
 	return s.do(request, args...)
 }
 
+func (s *Session) Patch(url string, data []byte, args ...any) (*Response, error) {
+	request := &Request{
+		Method: http.MethodPatch,
+		Url:    url,
+		Body:   data,
+	}
+
+	return s.do(request, args...)
+}
+
+func (s *Session) Delete(url string, args ...any) (*Response, error) {
+	request := &Request{
+		Method: http.MethodDelete,
+		Url:    url,
+	}
+
+	return s.do(request, args...)
+}
+
+func (s *Session) Head(url string, args ...any) (*Response, error) {
+	request := &Request{
+		Method: http.MethodHead,
+		Url:    url,
+	}
+
+	return s.do(request, args...)
+}
+
+func (s *Session) Options(url string, args ...any) (*Response, error) {
+	request := &Request{
+		Method: http.MethodOptions,
+		Url:    url,
+	}
+
+	return s.do(request, args...)
+}
+
 func (s *Session) Close() {
 	s.CloseConns()
 	s.conns = nil
 }
 
 func (s *Session) CloseConns() {
-	for _, c := range s.conns {
-		if c == nil {
-			continue
-		}
-		if c.tlsConn != nil {
-			_ = c.tlsConn.Close()
-			c.tlsConn = nil
-		}
-		if c.conn != nil {
-			_ = c.conn.Close()
-			c.conn = nil
-		}
-		if c.pins != nil {
-			c.pins = nil
-		}
-	}
-	s.conns = []*sessionConn{}
+	s.conns.close()
 }
