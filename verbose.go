@@ -78,7 +78,7 @@ func (s *Session) saveVerbose(request *Request, response *Response, err error) {
 		fileName := path.Join(folderPath, pathSplit[length-1])
 
 		iter := 1
-		for _, err = os.ReadFile(fileName); err == nil; _, err = os.ReadFile(fileName) {
+		for _, err2 := os.ReadFile(fileName); err2 == nil; _, err2 = os.ReadFile(fileName) {
 			fileName = path.Join(folderPath, pathSplit[length-1]+fmt.Sprintf(" (%d)", iter))
 			iter++
 		}
