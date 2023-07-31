@@ -1,9 +1,11 @@
 package azuretls
 
 import (
+	"fmt"
 	http "github.com/Noooste/fhttp"
 	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 )
@@ -53,31 +55,31 @@ func (s *Session) saveVerbose(request *Request, response *Response, err error) {
 	}
 
 	if s.Verbose && !s.isIgnored(request.parsedUrl.Hostname()) {
-		path := request.parsedUrl.Path
-		if path == "" {
-			path = "/"
+		reqUrl := request.parsedUrl.Path
+		if reqUrl == "" {
+			reqUrl = "/"
 		}
 
-		if path[len(path)-1] == '/' {
-			path += "$no_name$"
+		if reqUrl[len(reqUrl)-1] == '/' {
+			reqUrl += "index.html"
 		}
 
-		pathSplit := strings.Split(path, "/")
+		pathSplit := strings.Split(reqUrl, "/")
 		length := len(pathSplit)
 
 		for i := 0; i < length; i++ {
 			pathSplit[i] = url.PathEscape(pathSplit[i])
 		}
 
-		folderPath := s.VerbosePath + "/" + request.parsedUrl.Host + "/" + strings.Join(pathSplit[:length-1], "/")
+		folderPath := path.Join(s.VerbosePath, request.parsedUrl.Hostname(), strings.Join(pathSplit[:length-1], "/"))
 
 		_ = os.MkdirAll(folderPath, 0755)
 
-		fileName := folderPath + "/" + "$" + pathSplit[length-1]
+		fileName := path.Join(folderPath, pathSplit[length-1])
 
 		iter := 1
-		for _, err = os.ReadFile(fileName); err == nil; _, err = os.ReadFile(fileName) {
-			fileName = folderPath + "/" + pathSplit[length-1] + " (" + strconv.Itoa(iter) + ")"
+		for _, err2 := os.ReadFile(fileName); err2 == nil; _, err2 = os.ReadFile(fileName) {
+			fileName = path.Join(folderPath, pathSplit[length-1]+fmt.Sprintf(" (%d)", iter))
 			iter++
 		}
 

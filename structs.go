@@ -73,6 +73,7 @@ type Request struct {
 	HeaderOrder HeaderOrder //deprecated, use OrderedHeaders instead
 
 	OrderedHeaders OrderedHeaders
+	conn           *requestConn
 
 	Proxy   string
 	Browser string
@@ -96,8 +97,6 @@ type Request struct {
 
 	retries uint8
 	ctx     context.Context
-
-	conn *requestConn
 }
 
 type Response struct {
@@ -113,7 +112,8 @@ type Response struct {
 	HttpResponse *http.Response
 
 	Request *Request
-	TLS     *tls.ConnectionState
+
+	TLS *tls.ConnectionState
 
 	ContentLength int64
 
