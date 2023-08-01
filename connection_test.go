@@ -1,11 +1,14 @@
 package azuretls
 
 import (
+	"runtime"
 	"sync"
 	"testing"
 )
 
 func TestSessionConn(t *testing.T) {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
 	session := NewSession()
 
 	response, err := session.Get("https://httpbin.org/get")
@@ -23,6 +26,7 @@ func TestSessionConn(t *testing.T) {
 	}
 
 	firstConn := session.conns.hosts["httpbin.org:443"]
+
 	if !firstConn.http2Conn.CanTakeNewRequest() {
 		t.Fatal("TestSessionConn failed, Conn is not reusable")
 	}
@@ -45,16 +49,15 @@ func TestSessionConn(t *testing.T) {
 		t.Fatal("TestSessionConn failed, Conn is not reused")
 	}
 
-	if firstConn != session.conns.hosts["httpbin.or:443"] {
+	if firstConn != session.conns.hosts["httpbin.org:443"] {
 		t.Fatal("TestSessionConn failed, Conn is not reused")
 	}
 }
 
 func TestHTTP1Conn(t *testing.T) {
-
 	session := NewSession()
 
-	_, err := session.Get("http://www.gstatic.com/generate_204")
+	_, err := session.Get("https://api.ipify.org/")
 
 	if err != nil {
 		t.Fatal(err)

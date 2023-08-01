@@ -36,12 +36,11 @@ func testProxy(t *testing.T, session *Session, proxy string, expected ...string)
 
 func TestSession_SetProxy(t *testing.T) {
 
-	session := NewSession()
-	testProxy(t, session, "http://username:password@ip:9999")
-	testProxy(t, session, "http://ip:9999")
-	testProxy(t, session, "http://username:password@ip")
-	testProxy(t, session, "ip:9999:username:password", "http://username:password@ip:9999")
-	testProxy(t, session, "ip:9999", "http://ip:9999")
+	testProxy(t, NewSession(), "http://username:password@ip:9999")
+	testProxy(t, NewSession(), "http://ip:9999")
+	testProxy(t, NewSession(), "http://username:password@ip")
+	testProxy(t, NewSession(), "ip:9999:username:password", "http://username:password@ip:9999")
+	testProxy(t, NewSession(), "ip:9999", "http://ip:9999")
 }
 
 func TestSession_SetTimeout(t *testing.T) {

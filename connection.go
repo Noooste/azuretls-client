@@ -33,7 +33,7 @@ type requestConnPool struct {
 func newRequestConnPool() *requestConnPool {
 	return &requestConnPool{
 		hosts: make(map[string]*requestConn),
-		mu:    new(sync.RWMutex),
+		mu:    &sync.RWMutex{},
 	}
 }
 
@@ -46,7 +46,7 @@ func (p *requestConnPool) close() {
 	p.mu.Unlock()
 }
 
-func (p *requestConnPool) get(u *url.URL) (c *requestConn) {
+func (p *requestConnPool) get(u *url.URL) (c *requestConn, err error) {
 	var (
 		ok       bool
 		hostName string
@@ -58,6 +58,9 @@ func (p *requestConnPool) get(u *url.URL) (c *requestConn) {
 			hostName = net.JoinHostPort(u.Host, "443")
 		case SchemeHttp, SchemeWs:
 			hostName = net.JoinHostPort(u.Host, "80")
+		default:
+			err = errors.New("unknown scheme")
+			return
 		}
 	} else {
 		hostName = u.Host
@@ -66,6 +69,7 @@ func (p *requestConnPool) get(u *url.URL) (c *requestConn) {
 	p.mu.RLock()
 	c, ok = p.hosts[hostName]
 	p.mu.RUnlock()
+
 	if !ok {
 		p.mu.Lock()
 		c, ok = p.hosts[hostName]
@@ -133,7 +137,11 @@ func (rc *requestConn) close() {
 
 func (s *Session) initConn(req *Request) (rConn *requestConn, err error) {
 	// get connection from pool
-	rConn = s.conns.get(req.parsedUrl)
+	rConn, err = s.conns.get(req.parsedUrl)
+
+	if err != nil {
+		return
+	}
 
 	// init tls connection if needed
 	switch req.parsedUrl.Scheme {
@@ -188,7 +196,12 @@ func (rc *requestConn) getConn(req *Request, doPins bool, getSpec func() *tls.Cl
 	}
 
 	if doPins && req.parsedUrl.Scheme == SchemeHttps {
-		rc.pins = generatePins(addr)
+		if rc.pins == nil {
+			rc.pins, err = generatePins(addr)
+			if err != nil {
+				return
+			}
+		}
 	}
 
 	for i := 0; i < 10; i++ {

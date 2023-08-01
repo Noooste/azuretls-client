@@ -3,10 +3,16 @@ package azuretls
 import (
 	"crypto/sha256"
 	"crypto/x509"
-	"fmt"
+	"encoding/base64"
+	"errors"
 	tls "github.com/Noooste/utls"
-	"strings"
+	"net/url"
 )
+
+func fingerprint(c *x509.Certificate) string {
+	digest := sha256.Sum256(c.RawSubjectPublicKeyInfo)
+	return base64.StdEncoding.EncodeToString(digest[:])
+}
 
 func Contains(s []string, e string) bool {
 	for _, a := range s {
@@ -17,35 +23,50 @@ func Contains(s []string, e string) bool {
 	return false
 }
 
-// Fingerprint returns the hpkp signature of an x509 certificate
-func fingerprint(c *x509.Certificate) string {
-	digest := sha256.Sum256(c.RawSubjectPublicKeyInfo)
-	return fmt.Sprintf("%x", digest[:])
-}
-
-func generatePins(addr string) (pins []string) {
-	dial, _ := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
-	cs := dial.ConnectionState()
-	pins = make([]string, len(cs.PeerCertificates))
-
-	addr = strings.Split(addr, ":")[0]
-
-	for i, cert := range cs.PeerCertificates {
-		for _, name := range cert.DNSNames {
-			if name == addr {
-				break
-			}
-		}
-		pins[i] = fingerprint(cert)
+func generatePins(addr string) (pins []string, err error) {
+	dial, err := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
+	if err != nil {
+		return nil, errors.New("failed to connect to generate pins")
 	}
+
+	defer dial.Close()
+
+	cs := dial.ConnectionState()
+
+	pins = make([]string, 0, len(cs.PeerCertificates))
+	for _, cert := range cs.PeerCertificates {
+		pins = append(pins, fingerprint(cert))
+	}
+
 	return
 }
 
 func verifyPins(tlsConn *tls.UConn, pins []string) bool {
 	for _, cert := range tlsConn.ConnectionState().PeerCertificates {
-		if !Contains(pins, fingerprint(cert)) {
-			return false
+		if Contains(pins, fingerprint(cert)) {
+			return true
 		}
 	}
-	return true
+	return false
+}
+
+func (s *Session) AddPins(u *url.URL, pins []string) error {
+	conn, err := s.conns.get(u)
+
+	if err != nil {
+		return err
+	}
+
+	conn.mu.Lock()
+	defer conn.mu.Unlock()
+
+	if conn.pins == nil {
+		conn.pins = pins
+	} else {
+		conn.pins = append(conn.pins, pins...)
+	}
+
+	s.VerifyPins = true
+
+	return nil
 }

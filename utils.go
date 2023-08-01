@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	http "github.com/Noooste/fhttp"
 	"math/rand"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -115,12 +116,27 @@ func getRandomId() uint64 {
 	return rand.Uint64()
 }
 
+var numberReg = regexp.MustCompile(`\d+`)
+
 func formatProxy(proxy string) string {
 	var split = strings.Split(strings.Trim(proxy, "\n\r"), ":")
 	if len(split) == 4 {
-		return "http://" + split[2] + ":" + split[3] + "@" + split[0] + ":" + split[1]
+		if numberReg.MatchString(split[1]) {
+			// proxy = ip:port:username:password
+			return "http://" + split[2] + ":" + split[3] + "@" + split[0] + ":" + split[1]
+		}
+
+		// proxy = ip:port:username:password
+		return "http://" + split[0] + ":" + split[1] + "@" + split[2] + ":" + split[3]
+
 	} else if len(split) == 2 {
+		// proxy = ip:port
 		return "http://" + split[0] + ":" + split[1]
+
+	} else if len(split) == 3 {
+		// proxy = username:password@ip:port
+		return "http://" + proxy
 	}
+
 	return proxy
 }

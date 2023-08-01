@@ -129,6 +129,8 @@ Proxy format supported :
 - `http://username:password@ip:port`
 - `ip:port`
 - `ip:port:username:password`
+- `username:password:ip:port`
+- `username:password@ip:port`
 
 ```go
 session := azuretls.NewSession()
@@ -168,6 +170,28 @@ fmt.Println(string(response.Body))
 session.Close()
 ```
 
+You can also set manual SSL Pinning to the session with method `session.AddPins`.
+
+```go
+session := azuretls.NewSession()
+
+session.AddPins(&url.URL{
+        Scheme: "https",
+        Host:   "httpbin.org",
+    }, []string{
+        "j5bzD/UjYVE+0feXsngcrVs3i1vSaoOOtPgpLBb9Db8=",
+        "18tkPyr2nckv4fgo0dhAkaUtJ2hu2831xlO2SKhq8dg=",
+        "++MBgDH5WGvL9Bcn5Be30cRcL0f5O+NyoXuWtQdX1aI=",
+        "KwccWaCgrnaw6tsrrSO61FgLacNgG2MMLq8GE6+oP5I=",
+})
+
+_, err := session.Get("https://httpbin.org/get")
+
+if err != nil {
+    panic(err)
+}
+```
+
 ### Timeout
 
 You can set a timeout to the session with the `session.SetTimeout` method. It takes a `time.Duration` as parameter, which is the timeout duration.
@@ -187,4 +211,63 @@ fmt.Println(response.StatusCode)
 fmt.Println(string(response.Body))
 
 session.Close()
+```
+
+### PreHook and CallBack
+
+You can set pre hooks to the session with the `session.PreHook` method. It takes a `func(*http.Request) error` as parameter, which is the pre hook function.
+
+```go
+session := azuretls.NewSession()
+
+session.PreHook = func(req *http.Request) error {
+    req.Header.Set("user-agent", "test")
+    return nil
+}
+
+response, err := session.Get("https://tls.peet.ws/api/all")
+
+if err != nil {
+    panic(err)
+}
+```
+
+You can set call backs to the session with the `session.CallBack` method. It takes a `func(*http.Response) error` as parameter, which is the call back function.
+
+```go
+session := azuretls.NewSession()
+
+session.CallBack = func(resp *http.Response) error {
+    fmt.Println(resp.StatusCode)
+    return nil
+}
+
+response, err := session.Get("https://tls.peet.ws/api/all")
+
+if err != nil {
+    panic(err)
+}
+```
+
+### Cookies
+
+You can set cookies to the session with the `session.SetCookies` method. It takes a `[]*http.Cookie` as parameter, which is the cookies.
+
+```go
+session := azuretls.NewSession()
+
+parsed, err := url.Parse("https://tls.peet.ws/api/all")
+
+session.CookieJar.SetCookies(parsed, []*http.Cookie{
+    {
+        Name:  "test",
+        Value: "test",
+    },
+})
+
+response, err := session.Get("https://tls.peet.ws/api/all")
+
+if err != nil {
+    panic(err)
+}
 ```

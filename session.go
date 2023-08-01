@@ -2,6 +2,7 @@ package azuretls
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	http "github.com/Noooste/fhttp"
 	"github.com/Noooste/fhttp/cookiejar"
@@ -55,20 +56,20 @@ func (s *Session) SetTimeout(timeout time.Duration) {
 	s.TimeOut = timeout
 }
 
+func (s *Session) SetContext(ctx context.Context) {
+	s.ctx = ctx
+}
+
 var proxyCheckReg = regexp.MustCompile(`^(https?://)(?:(\w+)(:(\w*))@)?(\w[\w\-_]{0,61}\w?\.(\w{1,6}|[\w-]{1,30}\.\w{2,3})|((\d{1,3})(?:\.\d{1,3}){3}))(:(\d{1,5}))$`)
 
 func (s *Session) SetProxy(proxy string) {
-	if proxyCheckReg.MatchString(proxy) {
+	defer s.Close()
+
+	switch {
+	case proxyCheckReg.MatchString(proxy), strings.HasPrefix(proxy, "http://"), strings.HasPrefix(proxy, "https://"):
 		s.Proxy = proxy
-		s.CloseConns()
-	} else {
-		if strings.HasPrefix(proxy, "http://") || strings.HasPrefix(proxy, "https://") {
-			s.Proxy = proxy
-			s.CloseConns()
-		} else {
-			s.Proxy = formatProxy(proxy)
-			s.CloseConns()
-		}
+	default:
+		s.Proxy = formatProxy(proxy)
 	}
 }
 
@@ -91,7 +92,14 @@ func (s *Session) send(request *Request) (*Response, error) {
 	if request.retries > 5 {
 		return nil, fmt.Errorf("retries exceeded")
 	}
-	var err error
+
+	var (
+		httpResponse *http.Response
+		roundTripper http.RoundTripper
+		rConn        *requestConn
+
+		err error
+	)
 
 	httpRequest, err := s.buildRequest(request.ctx, request)
 	if err != nil {
@@ -108,7 +116,6 @@ func (s *Session) send(request *Request) (*Response, error) {
 		return nil, err
 	}
 
-	var rConn *requestConn
 	if rConn, err = s.initConn(request); err != nil {
 		utils.SafeGoRoutine(func() {
 			s.saveVerbose(request, nil, err)
@@ -117,10 +124,6 @@ func (s *Session) send(request *Request) (*Response, error) {
 	}
 
 	request.conn = rConn
-
-	var httpResponse *http.Response
-
-	var roundTripper http.RoundTripper
 
 	if rConn.http2Conn != nil {
 		roundTripper = rConn.http2Conn
@@ -150,8 +153,8 @@ func (s *Session) send(request *Request) (*Response, error) {
 
 	if httpResponse == nil {
 		err = request.ctx.Err()
-		switch err {
-		case context.Canceled, context.DeadlineExceeded:
+		switch {
+		case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
 			return nil, fmt.Errorf("timeout")
 		}
 		return nil, fmt.Errorf("unknown error")
@@ -166,25 +169,31 @@ func (s *Session) send(request *Request) (*Response, error) {
 		s.saveVerbose(request, response, err)
 	})
 
-	utils.SafeGoRoutine(func() {
-		if s.Callback != nil {
-			s.Callback(request, response, err)
-		}
-	})
+	if s.Callback != nil {
+		s.Callback(request, response, err)
+	}
 
 	return response, nil
 }
 
+/*
+Do sends a request and returns a response
+*/
 func (s *Session) Do(request *Request, args ...any) (*Response, error) {
 	return s.do(request, args...)
 }
 
 func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
-	s.prepareRequest(req, args...)
+	err = s.prepareRequest(req, args...)
+
+	if err != nil {
+		return
+	}
 
 	var cancel context.CancelFunc
 	if req.ctx == nil {
 		req.ctx, cancel = context.WithTimeout(s.ctx, req.TimeOut)
+		defer cancel()
 	}
 
 	var reqs []*Request
@@ -201,13 +210,13 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 			loc := resp.Header.Get("Location")
 			if loc == "" {
 				resp.CloseBody()
-				cancel()
 				return nil, fmt.Errorf("%d response missing Location header", resp.StatusCode)
 			}
-			u, err := req.parsedUrl.Parse(loc)
+
+			var u *url.URL
+			u, err = req.parsedUrl.Parse(loc)
 			if err != nil {
 				resp.CloseBody()
-				cancel()
 				return nil, fmt.Errorf("failed to parse Location header %q: %v", loc, err)
 			}
 
@@ -227,7 +236,10 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 				ctx:              oldReq.ctx,
 			}
 
-			s.prepareRequest(req, args...)
+			err = s.prepareRequest(req, args...)
+			if err != nil {
+				return
+			}
 
 			if oldReq.OrderedHeaders != nil {
 				req.OrderedHeaders = oldReq.OrderedHeaders.Clone()
@@ -236,11 +248,11 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 				req.HeaderOrder = oldReq.HeaderOrder
 			}
 
-			ireq := reqs[0]
+			oldRequest := reqs[0]
 
-			if includeBody && ireq.Body != nil {
-				req.Body = ireq.Body
-				req.contentLength = ireq.contentLength
+			if includeBody && oldRequest.Body != nil {
+				req.Body = oldRequest.Body
+				req.contentLength = oldRequest.contentLength
 			} else {
 				req.contentLength = 0
 			}
@@ -269,6 +281,7 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 			if cancel != nil {
 				cancel()
 			}
+			req.CloseBody()
 			return resp, nil
 		}
 
@@ -278,8 +291,10 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 			if cancel != nil {
 				cancel()
 			}
+			req.CloseBody()
 			return resp, nil
 		}
+
 		if redirectMethod == http.MethodGet {
 			req.Body = nil
 			req.contentLength = 0
@@ -289,6 +304,9 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 	}
 }
 
+/*
+Get provides shortcut for sending GET request
+*/
 func (s *Session) Get(url string, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodGet,
@@ -297,6 +315,10 @@ func (s *Session) Get(url string, args ...any) (*Response, error) {
 
 	return s.do(request, args...)
 }
+
+/*
+Post provides shortcut for sending POST request
+*/
 func (s *Session) Post(url string, data []byte, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodPost,
@@ -307,6 +329,9 @@ func (s *Session) Post(url string, data []byte, args ...any) (*Response, error) 
 	return s.do(request, args...)
 }
 
+/*
+Put provides shortcut for sending PUT request
+*/
 func (s *Session) Put(url string, data []byte, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodPut,
@@ -317,6 +342,9 @@ func (s *Session) Put(url string, data []byte, args ...any) (*Response, error) {
 	return s.do(request, args...)
 }
 
+/*
+Patch provides shortcut for sending PATCH request²
+*/
 func (s *Session) Patch(url string, data []byte, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodPatch,
@@ -327,6 +355,9 @@ func (s *Session) Patch(url string, data []byte, args ...any) (*Response, error)
 	return s.do(request, args...)
 }
 
+/*
+Delete provides shortcut for sending DELETE request
+*/
 func (s *Session) Delete(url string, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodDelete,
@@ -336,6 +367,9 @@ func (s *Session) Delete(url string, args ...any) (*Response, error) {
 	return s.do(request, args...)
 }
 
+/*
+Head provides shortcut for sending HEAD request
+*/
 func (s *Session) Head(url string, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodHead,
@@ -345,6 +379,9 @@ func (s *Session) Head(url string, args ...any) (*Response, error) {
 	return s.do(request, args...)
 }
 
+/*
+Options provides shortcut for sending OPTIONS request
+*/
 func (s *Session) Options(url string, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodOptions,
@@ -355,10 +392,6 @@ func (s *Session) Options(url string, args ...any) (*Response, error) {
 }
 
 func (s *Session) Close() {
-	s.CloseConns()
-	s.conns = nil
-}
-
-func (s *Session) CloseConns() {
 	s.conns.close()
+	s.conns = newRequestConnPool()
 }
