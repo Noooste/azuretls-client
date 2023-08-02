@@ -199,7 +199,7 @@ session := azuretls.NewSession()
 
 session.InsecureSkipVerify = true
 
-// do it at you own risk !
+// do it at your own risk !
 _, err := session.Get("https://httpbin.org/get")
 
 if err != nil {
