@@ -2,6 +2,7 @@ package azuretls
 
 import (
 	"errors"
+	"github.com/Noooste/fhttp/http2"
 	tls "github.com/Noooste/utls"
 	"strconv"
 	"strings"
@@ -48,11 +49,6 @@ func DefaultTlsSpecifications() TlsSpecifications {
 		RenegotiationSupport:                    tls.RenegotiateOnceAsClient,
 	}
 }
-
-const (
-	LatestVersion TlsVersion = iota
-	ChromeVersion109
-)
 
 func (s *Session) ApplyJa3(ja3, navigator string) error {
 	_, err := stringToSpec(ja3, DefaultTlsSpecifications(), navigator)
@@ -464,8 +460,72 @@ func GetSupportedVersion(navigator string) ([]uint16, uint16, uint16) {
 }
 
 // GetLastChromeVersion apply the latest Chrome version
-// Current Chrome version : 112
+// Current Chrome version : 114
 func GetLastChromeVersion() *tls.ClientHelloSpec {
+	extensions := []tls.TLSExtension{
+		&tls.UtlsGREASEExtension{},
+		&tls.KeyShareExtension{KeyShares: []tls.KeyShare{
+			{Group: tls.CurveID(tls.GREASE_PLACEHOLDER), Data: []byte{0}},
+			{Group: tls.X25519},
+		}},
+		&tls.ALPNExtension{AlpnProtocols: []string{
+			http2.NextProtoTLS,
+			"http/1.1",
+		}},
+		&tls.SNIExtension{},
+		&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
+			tls.ECDSAWithP256AndSHA256,
+			tls.PSSWithSHA256,
+			tls.PKCS1WithSHA256,
+			tls.ECDSAWithP384AndSHA384,
+			tls.PSSWithSHA384,
+			tls.PKCS1WithSHA384,
+			tls.PSSWithSHA512,
+			tls.PKCS1WithSHA512,
+		}},
+		&tls.UtlsExtendedMasterSecretExtension{},
+		&tls.SessionTicketExtension{},
+		&tls.SCTExtension{},
+		&tls.RenegotiationInfoExtension{},
+		&tls.PSKKeyExchangeModesExtension{Modes: []uint8{
+			tls.PskModeDHE,
+		}},
+		&tls.ApplicationSettingsExtension{SupportedALPNList: []string{http2.NextProtoTLS}},
+		&tls.CompressCertificateExtension{Algorithms: []tls.CertCompressionAlgo{
+			tls.CertCompressionBrotli,
+		}},
+		&tls.SupportedVersionsExtension{Versions: []uint16{
+			tls.GREASE_PLACEHOLDER,
+			tls.VersionTLS13,
+			tls.VersionTLS12,
+		}},
+		&tls.SupportedCurvesExtension{Curves: []tls.CurveID{
+			tls.GREASE_PLACEHOLDER,
+			tls.X25519,
+			tls.CurveP256,
+			tls.CurveP384,
+		}},
+		&tls.StatusRequestExtension{},
+		&tls.SupportedPointsExtension{SupportedPoints: []byte{
+			0x00, // pointFormatUncompressed
+		}},
+		&tls.UtlsGREASEExtension{},
+		&tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle},
+	}
+
+	extensionsLength := len(extensions)
+	lastTwo := extensionsLength - 2
+
+	// since version 110, Chrome TLS Client Hello extensions are shuffled
+	// https://www.fastly.com/blog/a-first-look-at-chromes-tls-clienthello-permutation-in-the-wild
+	random.Shuffle(extensionsLength, func(i, j int) {
+		if i >= lastTwo || j >= lastTwo || i == 0 || j == 0 {
+			// ignore GREASE extensions and padding
+			return
+		}
+		extensions[i], extensions[j] = extensions[j], extensions[i]
+	})
+
 	return &tls.ClientHelloSpec{
 		CipherSuites: []uint16{
 			tls.GREASE_PLACEHOLDER,
@@ -488,52 +548,7 @@ func GetLastChromeVersion() *tls.ClientHelloSpec {
 		CompressionMethods: []byte{
 			0x00, // compressionNone
 		},
-		Extensions: []tls.TLSExtension{
-			&tls.UtlsGREASEExtension{},
-			&tls.SNIExtension{},
-			&tls.SupportedCurvesExtension{Curves: []tls.CurveID{
-				tls.GREASE_PLACEHOLDER,
-				tls.X25519,
-				tls.CurveP256,
-				tls.CurveP384,
-			}},
-			&tls.SessionTicketExtension{},
-			&tls.SupportedPointsExtension{SupportedPoints: []byte{
-				0x00, // pointFormatUncompressed
-			}},
-			&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
-				tls.ECDSAWithP256AndSHA256,
-				tls.PSSWithSHA256,
-				tls.PKCS1WithSHA256,
-				tls.ECDSAWithP384AndSHA384,
-				tls.PSSWithSHA384,
-				tls.PKCS1WithSHA384,
-				tls.PSSWithSHA512,
-				tls.PKCS1WithSHA512,
-			}},
-			&tls.KeyShareExtension{KeyShares: []tls.KeyShare{
-				{Group: tls.CurveID(tls.GREASE_PLACEHOLDER), Data: []byte{0}},
-				{Group: tls.X25519},
-			}},
-			&tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}},
-			&tls.UtlsExtendedMasterSecretExtension{},
-			&tls.SCTExtension{},
-			&tls.RenegotiationInfoExtension{},
-			&tls.PSKKeyExchangeModesExtension{Modes: []uint8{
-				tls.PskModeDHE,
-			}},
-			&tls.ApplicationSettingsExtension{SupportedALPNList: []string{"h2", "http/1.1"}},
-			&tls.CompressCertificateExtension{Algorithms: []tls.CertCompressionAlgo{
-				tls.CertCompressionBrotli,
-			}},
-			&tls.SupportedVersionsExtension{Versions: []uint16{
-				tls.GREASE_PLACEHOLDER,
-				tls.VersionTLS13,
-				tls.VersionTLS12,
-			}},
-			&tls.UtlsGREASEExtension{},
-			&tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle},
-		},
+		Extensions: extensions,
 	}
 }
 

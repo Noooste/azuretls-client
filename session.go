@@ -40,7 +40,7 @@ func NewSessionWithContext(ctx context.Context) *Session {
 		CookieJar: cookieJar,
 		Browser:   Chrome,
 
-		conns:              newRequestConnPool(),
+		Connections:        NewRequestConnPool(),
 		GetClientHelloSpec: GetLastChromeVersion,
 
 		mu: &sync.Mutex{},
@@ -74,18 +74,11 @@ func (s *Session) SetProxy(proxy string) {
 }
 
 func (s *Session) Ip() (ip string, err error) {
-	proxy, _ := url.Parse(s.Proxy)
-	tr := &http.Transport{
-		Proxy: http.ProxyURL(proxy),
-	}
-	request, _ := http.NewRequest(http.MethodGet, "http://ipinfo.io/ip", nil)
-
-	httpResponse, err := tr.RoundTrip(request)
+	r, err := s.Get("https://api.ipify.org")
 	if err != nil {
 		return
 	}
-	response := s.buildResponse(&Response{}, httpResponse)
-	return string(response.Body), nil
+	return string(r.Body), nil
 }
 
 func (s *Session) send(request *Request) (*Response, error) {
@@ -95,8 +88,10 @@ func (s *Session) send(request *Request) (*Response, error) {
 
 	var (
 		httpResponse *http.Response
+		response     *Response
+
 		roundTripper http.RoundTripper
-		rConn        *requestConn
+		rConn        *RequestConn
 
 		err error
 	)
@@ -110,64 +105,51 @@ func (s *Session) send(request *Request) (*Response, error) {
 	request.parsedUrl = httpRequest.URL
 
 	if err = s.initTransport(request.Browser); err != nil {
-		utils.SafeGoRoutine(func() {
-			s.saveVerbose(request, nil, err)
-		})
+		utils.SafeGoRoutine(func() { s.saveVerbose(request, nil, err) })
 		return nil, err
 	}
 
 	if rConn, err = s.initConn(request); err != nil {
-		utils.SafeGoRoutine(func() {
-			s.saveVerbose(request, nil, err)
-		})
+		utils.SafeGoRoutine(func() { s.saveVerbose(request, nil, err) })
 		return nil, err
 	}
 
 	request.conn = rConn
 
-	if rConn.http2Conn != nil {
-		roundTripper = rConn.http2Conn
+	if rConn.HTTP2 != nil {
+		roundTripper = rConn.HTTP2
 	} else {
 		roundTripper = s.tr
 	}
 
-	for i := 0; i < 5; i++ {
-		httpResponse, err = roundTripper.RoundTrip(httpRequest)
-		if err != nil {
-			switch err.Error() {
-			case http2errClientConnClosed, http2errClientConnUnusable, http2errClientConnGotGoAway:
-				if rConn.http2Conn != nil {
-					_ = rConn.http2Conn.Close()
-					rConn.http2Conn = nil
-				}
-				request.retries++
-				utils.SafeGoRoutine(func() {
-					s.saveVerbose(request, nil, err)
-				})
-				return s.send(request)
+	httpResponse, err = roundTripper.RoundTrip(httpRequest)
+
+	if err != nil {
+		switch err.Error() {
+		case http2errClientConnClosed, http2errClientConnUnusable, http2errClientConnGotGoAway:
+			if rConn.HTTP2 != nil {
+				_ = rConn.HTTP2.Close()
+				rConn.HTTP2 = nil
 			}
-		} else {
-			break
+
+			// retry request with new connection
+			request.retries++
+			return s.send(request)
+
+		default:
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return nil, fmt.Errorf("timeout")
+			}
+			return nil, err
 		}
 	}
 
-	if httpResponse == nil {
-		err = request.ctx.Err()
-		switch {
-		case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
-			return nil, fmt.Errorf("timeout")
-		}
-		return nil, fmt.Errorf("unknown error")
-	}
-
-	response := s.buildResponse(&Response{
+	response = s.buildResponse(&Response{
 		IgnoreBody: request.IgnoreBody,
 		Request:    request,
 	}, httpResponse)
 
-	utils.SafeGoRoutine(func() {
-		s.saveVerbose(request, response, err)
-	})
+	utils.SafeGoRoutine(func() { s.saveVerbose(request, response, err) })
 
 	if s.Callback != nil {
 		s.Callback(request, response, err)
@@ -190,8 +172,8 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 		return
 	}
 
-	var cancel context.CancelFunc
 	if req.ctx == nil {
+		var cancel context.CancelFunc
 		req.ctx, cancel = context.WithTimeout(s.ctx, req.TimeOut)
 		defer cancel()
 	}
@@ -223,17 +205,17 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 			oldReq := req
 
 			req = &Request{
-				Method:           redirectMethod,
-				Url:              u.String(),
-				parsedUrl:        u,
-				Proxy:            oldReq.Proxy,
-				IgnoreBody:       oldReq.IgnoreBody,
-				Browser:          oldReq.Browser,
-				TimeOut:          oldReq.TimeOut,
-				Verify:           oldReq.Verify,
-				listenServerPush: oldReq.listenServerPush,
-				PHeader:          oldReq.PHeader,
-				ctx:              oldReq.ctx,
+				Method:             redirectMethod,
+				Url:                u.String(),
+				parsedUrl:          u,
+				Proxy:              oldReq.Proxy,
+				IgnoreBody:         oldReq.IgnoreBody,
+				Browser:            oldReq.Browser,
+				TimeOut:            oldReq.TimeOut,
+				InsecureSkipVerify: oldReq.InsecureSkipVerify,
+				listenServerPush:   oldReq.listenServerPush,
+				PHeader:            oldReq.PHeader,
+				ctx:                oldReq.ctx,
 			}
 
 			err = s.prepareRequest(req, args...)
@@ -271,16 +253,10 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 		reqs = append(reqs, req)
 
 		if resp, err = s.send(req); err != nil {
-			if cancel != nil {
-				cancel()
-			}
 			return nil, err
 		}
 
 		if req.DisableRedirects {
-			if cancel != nil {
-				cancel()
-			}
 			req.CloseBody()
 			return resp, nil
 		}
@@ -288,9 +264,6 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 		var shouldRedirect bool
 		redirectMethod, shouldRedirect, includeBody = redirectBehavior(req.Method, resp, reqs[0])
 		if !shouldRedirect {
-			if cancel != nil {
-				cancel()
-			}
 			req.CloseBody()
 			return resp, nil
 		}
@@ -345,7 +318,7 @@ func (s *Session) Put(url string, data []byte, args ...any) (*Response, error) {
 /*
 Patch provides shortcut for sending PATCH request²
 */
-func (s *Session) Patch(url string, data []byte, args ...any) (*Response, error) {
+func (s *Session) Patch(url string, data any, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodPatch,
 		Url:    url,
@@ -392,6 +365,6 @@ func (s *Session) Options(url string, args ...any) (*Response, error) {
 }
 
 func (s *Session) Close() {
-	s.conns.close()
-	s.conns = newRequestConnPool()
+	s.Connections.Close()
+	s.Connections = NewRequestConnPool()
 }

@@ -2,10 +2,10 @@ package azuretls
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	http "github.com/Noooste/fhttp"
 	"github.com/Noooste/fhttp/cookiejar"
 	"io"
-	"io/ioutil"
 	"strings"
 )
 
@@ -74,7 +74,7 @@ func buildServerPushResponse(response *http.Response) *ServerPush {
 
 	encoding := response.Header.Get("content-encoding")
 
-	bodyBytes, err := ioutil.ReadAll(response.Body)
+	bodyBytes, err := io.ReadAll(response.Body)
 
 	if err != nil {
 		body = "error"
@@ -102,5 +102,19 @@ func buildServerPushResponse(response *http.Response) *ServerPush {
 		Headers:    Header,
 		Cookies:    getCookiesMap(http.ReadSetCookies(response.Header)),
 		Url:        response.Request.URL.String(),
+	}
+}
+
+func (r *Response) Load(v any) error {
+	if r.Body == nil {
+		return nil
+	}
+
+	return json.Unmarshal(r.Body, v)
+}
+
+func (r *Response) MustLoad(v any) {
+	if err := r.Load(v); err != nil {
+		panic(err)
 	}
 }

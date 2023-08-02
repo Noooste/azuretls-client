@@ -3,19 +3,15 @@ package azuretls
 import (
 	"context"
 	http "github.com/Noooste/fhttp"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
 )
 
 func TestNewSession(t *testing.T) {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-
 	session := NewSession()
 	if session == nil {
 		t.Fatal("session is nil")
-		t.SkipNow()
 	}
 }
 
@@ -35,7 +31,6 @@ func testProxy(t *testing.T, session *Session, proxy string, expected ...string)
 }
 
 func TestSession_SetProxy(t *testing.T) {
-
 	testProxy(t, NewSession(), "http://username:password@ip:9999")
 	testProxy(t, NewSession(), "http://ip:9999")
 	testProxy(t, NewSession(), "http://username:password@ip")
@@ -44,7 +39,6 @@ func TestSession_SetProxy(t *testing.T) {
 }
 
 func TestSession_SetTimeout(t *testing.T) {
-
 	session := NewSession()
 	session.SetTimeout(10 * time.Second)
 	if session.TimeOut != 10*time.Second {
@@ -69,7 +63,6 @@ func TestSession_SetTimeout(t *testing.T) {
 }
 
 func TestNewSessionWithContext(t *testing.T) {
-
 	req := &Request{
 		Method: http.MethodGet,
 		Url:    "https://httpbin.org/delay/5",
@@ -93,7 +86,6 @@ func TestNewSessionWithContext(t *testing.T) {
 }
 
 func TestNewSessionWithContext2(t *testing.T) {
-
 	req := &Request{
 		Method: http.MethodGet,
 		Url:    "https://httpbin.org/delay/5",

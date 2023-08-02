@@ -20,7 +20,8 @@ const (
 )
 
 type Session struct {
-	Headers      http.Header //deprecated, use OrderedHeaders instead
+	Headers http.Header //deprecated, use OrderedHeaders instead
+
 	HeadersOrder HeaderOrder //deprecated
 	PHeader      PHeader
 
@@ -29,7 +30,7 @@ type Session struct {
 	CookieJar *cookiejar.Jar
 	Browser   string
 
-	conns *requestConnPool
+	Connections *RequestConnPool
 
 	tr2 *http2.Transport
 	tr  *http.Transport
@@ -52,8 +53,10 @@ type Session struct {
 	PreHook  func(request *Request) error
 	Callback func(request *Request, response *Response, err error)
 
-	VerifyPins bool
-	ctx        context.Context
+	VerifyPins         bool // deprecated, this parameter is ignored as verify pins is always true. To disable pin verification, use the InsecureSkipVerify parameter instead
+	InsecureSkipVerify bool
+
+	ctx context.Context
 
 	UserAgent, SecChUa string
 }
@@ -66,14 +69,16 @@ type Request struct {
 	Url       string
 	parsedUrl *url.URL
 
-	Body    []byte
+	Body any
+	body []byte
+
 	PHeader PHeader
 
 	Header      http.Header //deprecated, use OrderedHeaders instead
 	HeaderOrder HeaderOrder //deprecated, use OrderedHeaders instead
 
 	OrderedHeaders OrderedHeaders
-	conn           *requestConn
+	conn           *RequestConn
 
 	Proxy   string
 	Browser string
@@ -85,8 +90,8 @@ type Request struct {
 
 	IsRedirected bool
 
-	FetchServerPush bool
-	Verify          bool
+	FetchServerPush    bool
+	InsecureSkipVerify bool
 
 	IgnoreBody bool
 

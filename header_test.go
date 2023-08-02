@@ -11,7 +11,6 @@ var contentTypeReg = regexp.MustCompile(`content-type`)
 var acceptReg = regexp.MustCompile(`accept`)
 
 func TestHeader(t *testing.T) {
-
 	session := NewSession()
 
 	session.OrderedHeaders = OrderedHeaders{
@@ -44,7 +43,6 @@ func TestHeader(t *testing.T) {
 }
 
 func TestHeaderDeprecated(t *testing.T) {
-
 	session := NewSession()
 
 	session.Headers = http.Header{
@@ -79,7 +77,6 @@ func TestHeaderDeprecated(t *testing.T) {
 }
 
 func TestOrderedHeaders_Get(t *testing.T) {
-
 	headers := OrderedHeaders{
 		{"user-agent", "test"},
 		{"content-type", "application/json"},
@@ -92,7 +89,6 @@ func TestOrderedHeaders_Get(t *testing.T) {
 }
 
 func TestOrderedHeaders_Add(t *testing.T) {
-
 	headers := OrderedHeaders{
 		{"user-agent", "test"},
 		{"content-type", "application/json"},

@@ -7,10 +7,13 @@ import (
 )
 
 func TestChrome(t *testing.T) {
-
 	// Chrome 80
-	//
+
 	session := NewSession()
+
+	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", Chrome); err != nil {
+		t.Fatal(err)
+	}
 
 	response, err := session.Get("https://tls.peet.ws/api/all")
 

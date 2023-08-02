@@ -10,7 +10,6 @@ import (
 )
 
 func TestRequest_SetContext(t *testing.T) {
-
 	session := NewSession()
 
 	req := &Request{
@@ -36,7 +35,6 @@ func TestRequest_SetContext(t *testing.T) {
 }
 
 func TestRequest_NoCookies(t *testing.T) {
-
 	session := NewSession()
 
 	session.CookieJar.SetCookies(&url.URL{
