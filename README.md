@@ -151,13 +151,12 @@ session.Close()
 
 ### SSL Pinning
 
-You can set SSL Pinning to the session with the `session.VerifyPins = true`.
+SSL pinning is enable by default.
 
 ```go
 session := azuretls.NewSession()
 
-session.VerifyPins = true
-
+// secured request
 response, err := session.Get("https://tls.peet.ws/api/all")
 
 if err != nil {
@@ -170,7 +169,7 @@ fmt.Println(string(response.Body))
 session.Close()
 ```
 
-You can also set manual SSL Pinning to the session with method `session.AddPins`.
+You can set manual SSL Pinning to the session with method `session.AddPins`.
 
 ```go
 session := azuretls.NewSession()
@@ -185,6 +184,22 @@ session.AddPins(&url.URL{
         "KwccWaCgrnaw6tsrrSO61FgLacNgG2MMLq8GE6+oP5I=",
 })
 
+_, err := session.Get("https://httpbin.org/get")
+
+if err != nil {
+    panic(err)
+}
+```
+
+
+To diable SSL Pinning, you can do `session.InsecureSkipVerify = true`
+
+```go
+session := azuretls.NewSession()
+
+session.InsecureSkipVerify = true
+
+// do it at you own risk !
 _, err := session.Get("https://httpbin.org/get")
 
 if err != nil {
