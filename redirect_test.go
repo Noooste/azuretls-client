@@ -3,8 +3,6 @@ package azuretls
 import "testing"
 
 func TestRedirect(t *testing.T) {
-	t.Parallel()
-
 	session := NewSession()
 
 	response, err := session.Get("https://www.nike.com/")

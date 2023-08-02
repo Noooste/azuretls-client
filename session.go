@@ -2,12 +2,11 @@ package azuretls
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	http "github.com/Noooste/fhttp"
 	"github.com/Noooste/fhttp/cookiejar"
-	"github.com/Noooste/fhttp/http2"
 	"github.com/Noooste/go-utils"
-	"github.com/Noooste/utls"
 	"net/url"
 	"regexp"
 	"strings"
@@ -20,13 +19,6 @@ const (
 	http2errClientConnUnusable  = "http2: client conn not usable"
 	http2errClientConnGotGoAway = "http2: Transport received Server's graceful shutdown GOAWAY"
 )
-
-type sessionConn struct {
-	tlsConn *tls.UConn
-	conn    *http2.ClientConn
-
-	pins []string
-}
 
 /*
 NewSession creates a new session
@@ -48,7 +40,7 @@ func NewSessionWithContext(ctx context.Context) *Session {
 		CookieJar: cookieJar,
 		Browser:   Chrome,
 
-		conns:              []*sessionConn{},
+		Connections:        NewRequestConnPool(),
 		GetClientHelloSpec: GetLastChromeVersion,
 
 		mu: &sync.Mutex{},
@@ -64,43 +56,45 @@ func (s *Session) SetTimeout(timeout time.Duration) {
 	s.TimeOut = timeout
 }
 
+func (s *Session) SetContext(ctx context.Context) {
+	s.ctx = ctx
+}
+
 var proxyCheckReg = regexp.MustCompile(`^(https?://)(?:(\w+)(:(\w*))@)?(\w[\w\-_]{0,61}\w?\.(\w{1,6}|[\w-]{1,30}\.\w{2,3})|((\d{1,3})(?:\.\d{1,3}){3}))(:(\d{1,5}))$`)
 
 func (s *Session) SetProxy(proxy string) {
-	if proxyCheckReg.MatchString(proxy) {
+	defer s.Close()
+
+	switch {
+	case proxyCheckReg.MatchString(proxy), strings.HasPrefix(proxy, "http://"), strings.HasPrefix(proxy, "https://"):
 		s.Proxy = proxy
-		s.CloseConns()
-	} else {
-		if strings.HasPrefix(proxy, "http://") || strings.HasPrefix(proxy, "https://") {
-			s.Proxy = proxy
-			s.CloseConns()
-		} else {
-			s.Proxy = formatProxy(proxy)
-			s.CloseConns()
-		}
+	default:
+		s.Proxy = formatProxy(proxy)
 	}
 }
 
 func (s *Session) Ip() (ip string, err error) {
-	proxy, _ := url.Parse(s.Proxy)
-	tr := &http.Transport{
-		Proxy: http.ProxyURL(proxy),
-	}
-	request, _ := http.NewRequest(http.MethodGet, "http://ipinfo.io/ip", nil)
-
-	httpResponse, err := tr.RoundTrip(request)
+	r, err := s.Get("https://api.ipify.org")
 	if err != nil {
 		return
 	}
-	response := s.buildResponse(&Response{}, httpResponse)
-	return string(response.Body), nil
+	return string(r.Body), nil
 }
 
 func (s *Session) send(request *Request) (*Response, error) {
 	if request.retries > 5 {
 		return nil, fmt.Errorf("retries exceeded")
 	}
-	var err error
+
+	var (
+		httpResponse *http.Response
+		response     *Response
+
+		roundTripper http.RoundTripper
+		rConn        *RequestConn
+
+		err error
+	)
 
 	httpRequest, err := s.buildRequest(request.ctx, request)
 	if err != nil {
@@ -111,91 +105,77 @@ func (s *Session) send(request *Request) (*Response, error) {
 	request.parsedUrl = httpRequest.URL
 
 	if err = s.initTransport(request.Browser); err != nil {
-		utils.SafeGoRoutine(func() {
-			s.saveVerbose(request, nil, err)
-		})
+		utils.SafeGoRoutine(func() { s.saveVerbose(request, nil, err) })
 		return nil, err
 	}
 
-	var sConn *sessionConn
-	if sConn, err = s.initConn(request); err != nil {
-		utils.SafeGoRoutine(func() {
-			s.saveVerbose(request, nil, err)
-		})
+	if rConn, err = s.initConn(request); err != nil {
+		utils.SafeGoRoutine(func() { s.saveVerbose(request, nil, err) })
 		return nil, err
 	}
 
-	var httpResponse *http.Response
+	request.conn = rConn
 
-	var roundTripper http.RoundTripper
-
-	if sConn.conn != nil {
-		roundTripper = sConn.conn
+	if rConn.HTTP2 != nil {
+		roundTripper = rConn.HTTP2
 	} else {
 		roundTripper = s.tr
 	}
 
-	for i := 0; i < 5; i++ {
-		httpResponse, err = roundTripper.RoundTrip(httpRequest)
-		if err != nil {
-			switch err.Error() {
-			case http2errClientConnClosed, http2errClientConnUnusable, http2errClientConnGotGoAway:
-				if sConn.conn != nil {
-					_ = sConn.conn.Close()
-					sConn.conn = nil
-				}
-				if sConn.tlsConn != nil {
-					_ = sConn.tlsConn.Close()
-					sConn.tlsConn = nil
-				}
-				request.retries++
-				utils.SafeGoRoutine(func() {
-					s.saveVerbose(request, nil, err)
-				})
-				return s.send(request)
+	httpResponse, err = roundTripper.RoundTrip(httpRequest)
+
+	if err != nil {
+		switch err.Error() {
+		case http2errClientConnClosed, http2errClientConnUnusable, http2errClientConnGotGoAway:
+			if rConn.HTTP2 != nil {
+				_ = rConn.HTTP2.Close()
+				rConn.HTTP2 = nil
 			}
-		} else {
-			break
+
+			// retry request with new connection
+			request.retries++
+			return s.send(request)
+
+		default:
+			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				return nil, fmt.Errorf("timeout")
+			}
+			return nil, err
 		}
 	}
 
-	if httpResponse == nil {
-		err = request.ctx.Err()
-		switch err {
-		case context.Canceled, context.DeadlineExceeded:
-			return nil, fmt.Errorf("timeout")
-		}
-		return nil, fmt.Errorf("unknown error")
-	}
-
-	response := s.buildResponse(&Response{
+	response = s.buildResponse(&Response{
 		IgnoreBody: request.IgnoreBody,
 		Request:    request,
 	}, httpResponse)
 
-	utils.SafeGoRoutine(func() {
-		s.saveVerbose(request, response, err)
-	})
+	utils.SafeGoRoutine(func() { s.saveVerbose(request, response, err) })
 
-	utils.SafeGoRoutine(func() {
-		if s.Callback != nil {
-			s.Callback(request, response, err)
-		}
-	})
+	if s.Callback != nil {
+		s.Callback(request, response, err)
+	}
 
 	return response, nil
 }
 
+/*
+Do sends a request and returns a response
+*/
 func (s *Session) Do(request *Request, args ...any) (*Response, error) {
 	return s.do(request, args...)
 }
 
 func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
-	s.prepareRequest(req, args...)
+	err = s.prepareRequest(req, args...)
 
-	var cancel context.CancelFunc
+	if err != nil {
+		return
+	}
+
 	if req.ctx == nil {
+		var cancel context.CancelFunc
 		req.ctx, cancel = context.WithTimeout(s.ctx, req.TimeOut)
+		defer cancel()
 	}
 
 	var reqs []*Request
@@ -212,33 +192,36 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 			loc := resp.Header.Get("Location")
 			if loc == "" {
 				resp.CloseBody()
-				cancel()
 				return nil, fmt.Errorf("%d response missing Location header", resp.StatusCode)
 			}
-			u, err := req.parsedUrl.Parse(loc)
+
+			var u *url.URL
+			u, err = req.parsedUrl.Parse(loc)
 			if err != nil {
 				resp.CloseBody()
-				cancel()
 				return nil, fmt.Errorf("failed to parse Location header %q: %v", loc, err)
 			}
 
 			oldReq := req
 
 			req = &Request{
-				Method:           redirectMethod,
-				Url:              u.String(),
-				parsedUrl:        u,
-				Proxy:            oldReq.Proxy,
-				IgnoreBody:       oldReq.IgnoreBody,
-				Browser:          oldReq.Browser,
-				TimeOut:          oldReq.TimeOut,
-				Verify:           oldReq.Verify,
-				listenServerPush: oldReq.listenServerPush,
-				PHeader:          oldReq.PHeader,
-				ctx:              oldReq.ctx,
+				Method:             redirectMethod,
+				Url:                u.String(),
+				parsedUrl:          u,
+				Proxy:              oldReq.Proxy,
+				IgnoreBody:         oldReq.IgnoreBody,
+				Browser:            oldReq.Browser,
+				TimeOut:            oldReq.TimeOut,
+				InsecureSkipVerify: oldReq.InsecureSkipVerify,
+				listenServerPush:   oldReq.listenServerPush,
+				PHeader:            oldReq.PHeader,
+				ctx:                oldReq.ctx,
 			}
 
-			s.prepareRequest(req, args...)
+			err = s.prepareRequest(req, args...)
+			if err != nil {
+				return
+			}
 
 			if oldReq.OrderedHeaders != nil {
 				req.OrderedHeaders = oldReq.OrderedHeaders.Clone()
@@ -247,11 +230,11 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 				req.HeaderOrder = oldReq.HeaderOrder
 			}
 
-			ireq := reqs[0]
+			oldRequest := reqs[0]
 
-			if includeBody && ireq.Body != nil {
-				req.Body = ireq.Body
-				req.contentLength = ireq.contentLength
+			if includeBody && oldRequest.Body != nil {
+				req.Body = oldRequest.Body
+				req.contentLength = oldRequest.contentLength
 			} else {
 				req.contentLength = 0
 			}
@@ -270,27 +253,21 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 		reqs = append(reqs, req)
 
 		if resp, err = s.send(req); err != nil {
-			if cancel != nil {
-				cancel()
-			}
 			return nil, err
 		}
 
 		if req.DisableRedirects {
-			if cancel != nil {
-				cancel()
-			}
+			req.CloseBody()
 			return resp, nil
 		}
 
 		var shouldRedirect bool
 		redirectMethod, shouldRedirect, includeBody = redirectBehavior(req.Method, resp, reqs[0])
 		if !shouldRedirect {
-			if cancel != nil {
-				cancel()
-			}
+			req.CloseBody()
 			return resp, nil
 		}
+
 		if redirectMethod == http.MethodGet {
 			req.Body = nil
 			req.contentLength = 0
@@ -300,6 +277,9 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 	}
 }
 
+/*
+Get provides shortcut for sending GET request
+*/
 func (s *Session) Get(url string, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodGet,
@@ -308,6 +288,10 @@ func (s *Session) Get(url string, args ...any) (*Response, error) {
 
 	return s.do(request, args...)
 }
+
+/*
+Post provides shortcut for sending POST request
+*/
 func (s *Session) Post(url string, data []byte, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodPost,
@@ -318,6 +302,9 @@ func (s *Session) Post(url string, data []byte, args ...any) (*Response, error) 
 	return s.do(request, args...)
 }
 
+/*
+Put provides shortcut for sending PUT request
+*/
 func (s *Session) Put(url string, data []byte, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodPut,
@@ -328,27 +315,56 @@ func (s *Session) Put(url string, data []byte, args ...any) (*Response, error) {
 	return s.do(request, args...)
 }
 
-func (s *Session) Close() {
-	s.CloseConns()
-	s.conns = nil
+/*
+Patch provides shortcut for sending PATCH request²
+*/
+func (s *Session) Patch(url string, data any, args ...any) (*Response, error) {
+	request := &Request{
+		Method: http.MethodPatch,
+		Url:    url,
+		Body:   data,
+	}
+
+	return s.do(request, args...)
 }
 
-func (s *Session) CloseConns() {
-	for _, c := range s.conns {
-		if c == nil {
-			continue
-		}
-		if c.tlsConn != nil {
-			_ = c.tlsConn.Close()
-			c.tlsConn = nil
-		}
-		if c.conn != nil {
-			_ = c.conn.Close()
-			c.conn = nil
-		}
-		if c.pins != nil {
-			c.pins = nil
-		}
+/*
+Delete provides shortcut for sending DELETE request
+*/
+func (s *Session) Delete(url string, args ...any) (*Response, error) {
+	request := &Request{
+		Method: http.MethodDelete,
+		Url:    url,
 	}
-	s.conns = []*sessionConn{}
+
+	return s.do(request, args...)
+}
+
+/*
+Head provides shortcut for sending HEAD request
+*/
+func (s *Session) Head(url string, args ...any) (*Response, error) {
+	request := &Request{
+		Method: http.MethodHead,
+		Url:    url,
+	}
+
+	return s.do(request, args...)
+}
+
+/*
+Options provides shortcut for sending OPTIONS request
+*/
+func (s *Session) Options(url string, args ...any) (*Response, error) {
+	request := &Request{
+		Method: http.MethodOptions,
+		Url:    url,
+	}
+
+	return s.do(request, args...)
+}
+
+func (s *Session) Close() {
+	s.Connections.Close()
+	s.Connections = NewRequestConnPool()
 }

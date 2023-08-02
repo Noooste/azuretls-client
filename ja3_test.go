@@ -7,11 +7,13 @@ import (
 )
 
 func TestChrome(t *testing.T) {
-	t.Parallel()
-
 	// Chrome 80
-	//
+
 	session := NewSession()
+
+	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", Chrome); err != nil {
+		t.Fatal(err)
+	}
 
 	response, err := session.Get("https://tls.peet.ws/api/all")
 
@@ -20,7 +22,8 @@ func TestChrome(t *testing.T) {
 	}
 
 	if response.StatusCode != 200 {
-		t.Error("Expected 200")
+		t.Fatal("Expected 200")
+		return
 	}
 
 	var loaded map[string]any
@@ -35,17 +38,20 @@ func TestChrome(t *testing.T) {
 	split := strings.Split(ja3, ",")
 
 	if len(split) != 5 {
-		t.Error("Expected 4 parts, got ", len(split))
+		t.Fatal("Expected 4 parts, got ", len(split))
+		return
 	}
 
 	version := "771"
 	if split[0] != version {
-		t.Error("Expected "+version+", got ", split[0])
+		t.Fatal("Expected "+version+", got ", split[0])
+		return
 	}
 
 	ciphers := "4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53"
 	if split[1] != ciphers {
-		t.Error("Expected "+ciphers+", got ", split[1])
+		t.Fatal("Expected "+ciphers+", got ", split[1])
+		return
 	}
 
 	//since chrome shuffle extension = not relevant to check the order
@@ -53,21 +59,23 @@ func TestChrome(t *testing.T) {
 	nbExtensions := strings.Count(extensions, "-") + 1
 
 	if nbExtensions != strings.Count(split[2], "-")+1 {
-		t.Error("Expected "+extensions+", got ", split[2])
+		t.Fatal("Expected "+extensions+", got ", split[2])
+		return
 	}
 
 	ellipticCurves := "29-23-24"
 	if split[3] != ellipticCurves {
-		t.Error("Expected"+ellipticCurves+", got ", split[3])
+		t.Fatal("Expected"+ellipticCurves+", got ", split[3])
+		return
 	}
 
 	if split[4] != "0" {
-		t.Error("Expected 0, got ", split[4])
+		t.Fatal("Expected 0, got ", split[4])
+		return
 	}
 }
 
 func TestSession_ApplyJa3(t *testing.T) {
-	t.Parallel()
 
 	session := NewSession()
 
@@ -84,7 +92,7 @@ func TestSession_ApplyJa3(t *testing.T) {
 	}
 
 	if response.StatusCode != 200 {
-		t.Error("Expected 200")
+		t.Fatal("Expected 200")
 	}
 
 	var loaded map[string]any
@@ -100,32 +108,31 @@ func TestSession_ApplyJa3(t *testing.T) {
 	splitOrigin := strings.Split(ja3Origin, ",")
 
 	if len(split) != 5 {
-		t.Error("Expected 4 parts, got ", len(split))
+		t.Fatal("Expected 4 parts, got ", len(split))
 	}
 
 	if split[0] != splitOrigin[0] {
-		t.Error("Expected "+splitOrigin[0]+", got ", split[0])
+		t.Fatal("Expected "+splitOrigin[0]+", got ", split[0])
 	}
 
 	if split[1] != splitOrigin[1] {
-		t.Error("Expected "+splitOrigin[1]+", got ", split[1])
+		t.Fatal("Expected "+splitOrigin[1]+", got ", split[1])
 	}
 
 	if split[2] != splitOrigin[2] {
-		t.Error("Expected "+splitOrigin[2]+", got ", split[2])
+		t.Fatal("Expected "+splitOrigin[2]+", got ", split[2])
 	}
 
 	if split[3] != splitOrigin[3] {
-		t.Error("Expected "+splitOrigin[3]+", got ", split[3])
+		t.Fatal("Expected "+splitOrigin[3]+", got ", split[3])
 	}
 
 	if split[4] != splitOrigin[4] {
-		t.Error("Expected "+splitOrigin[4]+", got ", split[4])
+		t.Fatal("Expected "+splitOrigin[4]+", got ", split[4])
 	}
 }
 
 func TestGetLastIosVersion(t *testing.T) {
-	t.Parallel()
 
 	session := NewSession()
 

@@ -1,10 +1,11 @@
 package azuretls
 
 import (
+	"context"
 	http "github.com/Noooste/fhttp"
 	"github.com/Noooste/fhttp/http2"
+	"net"
 	"sync"
-	"time"
 )
 
 func (s *Session) initTransport(browser string) (err error) {
@@ -38,8 +39,20 @@ func (s *Session) initTransport(browser string) (err error) {
 
 func (s *Session) initHTTP1() {
 	s.tr = &http.Transport{
-		TLSHandshakeTimeout:   time.Duration(30) * time.Second,
-		ResponseHeaderTimeout: time.Duration(30) * time.Second,
+		TLSHandshakeTimeout:   s.TimeOut,
+		ResponseHeaderTimeout: s.TimeOut,
+		DialTLSContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			s.Connections.mu.RLock()
+			defer s.Connections.mu.RUnlock()
+			rc := s.Connections.hosts[addr]
+			return rc.TLS, nil
+		},
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			s.Connections.mu.RLock()
+			defer s.Connections.mu.RUnlock()
+			rc := s.Connections.hosts[addr]
+			return rc.Conn, nil
+		},
 	}
 }
 

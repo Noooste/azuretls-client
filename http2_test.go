@@ -6,7 +6,6 @@ import (
 )
 
 func TestSession_ApplyAkamaiFingerprintChrome(t *testing.T) {
-	t.Parallel()
 
 	session := NewSession()
 
@@ -23,7 +22,7 @@ func TestSession_ApplyAkamaiFingerprintChrome(t *testing.T) {
 	}
 
 	if response.StatusCode != 200 {
-		t.Error("Expected 200")
+		t.Fatal("Expected 200")
 	}
 
 	var loaded map[string]any
@@ -37,12 +36,11 @@ func TestSession_ApplyAkamaiFingerprintChrome(t *testing.T) {
 	af := loaded["http2"].(map[string]any)["akamai_fingerprint"].(string)
 
 	if af != expectedAf {
-		t.Error("Expected "+expectedAf+", got ", af)
+		t.Fatal("Expected "+expectedAf+", got ", af)
 	}
 }
 
 func TestSession_ApplyAkamaiFingerprintFirefox(t *testing.T) {
-	t.Parallel()
 
 	session := NewSession()
 
@@ -59,7 +57,7 @@ func TestSession_ApplyAkamaiFingerprintFirefox(t *testing.T) {
 	}
 
 	if response.StatusCode != 200 {
-		t.Error("Expected 200")
+		t.Fatal("Expected 200")
 	}
 
 	var loaded map[string]any
@@ -73,7 +71,7 @@ func TestSession_ApplyAkamaiFingerprintFirefox(t *testing.T) {
 	af := loaded["http2"].(map[string]any)["akamai_fingerprint"].(string)
 
 	if af != expectedAf {
-		t.Error("Expected "+expectedAf+", got ", af)
+		t.Fatal("Expected "+expectedAf+", got ", af)
 	}
 }
 
@@ -89,7 +87,7 @@ func TestIos(t *testing.T) {
 	}
 
 	if response.StatusCode != 200 {
-		t.Error("Expected 200")
+		t.Fatal("Expected 200")
 	}
 
 	var loaded map[string]any
@@ -103,6 +101,6 @@ func TestIos(t *testing.T) {
 	af := loaded["http2"].(map[string]any)["akamai_fingerprint"].(string)
 
 	if af != expected {
-		t.Error("Expected "+expected+", got ", af)
+		t.Fatal("Expected "+expected+", got ", af)
 	}
 }

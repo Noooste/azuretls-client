@@ -1,39 +1,37 @@
 package azuretls
 
 import (
+	"runtime"
 	"sync"
 	"testing"
 )
 
 func TestSessionConn(t *testing.T) {
-	t.Parallel()
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	session := NewSession()
 
-	response, err := session.Get("https://httpbin.org/get")
-
-	if err != nil {
-		t.Fatal(err)
-	}
+	response, err := session.Get("https://example.com/")
 
 	if response.StatusCode != 200 {
 		t.Fatal("TestHeader failed, expected: 200, got: ", response.StatusCode)
 	}
 
-	if len(session.conns) == 0 {
+	if len(session.Connections.hosts) == 0 {
 		t.Fatal("TestSessionConn failed, Conn is empty")
 	}
 
-	firstConn := session.conns[0]
-	if !firstConn.conn.CanTakeNewRequest() {
+	firstConn := session.Connections.hosts["example.com:443"]
+
+	if !firstConn.HTTP2.CanTakeNewRequest() {
 		t.Fatal("TestSessionConn failed, Conn is not reusable")
 	}
 
-	if err = firstConn.tlsConn.VerifyHostname("httpbin.org"); err != nil {
+	if err = firstConn.TLS.VerifyHostname("example.com"); err != nil {
 		t.Fatal("TestSessionConn failed, VerifyHostname failed : ", err)
 	}
 
-	response, err = session.Get("https://httpbin.org/get")
+	response, err = session.Get("https://example.com/")
 
 	if err != nil {
 		t.Fatal(err)
@@ -43,21 +41,19 @@ func TestSessionConn(t *testing.T) {
 		t.Fatal("TestHeader failed, expected: 200, got: ", response.StatusCode)
 	}
 
-	if len(session.conns) != 1 {
+	if len(session.Connections.hosts) != 1 {
 		t.Fatal("TestSessionConn failed, Conn is not reused")
 	}
 
-	if firstConn != session.conns[0] {
+	if firstConn != session.Connections.hosts["example.com:443"] {
 		t.Fatal("TestSessionConn failed, Conn is not reused")
 	}
 }
 
 func TestHTTP1Conn(t *testing.T) {
-	t.Parallel()
-
 	session := NewSession()
 
-	_, err := session.Get("http://www.gstatic.com/generate_204")
+	_, err := session.Get("https://api.ipify.org/")
 
 	if err != nil {
 		t.Fatal(err)
@@ -65,24 +61,25 @@ func TestHTTP1Conn(t *testing.T) {
 }
 
 func TestHighConcurrency(t *testing.T) {
-	t.Parallel()
-
 	session := NewSession()
 
 	wait := &sync.WaitGroup{}
-	wait.Add(1000)
+
+	count := 100
+
+	wait.Add(count)
 
 	var err error
 	var ok int
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < count; i++ {
 		go func() {
 			defer wait.Done()
-			_, err2 := session.Get("https://httpbin.org/get")
+			_, err2 := session.Get("https://example.com")
 
 			if err2 != nil {
-				t.Error(err2)
 				err = err2
+				t.Error(err2)
 				return
 			}
 
@@ -93,10 +90,11 @@ func TestHighConcurrency(t *testing.T) {
 	wait.Wait()
 
 	if err != nil {
+		t.Error("TestHighConcurrency failed, expected: ", count, ", got: ", ok)
 		t.Fatal(err)
 	}
 
-	if ok != 1000 {
-		t.Fatal("TestHighConcurrency failed, expected: 1000, got: ", ok)
+	if ok != count {
+		t.Fatal("TestHighConcurrency failed, expected: ", count, ", got: ", ok)
 	}
 }

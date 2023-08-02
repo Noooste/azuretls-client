@@ -11,8 +11,6 @@ var contentTypeReg = regexp.MustCompile(`content-type`)
 var acceptReg = regexp.MustCompile(`accept`)
 
 func TestHeader(t *testing.T) {
-	t.Parallel()
-
 	session := NewSession()
 
 	session.OrderedHeaders = OrderedHeaders{
@@ -45,8 +43,6 @@ func TestHeader(t *testing.T) {
 }
 
 func TestHeaderDeprecated(t *testing.T) {
-	t.Parallel()
-
 	session := NewSession()
 
 	session.Headers = http.Header{
@@ -81,8 +77,6 @@ func TestHeaderDeprecated(t *testing.T) {
 }
 
 func TestOrderedHeaders_Get(t *testing.T) {
-	t.Parallel()
-
 	headers := OrderedHeaders{
 		{"user-agent", "test"},
 		{"content-type", "application/json"},
@@ -95,8 +89,6 @@ func TestOrderedHeaders_Get(t *testing.T) {
 }
 
 func TestOrderedHeaders_Add(t *testing.T) {
-	t.Parallel()
-
 	headers := OrderedHeaders{
 		{"user-agent", "test"},
 		{"content-type", "application/json"},
@@ -115,7 +107,6 @@ func TestOrderedHeaders_Add(t *testing.T) {
 }
 
 func TestOrderedHeaders_Del(t *testing.T) {
-	t.Parallel()
 
 	headers := OrderedHeaders{
 		{"user-agent", "test"},
@@ -135,7 +126,6 @@ func TestOrderedHeaders_Del(t *testing.T) {
 }
 
 func TestOrderedHeaders_Set(t *testing.T) {
-	t.Parallel()
 
 	headers := OrderedHeaders{
 		{"user-agent", "test"},
@@ -155,7 +145,6 @@ func TestOrderedHeaders_Set(t *testing.T) {
 }
 
 func TestOrderedHeaders_Set2(t *testing.T) {
-	t.Parallel()
 
 	headers := OrderedHeaders{
 		{"user-agent", "test"},

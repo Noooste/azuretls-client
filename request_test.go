@@ -10,8 +10,6 @@ import (
 )
 
 func TestRequest_SetContext(t *testing.T) {
-	t.Parallel()
-
 	session := NewSession()
 
 	req := &Request{
@@ -23,21 +21,20 @@ func TestRequest_SetContext(t *testing.T) {
 
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
 
 	req.SetContext(ctx)
 
 	_, err := session.Do(req)
 
 	if err == nil || err.Error() != "timeout" {
-		t.Error("TestSession_SetTimeout failed, expected: timeout, got: ", err)
+		t.Fatal("TestSession_SetTimeout failed, expected: timeout, got: ", err)
+		return
 	}
 
-	cancel()
 }
 
 func TestRequest_NoCookies(t *testing.T) {
-	t.Parallel()
-
 	session := NewSession()
 
 	session.CookieJar.SetCookies(&url.URL{
@@ -59,16 +56,19 @@ func TestRequest_NoCookies(t *testing.T) {
 	resp, err := session.Do(req)
 
 	if err != nil {
-		t.Error("TestRequest_NoCookies failed, expected: nil, got: ", err)
+		t.Fatal("TestRequest_NoCookies failed, expected: nil, got: ", err)
+		return
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		t.Error("TestRequest_NoCookies failed, expected: 200, got: ", resp.StatusCode)
+		t.Fatal("TestRequest_NoCookies failed, expected: 200, got: ", resp.StatusCode)
+		return
 	}
 
 	t.Log(string(resp.Body))
 
 	if strings.Contains(string(resp.Body), "test") {
-		t.Error("TestRequest_NoCookies failed, expected: false, got: true")
+		t.Fatal("TestRequest_NoCookies failed, expected: false, got: true")
+		return
 	}
 }

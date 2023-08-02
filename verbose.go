@@ -149,8 +149,8 @@ func (r *Request) String() string {
 	}
 
 	if r.Body != nil {
-		buffer.WriteString("\n")
-		buffer.Write(r.Body)
+		buffer.WriteByte('\n')
+		buffer.Write(r.body)
 	}
 
 	return buffer.String()

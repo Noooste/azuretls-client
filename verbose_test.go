@@ -7,7 +7,7 @@ import (
 )
 
 func TestSession_EnableVerbose(t *testing.T) {
-	t.Parallel()
+	defer os.RemoveAll("./tmp")
 
 	session := NewSession()
 
@@ -37,6 +37,7 @@ func TestSession_EnableVerbose(t *testing.T) {
 
 	if err != nil {
 		t.Error(err)
+		return
 	}
 
 	session.EnableVerbose("./tmp", nil)
@@ -45,6 +46,7 @@ func TestSession_EnableVerbose(t *testing.T) {
 
 	if err != nil {
 		t.Error(err)
+		return
 	}
 
 	time.Sleep(50 * time.Millisecond)
@@ -52,17 +54,17 @@ func TestSession_EnableVerbose(t *testing.T) {
 
 	if err != nil {
 		t.Error(err)
+		return
 	}
 
 	if len(f) == 0 {
 		t.Error("No files created")
+		return
 	}
-
-	os.RemoveAll("./tmp")
 }
 
 func TestSession_EnableVerbose2(t *testing.T) {
-	t.Parallel()
+	defer os.RemoveAll("./tmp")
 
 	session := NewSession()
 
@@ -92,6 +94,7 @@ func TestSession_EnableVerbose2(t *testing.T) {
 
 	if err != nil {
 		t.Error(err)
+		return
 	}
 
 	session.EnableVerbose("./tmp", nil)
@@ -115,6 +118,7 @@ func TestSession_EnableVerbose2(t *testing.T) {
 
 	if err != nil {
 		t.Error(err)
+		return
 	}
 
 	time.Sleep(50 * time.Millisecond)
@@ -122,11 +126,12 @@ func TestSession_EnableVerbose2(t *testing.T) {
 
 	if err != nil {
 		t.Error(err)
+		return
 	}
 
 	if len(f) == 0 {
 		t.Error("No files created")
+		return
 	}
 
-	os.RemoveAll("./tmp")
 }
