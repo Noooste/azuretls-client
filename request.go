@@ -83,7 +83,7 @@ func (s *Session) buildRequest(ctx context.Context, req *Request) (*http.Request
 	var newReq *http.Request
 	var err error
 
-	if req.body != nil {
+	if req.Body != nil {
 		if s.Verbose {
 			req.body = toBytes(req.Body)
 			newReq, err = http.NewRequestWithContext(ctx, strings.ToUpper(req.Method), req.Url, bytes.NewReader(req.body))

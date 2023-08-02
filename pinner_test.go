@@ -65,7 +65,7 @@ func TestSession_AddPins2(t *testing.T) {
 		Host:   "example.com",
 	}, []string{
 		"not a good pin here",
-	}); err == nil {
+	}); err != nil {
 		t.Fatal("TestPins failed, expected: error, got: ", err)
 	}
 

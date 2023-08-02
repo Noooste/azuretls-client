@@ -1,8 +1,10 @@
 package azuretls
 
 import (
+	"bytes"
 	"context"
 	http "github.com/Noooste/fhttp"
+	"log"
 	"strings"
 	"testing"
 	"time"
@@ -109,4 +111,36 @@ func TestNewSessionWithContext2(t *testing.T) {
 		t.Fatal("TestSession_SetTimeout failed, expected: timeout, got: ", err)
 		return
 	}
+}
+
+func TestSession_Post(t *testing.T) {
+	session := NewSession()
+	req := &Request{
+		Method: http.MethodPost,
+		Url:    "https://httpbin.org/post",
+		Body:   "test",
+	}
+
+	resp, err := session.Do(req)
+	if err != nil {
+		t.Fatal("TestSession_Post failed, expected: nil, got: ", err)
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		t.Fatal("TestSession_Post failed, expected: 200, got: ", resp.StatusCode)
+		return
+	}
+
+	if resp.Body == nil {
+		t.Fatal("TestSession_Post failed, expected: not nil, got: ", resp.Body)
+		return
+	}
+
+	if !bytes.Contains(resp.Body, []byte("test")) {
+		t.Fatal("TestSession_Post failed, expected: not contains, got: ", resp.Body)
+		return
+	}
+
+	log.Println(string(resp.Body))
 }
