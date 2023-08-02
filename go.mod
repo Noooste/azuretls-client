@@ -4,11 +4,9 @@ go 1.18
 
 require (
 	github.com/Noooste/fhttp v1.0.6
-	github.com/Noooste/go-utils v0.0.0-20230524084254-b1c5f3c8fb0b
+	github.com/Noooste/go-utils v1.0.0
 	github.com/Noooste/utls v1.1.3
-	github.com/Noooste/websocket v1.0.0
 	github.com/andybalholm/brotli v1.0.5
-	github.com/tam7t/hpkp v0.0.0-20160821193359-2b70b4024ed5
 	golang.org/x/net v0.10.0
 )
 
