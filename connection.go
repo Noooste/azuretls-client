@@ -4,6 +4,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"github.com/Noooste/fhttp/http2"
+	"github.com/Noooste/go-utils"
 	tls "github.com/Noooste/utls"
 	"golang.org/x/net/proxy"
 	"net"
@@ -149,7 +150,6 @@ func (rc *RequestConn) tryUpgradeHTTP2(tr *http2.Transport) bool {
 		if rc.HTTP2 != nil {
 			return true
 		}
-
 		rc.HTTP2, err = tr.NewClientConn(rc.TLS)
 		return err == nil
 	}
@@ -228,11 +228,22 @@ func (rc *RequestConn) NewConn(req *Request, doPins bool, getSpec func() *tls.Cl
 		}
 	}
 
-	if doPins && req.parsedUrl.Scheme == SchemeHttps && rc.Pins == nil {
-		rc.Pins = NewPinManager()
-		if err = rc.Pins.New(addr); err != nil {
-			return
-		}
+	var done chan bool
+
+	if req.parsedUrl.Scheme == SchemeHttps || req.parsedUrl.Scheme == SchemeWss {
+		done = make(chan bool, 1)
+		defer close(done)
+
+		utils.SafeGoRoutine(func() {
+			if doPins && req.parsedUrl.Scheme == SchemeHttps && rc.Pins == nil {
+				rc.Pins = NewPinManager()
+				if err = rc.Pins.New(addr); err != nil {
+					done <- false
+					return
+				}
+			}
+			done <- true
+		})
 	}
 
 	if req.Proxy != "" {
@@ -262,6 +273,10 @@ func (rc *RequestConn) NewConn(req *Request, doPins bool, getSpec func() *tls.Cl
 	if req.parsedUrl.Scheme != SchemeWss && req.parsedUrl.Scheme != SchemeHttps {
 		// we are done for http and ws
 		return
+	}
+
+	if !<-done {
+		return errors.New("pin verification failed")
 	}
 
 	config := tls.Config{

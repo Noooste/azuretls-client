@@ -36,7 +36,7 @@ func newConnectDialer(proxyURLStr string) (proxy.ContextDialer, error) {
 		return nil, err
 	}
 
-	if proxyURL.Host == "" || proxyURL.Host == "undefined" {
+	if proxyURL.Host == "" {
 		return nil, errors.New("invalid url `" + proxyURLStr +
 			"`, make sure to specify full url like http(s)://username:password@ip:port")
 	}
@@ -51,7 +51,8 @@ func newConnectDialer(proxyURLStr string) (proxy.ContextDialer, error) {
 			proxyURL.Host = net.JoinHostPort(proxyURL.Host, "443")
 		}
 	case "":
-		return nil, errors.New("specify scheme explicitly (https://)")
+		return nil, errors.New("specify scheme explicitly (http:// or https://)")
+
 	default:
 		return nil, errors.New("scheme " + proxyURL.Scheme + " is not supported")
 	}
@@ -115,6 +116,7 @@ func (c *connectDialer) DialContext(ctx context.Context, network, address string
 			_ = rawConn.Close()
 			return nil, errors.New("Given proxy returned with a status code different than 200: " + resp.Status)
 		}
+
 		return newHTTP2Conn(rawConn, pw, resp.Body), nil
 	}
 
@@ -139,6 +141,7 @@ func (c *connectDialer) DialContext(ctx context.Context, network, address string
 			_ = rawConn.Close()
 			return nil, errors.New("Given proxy returned with a status code different than 200: " + resp.Status)
 		}
+
 		return rawConn, nil
 	}
 
@@ -225,6 +228,7 @@ func (c *connectDialer) DialContext(ctx context.Context, network, address string
 			c.cacheH2Mu.Unlock()
 		}
 		return proxyConn, err
+
 	default:
 		_ = rawConn.Close()
 		return nil, errors.New("negotiated unsupported application layer protocol: " + negotiatedProtocol)

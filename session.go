@@ -43,6 +43,8 @@ func NewSessionWithContext(ctx context.Context) *Session {
 		Connections:        NewRequestConnPool(),
 		GetClientHelloSpec: GetLastChromeVersion,
 
+		ServerPush: make(chan *Response, 10),
+
 		mu: &sync.Mutex{},
 
 		TimeOut: 30 * time.Second,
@@ -81,19 +83,16 @@ func (s *Session) Ip() (ip string, err error) {
 	return string(r.Body), nil
 }
 
-func (s *Session) send(request *Request) (*Response, error) {
+func (s *Session) send(request *Request) (response *Response, err error) {
 	if request.retries > 5 {
 		return nil, fmt.Errorf("retries exceeded")
 	}
 
 	var (
 		httpResponse *http.Response
-		response     *Response
 
 		roundTripper http.RoundTripper
 		rConn        *RequestConn
-
-		err error
 	)
 
 	httpRequest, err := s.buildRequest(request.ctx, request)
@@ -124,36 +123,29 @@ func (s *Session) send(request *Request) (*Response, error) {
 
 	httpResponse, err = roundTripper.RoundTrip(httpRequest)
 
-	if err != nil {
-		switch err.Error() {
-		case http2errClientConnClosed, http2errClientConnUnusable, http2errClientConnGotGoAway:
-			if rConn.HTTP2 != nil {
-				_ = rConn.HTTP2.Close()
-				rConn.HTTP2 = nil
-			}
-
-			// retry request with new connection
-			request.retries++
-			return s.send(request)
-
-		default:
-			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-				return nil, fmt.Errorf("timeout")
-			}
-			return nil, err
+	defer func() {
+		if s.Callback != nil {
+			s.Callback(request, response, err)
 		}
+	}()
+
+	if err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return nil, fmt.Errorf("timeout")
+		}
+		return
 	}
 
-	response = s.buildResponse(&Response{
+	response = &Response{
 		IgnoreBody: request.IgnoreBody,
 		Request:    request,
-	}, httpResponse)
-
-	utils.SafeGoRoutine(func() { s.saveVerbose(request, response, err) })
-
-	if s.Callback != nil {
-		s.Callback(request, response, err)
 	}
+
+	s.buildResponse(response, httpResponse)
+
+	utils.SafeGoRoutine(func() {
+		s.saveVerbose(request, response, err)
+	})
 
 	return response, nil
 }
