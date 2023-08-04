@@ -99,15 +99,14 @@ func stringToSpec(ja3 string, specifications TlsSpecifications, navigator string
 	}
 
 	//ciphers suite
-	finalCiphers, convertErr := TurnToUint(ciphers, navigator, true)
+	finalCiphers, convertErr := TurnToUint(ciphers, navigator)
 	if convertErr != "" {
 		return nil, errors.New(convertErr + "cipher")
 	}
 	specs.CipherSuites = finalCiphers
 
 	//extensions
-
-	extensions, minVers, maxVers, err := GetExtensions(rawExtensions, specifications, pointFormats, curves, navigator)
+	extensions, minVers, maxVers, err := GetExtensions(rawExtensions, &specifications, pointFormats, curves, navigator)
 
 	if err != nil {
 		return nil, err
@@ -119,79 +118,74 @@ func stringToSpec(ja3 string, specifications TlsSpecifications, navigator string
 	return specs, nil
 }
 
-func TurnToUint(value []string, navigator string, isCipherSuite bool) ([]uint16, string) {
+func TurnToUint(ciphers []string, navigator string) ([]uint16, string) {
 	var converted []uint16
-	var nextIndex int
 
-	if isCipherSuite && navigator == Chrome {
-		converted = make([]uint16, len(value)+1)
+	if navigator == Chrome {
+		converted = make([]uint16, 1, len(ciphers)+1)
 		converted[0] = tls.GREASE_PLACEHOLDER
-		nextIndex = 1
 	} else {
-		converted = make([]uint16, len(value))
-
+		converted = make([]uint16, 0, len(ciphers))
 	}
 
 	//cipher suites
-	for _, cipher := range value {
-		value, err := strconv.Atoi(cipher)
-
+	for _, cipher := range ciphers {
+		v, err := strconv.Atoi(cipher)
 		if err != nil {
 			return nil, cipher + " is not a valid "
 		}
-
-		converted[nextIndex] = uint16(value)
-
-		nextIndex++
+		converted = append(converted, uint16(v))
 	}
 
 	return converted, ""
 }
 
-func GetExtensions(extensions []string, specifications TlsSpecifications, defaultPointsFormat []string, defaultCurves []string, navigator string) ([]tls.TLSExtension, uint16, uint16, error) {
+func isGrease(e uint16) bool {
+	i := (e & 0xf0) | 0x0a
+	i |= i << 8
+	return i == e
+}
+
+func GetExtensions(extensions []string, specifications *TlsSpecifications, defaultPointsFormat []string, defaultCurves []string, navigator string) ([]tls.TLSExtension, uint16, uint16, error) {
 	var builtExtensions []tls.TLSExtension
-	var nextIndex int
 	var minVers uint16 = tls.VersionTLS10
 	var maxVers uint16 = tls.VersionTLS13
 
 	switch navigator {
 	case Chrome:
-		builtExtensions = make([]tls.TLSExtension, len(extensions)+1)
+		builtExtensions = make([]tls.TLSExtension, 1, len(extensions)+1)
 		builtExtensions[0] = &tls.UtlsGREASEExtension{}
-		nextIndex = 1
 	default:
-		builtExtensions = make([]tls.TLSExtension, len(extensions))
+		builtExtensions = make([]tls.TLSExtension, 0, len(extensions))
 	}
 
 	for _, extension := range extensions {
 		switch extension {
 		case "0":
-			builtExtensions[nextIndex] = &tls.SNIExtension{}
+			builtExtensions = append(builtExtensions, &tls.SNIExtension{})
 			break
 
 		case "5":
-			builtExtensions[nextIndex] = &tls.StatusRequestExtension{}
+			builtExtensions = append(builtExtensions, &tls.StatusRequestExtension{})
 			break
 
 		case "10":
 			var finalCurves []tls.CurveID
-			var i int
 			switch navigator {
 			case Chrome:
-				finalCurves = make([]tls.CurveID, len(defaultCurves)+1)
+				finalCurves = make([]tls.CurveID, 1, len(defaultCurves)+1)
 				finalCurves[0] = tls.CurveID(tls.GREASE_PLACEHOLDER)
-				i = 1
 			default:
-				finalCurves = make([]tls.CurveID, len(defaultCurves))
+				finalCurves = make([]tls.CurveID, 0, len(defaultCurves))
 			}
 			for j := range defaultCurves {
 				value, err := strconv.Atoi(defaultCurves[j])
 				if err != nil {
 					return nil, 0, 0, errors.New(defaultCurves[j] + " is not a valid curve")
 				}
-				finalCurves[j+i] = tls.CurveID(value)
+				finalCurves = append(finalCurves, tls.CurveID(value))
 			}
-			builtExtensions[nextIndex] = &tls.SupportedCurvesExtension{Curves: finalCurves}
+			builtExtensions = append(builtExtensions, &tls.SupportedCurvesExtension{Curves: finalCurves})
 			break
 
 		case "11":
@@ -204,188 +198,156 @@ func GetExtensions(extensions []string, specifications TlsSpecifications, defaul
 				}
 				finalPointsFormat[j] = uint8(value)
 			}
-			builtExtensions[nextIndex] = &tls.SupportedPointsExtension{SupportedPoints: finalPointsFormat}
+			builtExtensions = append(builtExtensions, &tls.SupportedPointsExtension{SupportedPoints: finalPointsFormat})
 			break
 
 		case "13":
 			if specifications.SignatureAlgorithms != nil {
-				builtExtensions[nextIndex] = &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: specifications.SignatureAlgorithms}
+				builtExtensions = append(builtExtensions, &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: specifications.SignatureAlgorithms})
 			} else {
-				builtExtensions[nextIndex] = &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: GetSupportedAlgorithms(navigator)}
+				builtExtensions = append(builtExtensions, &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: GetSupportedAlgorithms(navigator)})
 			}
 			break
 
 		case "16":
 			if specifications.AlpnProtocols != nil {
-				builtExtensions[nextIndex] = &tls.ALPNExtension{AlpnProtocols: specifications.AlpnProtocols}
+				builtExtensions = append(builtExtensions, &tls.ALPNExtension{AlpnProtocols: specifications.AlpnProtocols})
 			} else {
-				builtExtensions[nextIndex] = &tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}}
+				builtExtensions = append(builtExtensions, &tls.ALPNExtension{AlpnProtocols: []string{"h2", "http/1.1"}})
 			}
 			break
 
 		case "17":
-			builtExtensions[nextIndex] = &tls.StatusRequestV2Extension{}
+			builtExtensions = append(builtExtensions, &tls.StatusRequestV2Extension{})
 			break
 
 		case "18":
-			builtExtensions[nextIndex] = &tls.SCTExtension{}
+			builtExtensions = append(builtExtensions, &tls.SCTExtension{})
 			break
 
 		case "21":
-			builtExtensions[nextIndex] = &tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle}
+			builtExtensions = append(builtExtensions, &tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle})
 			break
 
 		case "22":
-			builtExtensions[nextIndex] = &tls.GenericExtension{Id: 22}
+			builtExtensions = append(builtExtensions, &tls.GenericExtension{Id: 22})
 			break
 
 		case "23":
-			builtExtensions[nextIndex] = &tls.UtlsExtendedMasterSecretExtension{}
+			builtExtensions = append(builtExtensions, &tls.UtlsExtendedMasterSecretExtension{})
 			break
 
 		case "27":
 			if specifications.CertCompressionAlgos != nil {
-				builtExtensions[nextIndex] = &tls.CompressCertificateExtension{Algorithms: specifications.CertCompressionAlgos}
+				builtExtensions = append(builtExtensions, &tls.CompressCertificateExtension{Algorithms: specifications.CertCompressionAlgos})
 			} else {
-				builtExtensions[nextIndex] = &tls.CompressCertificateExtension{Algorithms: []tls.CertCompressionAlgo{tls.CertCompressionBrotli}}
+				builtExtensions = append(builtExtensions, &tls.CompressCertificateExtension{Algorithms: []tls.CertCompressionAlgo{tls.CertCompressionBrotli}})
 			}
 			break
 
 		case "28":
-			builtExtensions[nextIndex] = &tls.FakeRecordSizeLimitExtension{}
+			builtExtensions = append(builtExtensions, &tls.FakeRecordSizeLimitExtension{})
 			break
 
 		case "35":
-			builtExtensions[nextIndex] = &tls.SessionTicketExtension{}
+			builtExtensions = append(builtExtensions, &tls.SessionTicketExtension{})
 			break
 
 		case "34":
-			var supportedAlgorithms []tls.SignatureScheme
-			if specifications.DelegatedCredentialsAlgorithmSignatures != nil {
-				supportedAlgorithms = make([]tls.SignatureScheme, len(specifications.DelegatedCredentialsAlgorithmSignatures))
-			} else {
-				supportedAlgorithms = []tls.SignatureScheme{
-					tls.ECDSAWithP256AndSHA256,
-					tls.ECDSAWithP384AndSHA384,
-					tls.ECDSAWithP521AndSHA512,
-					tls.ECDSAWithSHA1,
-				}
-			}
-			builtExtensions[nextIndex] = &tls.DelegatedCredentialsExtension{AlgorithmsSignature: supportedAlgorithms}
+			builtExtensions = append(builtExtensions, &tls.DelegatedCredentialsExtension{})
 			break
 
 		case "41":
-			builtExtensions[nextIndex] = &tls.GenericExtension{Id: 41}
+			builtExtensions = append(builtExtensions, &tls.GenericExtension{Id: 41})
 			break
 
 		case "43":
 			var supportedVersions []uint16
 			if versions := specifications.SupportedVersions; versions != nil {
-				supportedVersions = make([]uint16, len(versions))
-				for i, specVersion := range versions {
-					supportedVersions[i] = specVersion
-
-					if specVersion == tls.GREASE_PLACEHOLDER {
+				supportedVersions = specifications.SupportedVersions
+				for _, specVersion := range versions {
+					switch {
+					case isGrease(specVersion):
 						continue
-					}
-
-					if specVersion < minVers || minVers == 0 {
+					case specVersion < tls.VersionTLS10:
+						return nil, 0, 0, errors.New("> TLS 1.0 is not supported")
+					case specVersion > tls.VersionTLS13:
+						return nil, 0, 0, errors.New("> TLS 1.3 is not supported")
+					case specVersion < minVers, minVers == 0:
 						minVers = specVersion
-					}
-
-					if specVersion > maxVers || minVers == 0 {
+					case specVersion > maxVers, maxVers == 0:
 						maxVers = specVersion
 					}
 				}
 			} else {
 				supportedVersions, minVers, maxVers = GetSupportedVersion(navigator)
 			}
-			builtExtensions[nextIndex] = &tls.SupportedVersionsExtension{Versions: supportedVersions}
+
+			builtExtensions = append(builtExtensions, &tls.SupportedVersionsExtension{
+				Versions: supportedVersions,
+			})
 			break
 
 		case "44":
-			builtExtensions[nextIndex] = &tls.CookieExtension{}
+			builtExtensions = append(builtExtensions, &tls.CookieExtension{})
 			break
 
 		case "45":
 			if specifications.PSKKeyExchangeModes != nil {
-				builtExtensions[nextIndex] = &tls.PSKKeyExchangeModesExtension{Modes: specifications.PSKKeyExchangeModes}
+				builtExtensions = append(builtExtensions, &tls.PSKKeyExchangeModesExtension{Modes: specifications.PSKKeyExchangeModes})
 			} else {
-				builtExtensions[nextIndex] = &tls.PSKKeyExchangeModesExtension{Modes: []uint8{tls.PskModeDHE}}
+				builtExtensions = append(builtExtensions, &tls.PSKKeyExchangeModesExtension{Modes: []uint8{tls.PskModeDHE}})
 			}
 			break
 
 		case "49":
-			builtExtensions[nextIndex] = &tls.GenericExtension{Id: 49}
+			builtExtensions = append(builtExtensions, &tls.GenericExtension{Id: 49})
 			break
 
 		case "50":
 			if specifications.SignatureAlgorithmsCert != nil {
-				builtExtensions[nextIndex] = &tls.SignatureAlgorithmsCertExtension{SupportedSignatureAlgorithms: specifications.SignatureAlgorithmsCert}
+				builtExtensions = append(builtExtensions, &tls.SignatureAlgorithmsCertExtension{SupportedSignatureAlgorithms: specifications.SignatureAlgorithmsCert})
 			} else {
-				builtExtensions[nextIndex] = &tls.SignatureAlgorithmsCertExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{}}
+				builtExtensions = append(builtExtensions, &tls.SignatureAlgorithmsCertExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{}})
 			}
 			break
 
 		case "51":
 			switch navigator {
 			case Chrome:
-				builtExtensions[nextIndex] = &tls.KeyShareExtension{KeyShares: []tls.KeyShare{
+				builtExtensions = append(builtExtensions, &tls.KeyShareExtension{KeyShares: []tls.KeyShare{
 					{Group: tls.GREASE_PLACEHOLDER, Data: []byte{0}},
 					{Group: tls.X25519},
-				}}
+				}})
 
 			default: //firefox
-				builtExtensions[nextIndex] = &tls.KeyShareExtension{KeyShares: []tls.KeyShare{
+				builtExtensions = append(builtExtensions, &tls.KeyShareExtension{KeyShares: []tls.KeyShare{
 					{Group: tls.X25519},
 					{Group: tls.CurveP256},
-				}}
+				}})
 			}
 			break
 
 		case "30032":
-			builtExtensions[nextIndex] = &tls.GenericExtension{Id: 0x7550, Data: []byte{0}}
+			builtExtensions = append(builtExtensions, &tls.GenericExtension{Id: 0x7550, Data: []byte{0}})
 			break
 
 		case "13172":
-			builtExtensions[nextIndex] = &tls.NPNExtension{}
+			builtExtensions = append(builtExtensions, &tls.NPNExtension{})
 			break
 
 		case "17513":
 			if specifications.ApplicationSettingsProtocols != nil {
-				builtExtensions[nextIndex] = &tls.ApplicationSettingsExtension{SupportedALPNList: specifications.ApplicationSettingsProtocols}
+				builtExtensions = append(builtExtensions, &tls.ApplicationSettingsExtension{SupportedProtocols: specifications.ApplicationSettingsProtocols})
 			} else {
-				builtExtensions[nextIndex] = &tls.ApplicationSettingsExtension{SupportedALPNList: []string{"h2"}}
+				builtExtensions = append(builtExtensions, &tls.ApplicationSettingsExtension{SupportedProtocols: []string{"h2"}})
 			}
 			break
 
 		case "65281":
-			builtExtensions[nextIndex] = &tls.RenegotiationInfoExtension{Renegotiation: specifications.RenegotiationSupport}
+			builtExtensions = append(builtExtensions, &tls.RenegotiationInfoExtension{Renegotiation: specifications.RenegotiationSupport})
 			break
 		}
-
-		nextIndex++
-	}
-
-	length := len(builtExtensions)
-	for _, el := range builtExtensions {
-		if el == nil {
-			length--
-		}
-	}
-
-	if length != len(builtExtensions) {
-		newBuildExtensions := make([]tls.TLSExtension, length)
-
-		index := 0
-		for _, el := range builtExtensions {
-			if el != nil {
-				newBuildExtensions[index] = el
-				index++
-			}
-		}
-
-		return newBuildExtensions, minVers, maxVers, nil
 	}
 
 	return builtExtensions, minVers, maxVers, nil
@@ -490,7 +452,7 @@ func GetLastChromeVersion() *tls.ClientHelloSpec {
 		&tls.PSKKeyExchangeModesExtension{Modes: []uint8{
 			tls.PskModeDHE,
 		}},
-		&tls.ApplicationSettingsExtension{SupportedALPNList: []string{http2.NextProtoTLS}},
+		&tls.ApplicationSettingsExtension{SupportedProtocols: []string{http2.NextProtoTLS}},
 		&tls.CompressCertificateExtension{Algorithms: []tls.CertCompressionAlgo{
 			tls.CertCompressionBrotli,
 		}},

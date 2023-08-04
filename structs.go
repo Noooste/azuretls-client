@@ -20,10 +20,10 @@ const (
 )
 
 type Session struct {
-	Headers http.Header //deprecated, use OrderedHeaders instead
-
+	Headers      http.Header //deprecated, use OrderedHeaders instead
 	HeadersOrder HeaderOrder //deprecated
-	PHeader      PHeader
+
+	PHeader PHeader
 
 	OrderedHeaders OrderedHeaders
 
@@ -59,6 +59,8 @@ type Session struct {
 	ctx context.Context
 
 	UserAgent, SecChUa string
+
+	ServerPush chan *Response
 }
 
 type Request struct {
@@ -121,8 +123,6 @@ type Response struct {
 	TLS *tls.ConnectionState
 
 	ContentLength int64
-
-	ServerPush []*ServerPush
 }
 
 type ServerPush struct {

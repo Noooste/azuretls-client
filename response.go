@@ -1,45 +1,54 @@
 package azuretls
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	http "github.com/Noooste/fhttp"
-	"github.com/Noooste/fhttp/cookiejar"
+	"github.com/Noooste/go-utils"
 	"io"
-	"strings"
+	"net/url"
 )
 
-func (s *Session) buildResponse(response *Response, httpResponse *http.Response) *Response {
+func (s *Session) buildResponse(response *Response, httpResponse *http.Response) {
 	response.RawBody = httpResponse.Body
 	response.HttpResponse = httpResponse
 
+	var (
+		done    chan bool
+		headers = make(http.Header, len(httpResponse.Header))
+	)
+
 	if !response.IgnoreBody {
-		response.Body, _ = response.ReadBody()
+		done = make(chan bool, 1)
+		defer close(done)
+		utils.SafeGoRoutine(func() {
+			response.Body, _ = response.ReadBody()
+			done <- true
+		})
 	}
 
-	var Header = http.Header{}
-
 	for key, value := range httpResponse.Header {
-		Header[key] = value
+		headers[key] = value
 	}
 
 	response.Id = getRandomId()
 	response.StatusCode = httpResponse.StatusCode
-	response.Header = Header
-	response.Url = httpResponse.Request.URL.String()
+	response.Header = headers
 
-	if s.CookieJar == nil {
-		s.CookieJar, _ = cookiejar.New(nil)
+	var u *url.URL
+	if response.Url == "" {
+		response.Url = httpResponse.Request.URL.String()
+		u = httpResponse.Request.URL
+	} else {
+		u, _ = url.Parse(response.Url)
 	}
 
 	cookies := http.ReadSetCookies(httpResponse.Header)
-	s.CookieJar.SetCookies(httpResponse.Request.URL, cookies)
+	s.CookieJar.SetCookies(u, cookies)
 	response.Cookies = getCookiesMap(cookies)
-
 	response.ContentLength = httpResponse.ContentLength
 	response.TLS = httpResponse.TLS
 
-	return response
+	<-done
 }
 
 func (r *Response) ReadBody() ([]byte, error) {
@@ -64,44 +73,6 @@ func (r *Response) ReadBody() ([]byte, error) {
 func (r *Response) CloseBody() {
 	if r.RawBody != nil {
 		_ = r.RawBody.Close()
-	}
-}
-
-func buildServerPushResponse(response *http.Response) *ServerPush {
-	defer response.Body.Close()
-
-	var body string
-
-	encoding := response.Header.Get("content-encoding")
-
-	bodyBytes, err := io.ReadAll(response.Body)
-
-	if err != nil {
-		body = "error"
-	} else if encoding != "" {
-		result := DecompressBody(bodyBytes, encoding)
-		if strings.Contains(response.Header.Get("content-type"), "octet-stream") {
-			body = base64.StdEncoding.EncodeToString(result)
-		} else {
-			body = string(result)
-		}
-
-	} else {
-		body = string(bodyBytes)
-	}
-
-	var Header = map[string]string{}
-
-	for key, value := range response.Header {
-		Header[key] = value[0]
-	}
-
-	return &ServerPush{
-		StatusCode: response.StatusCode,
-		Body:       body,
-		Headers:    Header,
-		Cookies:    getCookiesMap(http.ReadSetCookies(response.Header)),
-		Url:        response.Request.URL.String(),
 	}
 }
 

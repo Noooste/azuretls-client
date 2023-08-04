@@ -5,7 +5,6 @@ import (
 	http "github.com/Noooste/fhttp"
 	"github.com/Noooste/fhttp/http2"
 	"net"
-	"sync"
 )
 
 func (s *Session) initTransport(browser string) (err error) {
@@ -20,20 +19,10 @@ func (s *Session) initTransport(browser string) (err error) {
 		if err = s.initHTTP2(browser); err != nil {
 			return
 		}
-		var serverPushEnabled bool
-		for _, v := range s.tr2.Settings {
-			if v.ID == http2.SettingEnablePush {
-				serverPushEnabled = v.Val == 1
-				break
-			}
-		}
-		if serverPushEnabled {
-			s.tr2.PushHandler = &DefaultPushHandler{
-				mu:     &sync.Mutex{},
-				listen: false,
-			}
-		}
 	}
+
+	s.tr2.PushHandler = &http2.DefaultPushHandler{}
+
 	return
 }
 
