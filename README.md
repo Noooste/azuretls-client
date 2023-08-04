@@ -151,7 +151,7 @@ session.Close()
 
 ### SSL Pinning
 
-SSL pinning is enable by default.
+SSL pinning is enabled by default.
 
 ```go
 session := azuretls.NewSession()
@@ -252,8 +252,8 @@ You can set call backs to the session with the `session.CallBack` method. It tak
 ```go
 session := azuretls.NewSession()
 
-session.CallBack = func(resp *http.Response) error {
-    fmt.Println(resp.StatusCode)
+session.CallBack = func(request *Request, response *Response, err error) {
+    fmt.Println(response.StatusCode)
     return nil
 }
 
