@@ -63,6 +63,9 @@ func toBytes(b any) []byte {
 		var buf = new(bytes.Buffer)
 		_, _ = io.Copy(buf, b.(io.Reader))
 		return buf.Bytes()
+	default:
+		var dumped []byte
+		dumped, _ = json.Marshal(b)
+		return dumped
 	}
-	return nil
 }

@@ -3,6 +3,7 @@ package azuretls
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	http "github.com/Noooste/fhttp"
 	"io"
 	"strings"
@@ -98,6 +99,13 @@ func (s *Session) buildRequest(ctx context.Context, req *Request) (*http.Request
 					reader = bytes.NewReader(req.Body.([]byte))
 				case io.Reader:
 					reader = req.Body.(io.Reader)
+				default:
+					var dumped []byte
+					dumped, err = json.Marshal(req.Body)
+					if err != nil {
+						return nil, err
+					}
+					reader = bytes.NewReader(dumped)
 				}
 			}
 
