@@ -40,7 +40,7 @@ func NewSessionWithContext(ctx context.Context) *Session {
 		CookieJar: cookieJar,
 		Browser:   Chrome,
 
-		Connections:        NewRequestConnPool(),
+		Connections:        NewRequestConnPool(ctx),
 		GetClientHelloSpec: GetLastChromeVersion,
 
 		ServerPush: make(chan *Response, 10),
@@ -60,6 +60,7 @@ func (s *Session) SetTimeout(timeout time.Duration) {
 
 func (s *Session) SetContext(ctx context.Context) {
 	s.ctx = ctx
+	s.Connections.SetContext(ctx)
 }
 
 var proxyCheckReg = regexp.MustCompile(`^(https?://)(?:(\w+)(:(\w*))@)?(\w[\w\-_]{0,61}\w?\.(\w{1,6}|[\w-]{1,30}\.\w{2,3})|((\d{1,3})(?:\.\d{1,3}){3}))(:(\d{1,5}))$`)
@@ -92,7 +93,7 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 		httpResponse *http.Response
 
 		roundTripper http.RoundTripper
-		rConn        *RequestConn
+		rConn        *Conn
 	)
 
 	httpRequest, err := s.buildRequest(request.ctx, request)
@@ -165,9 +166,7 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 	}
 
 	if req.ctx == nil {
-		var cancel context.CancelFunc
-		req.ctx, cancel = context.WithTimeout(s.ctx, req.TimeOut)
-		defer cancel()
+		req.ctx = s.ctx
 	}
 
 	var reqs []*Request
@@ -358,5 +357,5 @@ func (s *Session) Options(url string, args ...any) (*Response, error) {
 
 func (s *Session) Close() {
 	s.Connections.Close()
-	s.Connections = NewRequestConnPool()
+	s.Connections = NewRequestConnPool(s.ctx)
 }

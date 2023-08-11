@@ -30,7 +30,7 @@ type Session struct {
 	CookieJar *cookiejar.Jar
 	Browser   string
 
-	Connections *RequestConnPool
+	Connections *ConnPool
 
 	tr2 *http2.Transport
 	tr  *http.Transport
@@ -80,7 +80,7 @@ type Request struct {
 	HeaderOrder HeaderOrder //deprecated, use OrderedHeaders instead
 
 	OrderedHeaders OrderedHeaders
-	conn           *RequestConn
+	conn           *Conn
 
 	Proxy   string
 	Browser string

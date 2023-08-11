@@ -1,10 +1,10 @@
 package azuretls
 
 import (
+	"context"
 	"crypto/x509"
 	"errors"
 	"github.com/Noooste/fhttp/http2"
-	"github.com/Noooste/go-utils"
 	tls "github.com/Noooste/utls"
 	"golang.org/x/net/proxy"
 	"net"
@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-type RequestConn struct {
+type Conn struct {
 	TLS   *tls.UConn
 	HTTP2 *http2.ClientConn
 	Conn  net.Conn
@@ -21,31 +21,47 @@ type RequestConn struct {
 	mu *sync.RWMutex
 
 	Pins *PinManager
+
+	ctx context.Context
 }
 
-func NewRequestConn() *RequestConn {
-	return &RequestConn{mu: new(sync.RWMutex)}
-}
-
-type RequestConnPool struct {
-	hosts map[string]*RequestConn
-	mu    *sync.RWMutex
-}
-
-func NewRequestConnPool() *RequestConnPool {
-	return &RequestConnPool{
-		hosts: make(map[string]*RequestConn),
-		mu:    &sync.RWMutex{},
+func NewConn() *Conn {
+	return &Conn{
+		mu:  new(sync.RWMutex),
+		ctx: context.Background(),
 	}
 }
 
-func (p *RequestConnPool) Close() {
-	p.mu.Lock()
-	for _, c := range p.hosts {
+func (c *Conn) SetContext(ctx context.Context) {
+	c.ctx = ctx
+}
+
+type ConnPool struct {
+	hosts map[string]*Conn
+	mu    *sync.RWMutex
+
+	ctx context.Context
+}
+
+func NewRequestConnPool(ctx context.Context) *ConnPool {
+	return &ConnPool{
+		hosts: make(map[string]*Conn),
+		mu:    &sync.RWMutex{},
+		ctx:   ctx,
+	}
+}
+
+func (cp *ConnPool) SetContext(ctx context.Context) {
+	cp.ctx = ctx
+}
+
+func (cp *ConnPool) Close() {
+	cp.mu.Lock()
+	for _, c := range cp.hosts {
 		c.Close()
 	}
-	p.hosts = make(map[string]*RequestConn)
-	p.mu.Unlock()
+	cp.hosts = make(map[string]*Conn)
+	cp.mu.Unlock()
 }
 
 func getHost(u *url.URL) string {
@@ -61,75 +77,76 @@ func getHost(u *url.URL) string {
 	return host
 }
 
-func (p *RequestConnPool) Get(u *url.URL) (c *RequestConn, err error) {
+func (cp *ConnPool) Get(u *url.URL) (c *Conn, err error) {
 	var (
 		ok       bool
 		hostName = getHost(u)
 	)
 
-	p.mu.RLock()
-	c, ok = p.hosts[hostName]
-	p.mu.RUnlock()
+	cp.mu.RLock()
+	c, ok = cp.hosts[hostName]
+	cp.mu.RUnlock()
 
 	if !ok {
-		p.mu.Lock()
-		c, ok = p.hosts[hostName]
+		cp.mu.Lock()
+		c, ok = cp.hosts[hostName]
 		if !ok {
-			c = NewRequestConn()
-			p.hosts[hostName] = c
+			c = NewConn()
+			c.SetContext(cp.ctx)
+			cp.hosts[hostName] = c
 		}
-		p.mu.Unlock()
+		cp.mu.Unlock()
 	}
 	return
 }
 
-func (p *RequestConnPool) Set(u *url.URL, c *RequestConn) {
+func (cp *ConnPool) Set(u *url.URL, c *Conn) {
 	var (
 		ok       bool
 		hostName = getHost(u)
 	)
 
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	cp.mu.Lock()
+	defer cp.mu.Unlock()
 
-	_, ok = p.hosts[hostName]
+	_, ok = cp.hosts[hostName]
 	if !ok {
-		p.hosts[hostName] = c
+		cp.hosts[hostName] = c
 	}
 }
 
-func (p *RequestConnPool) Remove(u *url.URL) {
+func (cp *ConnPool) Remove(u *url.URL) {
 	var (
 		ok       bool
 		hostName = getHost(u)
-		c        *RequestConn
+		c        *Conn
 	)
 
-	p.mu.Lock()
-	defer p.mu.Unlock()
+	cp.mu.Lock()
+	defer cp.mu.Unlock()
 
-	c, ok = p.hosts[hostName]
+	c, ok = cp.hosts[hostName]
 	if ok {
 		c.Close()
-		delete(p.hosts, hostName)
+		delete(cp.hosts, hostName)
 	}
 }
 
-func (rc *RequestConn) makeTLS(req *Request, verifyPins bool, clientSpec func() *tls.ClientHelloSpec) error {
-	if rc.checkTLS() {
+func (c *Conn) makeTLS(req *Request, verifyPins bool, clientSpec func() *tls.ClientHelloSpec) error {
+	if c.checkTLS() {
 		return nil
 	}
-	if rc.TLS == nil {
-		return rc.NewConn(req, verifyPins, clientSpec)
+	if c.TLS == nil {
+		return c.NewConn(req, verifyPins, clientSpec)
 	}
 	return nil
 }
 
-func (rc *RequestConn) checkTLS() bool {
-	if rc.TLS == nil {
+func (c *Conn) checkTLS() bool {
+	if c.TLS == nil {
 		return false
-	} else if rc.TLS.ConnectionState().VerifiedChains != nil {
-		state := rc.TLS.ConnectionState()
+	} else if c.TLS.ConnectionState().VerifiedChains != nil {
+		state := c.TLS.ConnectionState()
 		for _, peerCert := range state.PeerCertificates {
 			if time.Now().After(peerCert.NotAfter) {
 				// the certificate is expired, so we need to create a new connection
@@ -141,39 +158,39 @@ func (rc *RequestConn) checkTLS() bool {
 	return true
 }
 
-func (rc *RequestConn) tryUpgradeHTTP2(tr *http2.Transport) bool {
-	if rc.HTTP2 != nil && rc.HTTP2.CanTakeNewRequest() {
+func (c *Conn) tryUpgradeHTTP2(tr *http2.Transport) bool {
+	if c.HTTP2 != nil && c.HTTP2.CanTakeNewRequest() {
 		return true
 
-	} else if rc.TLS.ConnectionState().NegotiatedProtocol == http2.NextProtoTLS {
+	} else if c.TLS.ConnectionState().NegotiatedProtocol == http2.NextProtoTLS {
 		var err error
-		if rc.HTTP2 != nil {
+		if c.HTTP2 != nil {
 			return true
 		}
-		rc.HTTP2, err = tr.NewClientConn(rc.TLS)
+		c.HTTP2, err = tr.NewClientConn(c.TLS)
 		return err == nil
 	}
 
 	return false
 }
 
-func (rc *RequestConn) Close() {
-	if rc.TLS != nil {
-		_ = rc.TLS.Close()
-		rc.TLS = nil
+func (c *Conn) Close() {
+	if c.TLS != nil {
+		_ = c.TLS.Close()
+		c.TLS = nil
 	}
-	if rc.Conn != nil {
-		_ = rc.Conn.Close()
-		rc.Conn = nil
+	if c.Conn != nil {
+		_ = c.Conn.Close()
+		c.Conn = nil
 	}
-	if rc.HTTP2 != nil {
-		_ = rc.HTTP2.Close()
-		rc.HTTP2 = nil
+	if c.HTTP2 != nil {
+		_ = c.HTTP2.Close()
+		c.HTTP2 = nil
 	}
-	rc.Pins = nil
+	c.Pins = nil
 }
 
-func (s *Session) initConn(req *Request) (rConn *RequestConn, err error) {
+func (s *Session) initConn(req *Request) (rConn *Conn, err error) {
 	// get connection from pool
 	rConn, err = s.Connections.Get(req.parsedUrl)
 
@@ -215,7 +232,7 @@ func (s *Session) initConn(req *Request) (rConn *RequestConn, err error) {
 	return
 }
 
-func (rc *RequestConn) NewConn(req *Request, doPins bool, getSpec func() *tls.ClientHelloSpec) (err error) {
+func (c *Conn) NewConn(req *Request, doPins bool, getSpec func() *tls.ClientHelloSpec) (err error) {
 	addr := req.parsedUrl.Host
 
 	if req.parsedUrl.Port() != "" {
@@ -234,16 +251,22 @@ func (rc *RequestConn) NewConn(req *Request, doPins bool, getSpec func() *tls.Cl
 		done = make(chan bool, 1)
 		defer close(done)
 
-		utils.SafeGoRoutine(func() {
-			if doPins && req.parsedUrl.Scheme == SchemeHttps && rc.Pins == nil {
-				rc.Pins = NewPinManager()
-				if err = rc.Pins.New(addr); err != nil {
+		go func() {
+			defer func() {
+				recover()
+			}()
+
+			if doPins && req.parsedUrl.Scheme == SchemeHttps && c.Pins == nil {
+				c.Pins = NewPinManager()
+				if err = c.Pins.New(addr); err != nil {
 					done <- false
 					return
 				}
 			}
+
+			//check if channel is closed
 			done <- true
-		})
+		}()
 	}
 
 	if req.Proxy != "" {
@@ -255,13 +278,13 @@ func (rc *RequestConn) NewConn(req *Request, doPins bool, getSpec func() *tls.Cl
 
 		dialer.(*connectDialer).Dialer.Timeout = req.TimeOut
 
-		rc.Conn, err = dialer.DialContext(req.ctx, "tcp", addr)
+		c.Conn, err = dialer.DialContext(req.ctx, "tcp", addr)
 		if err != nil {
 			return
 		}
 
 	} else {
-		rc.Conn, err = (&net.Dialer{
+		c.Conn, err = (&net.Dialer{
 			Timeout: req.TimeOut,
 		}).DialContext(req.ctx, "tcp", addr)
 
@@ -283,13 +306,13 @@ func (rc *RequestConn) NewConn(req *Request, doPins bool, getSpec func() *tls.Cl
 		ServerName:         req.parsedUrl.Hostname(),
 		InsecureSkipVerify: req.InsecureSkipVerify,
 		VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
-			if rc.Pins == nil {
+			if c.Pins == nil {
 				return nil
 			}
 
 			for _, chain := range verifiedChains {
 				for _, cert := range chain {
-					if rc.Pins.Verify(cert) {
+					if c.Pins.Verify(cert) {
 						return nil
 					}
 				}
@@ -299,14 +322,11 @@ func (rc *RequestConn) NewConn(req *Request, doPins bool, getSpec func() *tls.Cl
 		},
 	}
 
-	rc.TLS = tls.UClient(rc.Conn, &config, tls.HelloCustom)
-	if err = rc.TLS.ApplyPreset(getSpec()); err != nil {
+	c.TLS = tls.UClient(c.Conn, &config, tls.HelloCustom)
+	if err = c.TLS.ApplyPreset(getSpec()); err != nil {
 		return
 	}
-	if err = rc.TLS.SetDeadline(time.Now().Add(req.TimeOut)); err != nil {
-		return
-	}
-	err = rc.TLS.Handshake()
+	err = c.TLS.Handshake()
 
 	return
 }

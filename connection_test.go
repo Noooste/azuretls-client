@@ -4,6 +4,7 @@ import (
 	"runtime"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestSessionConn(t *testing.T) {
@@ -96,5 +97,36 @@ func TestHighConcurrency(t *testing.T) {
 
 	if ok != count {
 		t.Fatal("TestHighConcurrency failed, expected: ", count, ", got: ", ok)
+	}
+}
+
+func TestConnContext(t *testing.T) {
+	session := NewSession()
+
+	_, err := session.Do(&Request{
+		Method:  "GET",
+		Url:     "https://example.com/",
+		TimeOut: 2 * time.Second,
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if session.Connections.hosts["example.com:443"].ctx != session.ctx {
+		t.Fatal("TestConnContext failed, expected: ", session.ctx, ", got: ", session.Connections.hosts["example.com:443"].ctx)
+	}
+
+	select {
+	case <-time.After(2 * time.Second):
+		_, err := session.Get("https://example.com/")
+
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if session.Connections.hosts["example.com:443"].ctx != session.ctx {
+			t.Fatal("TestConnContext failed, expected: ", session.ctx, ", got: ", session.Connections.hosts["example.com:443"].ctx)
+		}
 	}
 }
