@@ -39,7 +39,8 @@ type Session struct {
 
 	mu *sync.Mutex
 
-	Proxy string // Proxy address.
+	Proxy      string // Proxy address.
+	ProxyHTTP2 bool   // If true, use HTTP2 for proxy connections.
 
 	Verbose           bool                                                  // If true, print detailed logs or debugging information.
 	VerbosePath       string                                                // Path for logging verbose information.
@@ -81,8 +82,7 @@ type Request struct {
 
 	conn *Conn // Connection associated with the request.
 
-	Proxy   string
-	Browser string
+	proxy string
 
 	DisableRedirects bool // If true, redirects won't be followed.
 	NoCookie         bool // If true, cookies won't be included in the request.

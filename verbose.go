@@ -84,6 +84,7 @@ func (s *Session) saveVerbose(request *Request, response *Response, err error) {
 			iter++
 		}
 
+		request.proxy = s.Proxy
 		requestPart := request.String()
 
 		var responsePart string
@@ -103,8 +104,8 @@ func (r *Request) String() string {
 	var buffer bytes.Buffer
 	buffer.WriteString(r.Method + " " + r.Url + "\n\n")
 
-	if r.Proxy != "" {
-		buffer.WriteString("Proxy : " + r.Proxy + "\n\n")
+	if r.proxy != "" {
+		buffer.WriteString("Proxy : " + r.proxy + "\n\n")
 	}
 
 	if h, ok := r.HttpRequest.Header[http.PHeaderOrderKey]; ok {

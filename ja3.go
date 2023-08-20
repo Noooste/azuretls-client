@@ -51,15 +51,7 @@ func DefaultTlsSpecifications() TlsSpecifications {
 }
 
 func (s *Session) ApplyJa3(ja3, navigator string) error {
-	_, err := stringToSpec(ja3, DefaultTlsSpecifications(), navigator)
-	if err != nil {
-		return err
-	}
-	s.GetClientHelloSpec = func() *tls.ClientHelloSpec {
-		specs, _ := stringToSpec(ja3, DefaultTlsSpecifications(), navigator)
-		return specs
-	}
-	return nil
+	return s.ApplyJa3WithSpecifications(ja3, DefaultTlsSpecifications(), navigator)
 }
 
 func (s *Session) ApplyJa3WithSpecifications(ja3 string, specifications TlsSpecifications, navigator string) error {

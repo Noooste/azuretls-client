@@ -11,7 +11,6 @@ import (
 	"github.com/Noooste/utls"
 	"io"
 	"net"
-
 	"net/url"
 	"sync"
 )
@@ -28,7 +27,8 @@ type proxyDialer struct {
 	h2Conn *http2.ClientConn
 	conn   net.Conn
 
-	tr *http2.Transport
+	tr         *http2.Transport
+	ForceHTTP2 bool
 }
 
 const (
@@ -164,9 +164,8 @@ func (c *proxyDialer) DialContext(ctx context.Context, network, address string) 
 			unlocked = true
 			proxyConn, err := c.connectHTTP2(req, rc, cc)
 			if err == nil {
-				return proxyConn, err
+				return proxyConn, nil
 			}
-			// else: carry on and try again
 		}
 	}
 
@@ -209,7 +208,8 @@ func (c *proxyDialer) initProxyConn(ctx context.Context, network string) (rawCon
 				ServerName:         c.ProxyURL.Hostname(),
 				InsecureSkipVerify: true,
 			}
-			tlsConn, err := tls.Dial(network, c.ProxyURL.Host, &tlsConf)
+			var tlsConn *tls.Conn
+			tlsConn, err = tls.Dial(network, c.ProxyURL.Host, &tlsConf)
 			if err != nil {
 				return nil, "", err
 			}
@@ -228,49 +228,25 @@ func (c *proxyDialer) initProxyConn(ctx context.Context, network string) (rawCon
 }
 
 func (c *proxyDialer) connect(req *http.Request, conn net.Conn, negotiatedProtocol string) (net.Conn, error) {
-	var err error
-
-	switch negotiatedProtocol {
-	case "":
-		fallthrough
-
-	case "http/1.1":
-		if err = c.connectHTTP1(req, conn); err != nil {
-			_ = conn.Close()
-			return nil, err
+	if c.ForceHTTP2 || negotiatedProtocol == http2.NextProtoTLS {
+		if h2clientConn, err := c.tr.NewClientConn(conn); err == nil {
+			if proxyConn, err := c.connectHTTP2(req, conn, h2clientConn); err == nil {
+				c.h2Mu.Lock()
+				c.h2Conn = h2clientConn
+				c.conn = conn
+				c.h2Mu.Unlock()
+				return proxyConn, err
+			}
 		}
-		return conn, nil
-
-	case "h2":
-		var (
-			h2clientConn *http2.ClientConn
-			proxyConn    net.Conn
-		)
-
-		h2clientConn, err = c.tr.NewClientConn(conn)
-
-		if err != nil {
-			_ = conn.Close()
-			return nil, err
-		}
-
-		proxyConn, err = c.connectHTTP2(req, conn, h2clientConn)
-		if err != nil {
-			_ = conn.Close()
-			return nil, err
-		}
-
-		c.h2Mu.Lock()
-		c.h2Conn = h2clientConn
-		c.conn = conn
-		c.h2Mu.Unlock()
-
-		return proxyConn, err
-
-	default:
-		_ = conn.Close()
-		return nil, errors.New("negotiated unsupported application layer protocol: " + negotiatedProtocol)
 	}
+
+	if err := c.connectHTTP1(req, conn); err != nil {
+		_ = conn.Close()
+		return nil, err
+	}
+
+	return conn, nil
+
 }
 
 func newHTTP2Conn(c net.Conn, pipedReqBody *io.PipeWriter, respBody io.ReadCloser) net.Conn {

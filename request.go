@@ -39,18 +39,10 @@ func (s *Session) prepareRequest(request *Request, args ...any) error {
 }
 
 func (s *Session) fillEmptyValues(request *Request) {
-	if request.Browser == "" {
-		request.Browser = s.Browser
-	}
-
 	if request.OrderedHeaders == nil {
 		if s.OrderedHeaders != nil && len(s.OrderedHeaders) > 0 {
 			request.OrderedHeaders = s.OrderedHeaders.Clone()
 		}
-	}
-
-	if request.Proxy == "" {
-		request.Proxy = s.Proxy
 	}
 
 	if request.TimeOut == 0 {
@@ -149,7 +141,7 @@ func (s *Session) formatHeader(req *Request, httpReq *http.Request) {
 		}
 		httpReq.Header[http.PHeaderOrderKey] = req.PHeader[:]
 	} else {
-		switch req.Browser {
+		switch s.Browser {
 		case Firefox:
 			httpReq.Header[http.PHeaderOrderKey] = []string{Method, Path, Authority, Scheme}
 		case Ios:

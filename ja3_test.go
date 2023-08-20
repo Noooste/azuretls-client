@@ -188,3 +188,16 @@ func TestGetLastIosVersion(t *testing.T) {
 		t.Fatal("Expected application_layer_protocol_negotiation (16), got ", extensions[6].(map[string]any)["name"])
 	}
 }
+
+func BenchmarkGetSupportedAlgorithms(b *testing.B) {
+	var navigators = []string{
+		Chrome,
+		Firefox,
+		Opera,
+		Safari,
+	}
+
+	for _, navigator := range navigators {
+		GetSupportedAlgorithms(navigator)
+	}
+}

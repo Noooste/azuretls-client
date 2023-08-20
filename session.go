@@ -116,7 +116,7 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 	request.HttpRequest = httpRequest
 	request.parsedUrl = httpRequest.URL
 
-	if err = s.initTransport(request.Browser); err != nil {
+	if err = s.initTransport(s.Browser); err != nil {
 		utils.SafeGoRoutine(func() { s.saveVerbose(request, nil, err) })
 		return nil, err
 	}
@@ -209,9 +209,7 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 				Method:             redirectMethod,
 				Url:                u.String(),
 				parsedUrl:          u,
-				Proxy:              oldReq.Proxy,
 				IgnoreBody:         oldReq.IgnoreBody,
-				Browser:            oldReq.Browser,
 				TimeOut:            oldReq.TimeOut,
 				InsecureSkipVerify: oldReq.InsecureSkipVerify,
 				PHeader:            oldReq.PHeader,

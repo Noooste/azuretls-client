@@ -16,7 +16,10 @@ import (
 type Conn struct {
 	TLS   *tls.UConn        // tls connection
 	HTTP2 *http2.ClientConn // http2 connection
-	Conn  net.Conn          // tcp connection
+	h2tr  *http2.Transport
+	h2    bool
+
+	Conn net.Conn // tcp connection
 
 	Pins *PinManager // pin manager
 
@@ -76,8 +79,6 @@ func (cp *ConnPool) Close() {
 	for _, c := range cp.hosts {
 		c.Close()
 	}
-
-	cp.hosts = make(map[string]*Conn)
 }
 
 func getHost(u *url.URL) string {
@@ -177,12 +178,8 @@ func (c *Conn) checkTLS() bool {
 func (c *Conn) tryUpgradeHTTP2(tr *http2.Transport) bool {
 	if c.HTTP2 != nil && c.HTTP2.CanTakeNewRequest() {
 		return true
-
 	} else if c.TLS.ConnectionState().NegotiatedProtocol == http2.NextProtoTLS {
 		var err error
-		if c.HTTP2 != nil {
-			return true
-		}
 		c.HTTP2, err = tr.NewClientConn(c.TLS)
 		return err == nil
 	}
@@ -210,12 +207,29 @@ func (s *Session) initConn(req *Request) (rConn *Conn, err error) {
 	// get connection from pool
 	rConn, err = s.Connections.Get(req.parsedUrl)
 
+	if rConn.h2tr == nil {
+		rConn.h2tr = s.tr2
+		rConn.h2 = s.ProxyHTTP2
+	}
+
 	host := getHost(req.parsedUrl)
 
-	rConn.ClientHelloSpec = s.GetClientHelloSpec
-	rConn.TimeOut = req.TimeOut
-	rConn.InsecureSkipVerify = req.InsecureSkipVerify
-	rConn.Proxy = req.Proxy
+	if rConn.ClientHelloSpec == nil {
+		rConn.ClientHelloSpec = s.GetClientHelloSpec
+	}
+
+	if rConn.TimeOut == 0 {
+		rConn.TimeOut = req.TimeOut
+	}
+
+	if rConn.InsecureSkipVerify == false {
+		rConn.InsecureSkipVerify = req.InsecureSkipVerify
+	}
+
+	if rConn.Proxy != s.Proxy {
+		rConn.Close()
+		rConn.Proxy = s.Proxy
+	}
 
 	rConn.SetContext(s.ctx)
 
@@ -237,7 +251,9 @@ func (s *Session) initConn(req *Request) (rConn *Conn, err error) {
 			rConn.Close()
 			return
 
-		} else if req.parsedUrl.Scheme != SchemeWss {
+		}
+
+		if req.parsedUrl.Scheme != SchemeWss {
 			// if tls connection is established, we can try to upgrade it to http2
 			rConn.tryUpgradeHTTP2(s.tr2)
 		}
@@ -245,11 +261,9 @@ func (s *Session) initConn(req *Request) (rConn *Conn, err error) {
 	case SchemeHttp, SchemeWs:
 		// for http we need to make tcp connection first
 		if rConn.Conn == nil {
-			if rConn.Conn == nil {
-				if err = rConn.New(host); err != nil {
-					rConn.Close()
-					return
-				}
+			if err = rConn.New(host); err != nil {
+				rConn.Close()
+				return
 			}
 		}
 
@@ -317,11 +331,9 @@ func (c *Conn) NewTLS(addr string) (err error) {
 	}
 
 	c.TLS = tls.UClient(c.Conn, &config, tls.HelloCustom)
-
 	if err = c.TLS.ApplyPreset(c.ClientHelloSpec()); err != nil {
 		return
 	}
-
 	return c.TLS.HandshakeContext(c.ctx)
 }
 
@@ -330,7 +342,15 @@ func (c *Conn) DialContext(ctx context.Context, network, addr string) (net.Conn,
 		if err := c.assignProxy(c.Proxy); err != nil {
 			return nil, err
 		}
-		return c.proxyDialer.DialContext(ctx, network, addr)
+
+		c.proxyDialer.tr = c.h2tr
+		c.proxyDialer.ForceHTTP2 = c.h2
+
+		if ctx == nil {
+			return c.proxyDialer.Dial(network, addr)
+		} else {
+			return c.proxyDialer.DialContext(ctx, network, addr)
+		}
 	}
 
 	dialer := &net.Dialer{
