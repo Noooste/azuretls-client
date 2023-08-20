@@ -12,11 +12,11 @@ func TestRedirect(t *testing.T) {
 	}
 
 	if response.StatusCode != 200 {
-		t.Fatal("TestRedirect2_307 failed, expected: 200, got: ", response.StatusCode)
+		t.Fatal("TestRedirect failed, expected: 200, got: ", response.StatusCode)
 	}
 
 	if response.Url != "https://httpbin.org/get" {
-		t.Fatal("TestRedirect2_307 failed, expected: https://httpbin.org/get, got: ", response.Url)
+		t.Fatal("TestRedirect failed, expected: https://httpbin.org/get, got: ", response.Url)
 	}
 }
 
