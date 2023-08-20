@@ -77,7 +77,7 @@ func TestProxy(t *testing.T) {
 
 	session.InsecureSkipVerify = true
 
-	session.SetProxy(os.Getenv("test_proxy"))
+	session.SetProxy(os.Getenv("HTTP_PROXY"))
 
 	response, err = session.Get("https://api.ipify.org/")
 
@@ -100,7 +100,7 @@ func TestProxy2(t *testing.T) {
 	session := NewSession()
 
 	session.ProxyHTTP2 = true
-	session.SetProxy(os.Getenv("test_proxy"))
+	session.SetProxy(os.Getenv("HTTP_PROXY"))
 
 	_, err := session.Get("https://tls.peet.ws/api/all")
 
@@ -116,7 +116,7 @@ func TestProxy3(t *testing.T) {
 
 	session := NewSession()
 	session.ProxyHTTP2 = true
-	session.SetProxy(os.Getenv("test_proxy"))
+	session.SetProxy(os.Getenv("HTTPS_PROXY"))
 
 	_, err := session.Get("https://www.nike.com/fr/")
 
