@@ -42,8 +42,6 @@ func NewSessionWithContext(ctx context.Context) *Session {
 		Connections:        NewRequestConnPool(ctx),
 		GetClientHelloSpec: GetLastChromeVersion,
 
-		ServerPush: make(chan *Response),
-
 		mu: new(sync.Mutex),
 
 		TimeOut: 30 * time.Second,
@@ -217,7 +215,6 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 				Browser:            oldReq.Browser,
 				TimeOut:            oldReq.TimeOut,
 				InsecureSkipVerify: oldReq.InsecureSkipVerify,
-				listenServerPush:   oldReq.listenServerPush,
 				PHeader:            oldReq.PHeader,
 				ctx:                oldReq.ctx,
 			}

@@ -62,8 +62,6 @@ type Session struct {
 	ctx context.Context // Context for cancellable and timeout operations.
 
 	UserAgent, SecChUa string // Headers for User-Agent and Sec-Ch-Ua, respectively.
-
-	ServerPush chan *Response // Channel to receive server push notifications.
 }
 
 // Request represents the details and configuration for an individual HTTP(S)
@@ -98,13 +96,11 @@ type Request struct {
 
 	IsRedirected bool // Indicates if the current request is a result of a redirection.
 
-	FetchServerPush    bool // If true, the request will fetch server pushes.
 	InsecureSkipVerify bool // If true, server's certificate is not verified.
 
 	IgnoreBody bool // If true, the body of the response is not read.
 
-	Proto            string
-	listenServerPush bool // Indicates whether to listen for server pushes.
+	Proto string
 
 	contentLength int64 // Length of content in the request.
 
