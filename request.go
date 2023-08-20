@@ -156,9 +156,9 @@ func (s *Session) buildRequest(ctx context.Context, req *Request) (*http.Request
 	}
 
 	if req.PHeader[0] != "" {
-		for _, el := range req.PHeader {
+		for i, el := range req.PHeader {
 			if el[0] != ':' {
-				el = ":" + el
+				req.PHeader[i] = ":" + el
 			}
 		}
 		newReq.Header[http.PHeaderOrderKey] = req.PHeader[:]

@@ -55,6 +55,10 @@ func NewSessionWithContext(ctx context.Context) *Session {
 
 func (s *Session) SetTimeout(timeout time.Duration) {
 	s.TimeOut = timeout
+	if s.tr != nil {
+		s.tr.TLSHandshakeTimeout = timeout
+		s.tr.ResponseHeaderTimeout = timeout
+	}
 }
 
 func (s *Session) SetContext(ctx context.Context) {
@@ -64,8 +68,14 @@ func (s *Session) SetContext(ctx context.Context) {
 
 var proxyCheckReg = regexp.MustCompile(`^(https?://)(?:(\w+)(:(\w*))@)?(\w[\w\-_]{0,61}\w?\.(\w{1,6}|[\w-]{1,30}\.\w{2,3})|((\d{1,3})(?:\.\d{1,3}){3}))(:(\d{1,5}))$`)
 
-func (s *Session) SetProxy(proxy string) {
+func (s *Session) SetProxy(proxy string) error {
 	defer s.Close()
+
+	if proxy == "" {
+		return fmt.Errorf("proxy is empty")
+	} else if strings.HasPrefix(proxy, "socks5://") {
+		return fmt.Errorf("socks5 proxy is not supported yet")
+	}
 
 	switch {
 	case proxyCheckReg.MatchString(proxy), strings.HasPrefix(proxy, "http://"), strings.HasPrefix(proxy, "https://"):
@@ -73,6 +83,10 @@ func (s *Session) SetProxy(proxy string) {
 	default:
 		s.Proxy = formatProxy(proxy)
 	}
+
+	s.Connections.Close()
+
+	return nil
 }
 
 func (s *Session) Ip() (ip string, err error) {

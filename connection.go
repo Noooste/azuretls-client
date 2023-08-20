@@ -33,9 +33,13 @@ type Conn struct {
 NewConn allocate a new empty connection struct
 */
 func NewConn() *Conn {
+	return NewConnWithContext(context.Background())
+}
+
+func NewConnWithContext(ctx context.Context) *Conn {
 	return &Conn{
 		mu:  new(sync.RWMutex),
-		ctx: context.Background(),
+		ctx: ctx,
 	}
 }
 
@@ -208,6 +212,7 @@ func (s *Session) initConn(req *Request) (rConn *Conn, err error) {
 	rConn.ClientHelloSpec = s.GetClientHelloSpec
 	rConn.TimeOut = req.TimeOut
 	rConn.InsecureSkipVerify = req.InsecureSkipVerify
+	rConn.SetContext(s.ctx)
 
 	rConn.mu.Lock()
 	defer rConn.mu.Unlock()
@@ -218,6 +223,9 @@ func (s *Session) initConn(req *Request) (rConn *Conn, err error) {
 
 	// init tls connection if needed
 	switch req.parsedUrl.Scheme {
+	case "":
+		return nil, errors.New("scheme is empty")
+
 	case SchemeHttps, SchemeWss:
 		// for secured http we need to make tls connection first
 		if err = rConn.makeTLS(host, req.Proxy); err != nil {
@@ -241,7 +249,7 @@ func (s *Session) initConn(req *Request) (rConn *Conn, err error) {
 		}
 
 	default:
-		err = errors.New("unknown scheme")
+		return nil, errors.New("unsupported scheme")
 	}
 
 	return
@@ -326,10 +334,10 @@ func (c *Conn) NewTLS(addr, proxy string) (err error) {
 	}
 
 	c.TLS = tls.UClient(c.Conn, &config, tls.HelloCustom)
+
 	if err = c.TLS.ApplyPreset(c.ClientHelloSpec()); err != nil {
 		return
 	}
 
-	err = c.TLS.Handshake()
-	return
+	return c.TLS.HandshakeContext(c.ctx)
 }
