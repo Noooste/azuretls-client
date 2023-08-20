@@ -53,6 +53,7 @@ func NewSessionWithContext(ctx context.Context) *Session {
 	return s
 }
 
+// SetTimeout sets timeout for the session
 func (s *Session) SetTimeout(timeout time.Duration) {
 	s.TimeOut = timeout
 	if s.tr != nil {
