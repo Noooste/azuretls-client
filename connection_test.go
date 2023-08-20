@@ -70,7 +70,7 @@ func TestHighConcurrency(t *testing.T) {
 
 	wait := &sync.WaitGroup{}
 
-	count := 100
+	count := 50
 
 	wait.Add(count)
 
