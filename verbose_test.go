@@ -7,7 +7,7 @@ import (
 )
 
 func TestSession_EnableVerbose(t *testing.T) {
-	//defer os.RemoveAll("./tmp")
+	defer os.RemoveAll("./tmp")
 
 	session := NewSession()
 

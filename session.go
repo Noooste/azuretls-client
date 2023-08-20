@@ -9,6 +9,7 @@ import (
 	"github.com/Noooste/go-utils"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -32,8 +33,6 @@ func NewSessionWithContext(ctx context.Context) *Session {
 	cookieJar, _ := cookiejar.New(nil)
 
 	s := &Session{
-		Headers:        make(http.Header),
-		HeadersOrder:   make(HeaderOrder, 0),
 		OrderedHeaders: make(OrderedHeaders, 0),
 
 		CookieJar: cookieJar,
@@ -41,6 +40,9 @@ func NewSessionWithContext(ctx context.Context) *Session {
 
 		Connections:        NewRequestConnPool(ctx),
 		GetClientHelloSpec: GetLastChromeVersion,
+
+		UserAgent: utils.UserAgent,
+		SecChUa:   utils.SecChUa,
 
 		mu: new(sync.Mutex),
 
@@ -102,7 +104,6 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 
 	var (
 		httpResponse *http.Response
-
 		roundTripper http.RoundTripper
 		rConn        *Conn
 	)
@@ -170,9 +171,7 @@ func (s *Session) Do(request *Request, args ...any) (*Response, error) {
 }
 
 func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
-	err = s.prepareRequest(req, args...)
-
-	if err != nil {
+	if err = s.prepareRequest(req, args...); err != nil {
 		return
 	}
 
@@ -217,6 +216,7 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 				InsecureSkipVerify: oldReq.InsecureSkipVerify,
 				PHeader:            oldReq.PHeader,
 				ctx:                oldReq.ctx,
+				OrderedHeaders:     oldReq.OrderedHeaders,
 			}
 
 			err = s.prepareRequest(req, args...)
@@ -224,24 +224,16 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 				return
 			}
 
-			if oldReq.OrderedHeaders != nil {
-				req.OrderedHeaders = oldReq.OrderedHeaders.Clone()
-			} else if oldReq.Header != nil {
-				req.Header = oldReq.Header.Clone()
-				req.HeaderOrder = oldReq.HeaderOrder
-			}
-
 			oldRequest := reqs[0]
 
 			if includeBody && oldRequest.Body != nil {
 				req.Body = oldRequest.Body
 				req.contentLength = oldRequest.contentLength
+				req.OrderedHeaders.Set("content-length", strconv.Itoa(int(req.contentLength)))
 			} else {
 				req.contentLength = 0
-			}
-
-			if req.contentLength != 0 {
-				req.OrderedHeaders = req.OrderedHeaders.Del("content-length")
+				req.OrderedHeaders.Del("content-length")
+				req.OrderedHeaders.Del("content-type")
 			}
 
 			// Add the Referer header from the most recent
@@ -263,6 +255,7 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 		}
 
 		var shouldRedirect bool
+
 		redirectMethod, shouldRedirect, includeBody = redirectBehavior(req.Method, resp, reqs[0])
 		if !shouldRedirect {
 			req.CloseBody()
@@ -272,6 +265,8 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 		if redirectMethod == http.MethodGet {
 			req.Body = nil
 			req.contentLength = 0
+			req.OrderedHeaders.Del("content-length")
+			req.OrderedHeaders.Del("content-type")
 		}
 
 		req.CloseBody()

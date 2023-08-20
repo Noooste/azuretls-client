@@ -147,9 +147,11 @@ func isGrease(e uint16) bool {
 }
 
 func GetExtensions(extensions []string, specifications *TlsSpecifications, defaultPointsFormat []string, defaultCurves []string, navigator string) ([]tls.TLSExtension, uint16, uint16, error) {
-	var builtExtensions []tls.TLSExtension
-	var minVers uint16 = tls.VersionTLS10
-	var maxVers uint16 = tls.VersionTLS13
+	var (
+		builtExtensions []tls.TLSExtension
+		minVers         uint16 = tls.VersionTLS10
+		maxVers         uint16 = tls.VersionTLS13
+	)
 
 	switch navigator {
 	case Chrome:

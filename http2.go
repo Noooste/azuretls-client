@@ -54,6 +54,26 @@ func (s *Session) ApplyHTTP2(fp string) error {
 		preHeader    = split[3]
 	)
 
+	if err := applySettings(settings, s.tr2); err != nil {
+		return err
+	}
+
+	if err := applyWindowUpdate(windowUpdate, s.tr2); err != nil {
+		return err
+	}
+
+	if err := applyPriorities(priorities, s.tr2); err != nil {
+		return err
+	}
+
+	if err := applyPreHeader(preHeader, &s.PHeader, s.tr2); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func applySettings(settings string, tr *http2.Transport) error {
 	if settings != "0" {
 		values := strings.Split(settings, ",")
 
@@ -85,24 +105,32 @@ func (s *Session) ApplyHTTP2(fp string) error {
 				Val: uint32(val),
 			})
 
-			s.tr2.Settings = settingsFrame
+			tr.Settings = settingsFrame
 		}
 	} else {
-		s.tr2.Settings = make([]http2.Setting, 0)
+		tr.Settings = make([]http2.Setting, 0)
 	}
 
+	return nil
+}
+
+func applyWindowUpdate(windowUpdate string, tr *http2.Transport) error {
 	if windowUpdate == "0" {
-		s.tr2.WindowsUpdateSize = (2 << 15) - 1
+		tr.WindowsUpdateSize = (2 << 15) - 1
 	} else {
 		if ws, err := strconv.Atoi(windowUpdate); err != nil {
 			return fmt.Errorf(invalidWindow, windowUpdate)
 		} else if ws == 0 {
 			return fmt.Errorf(invalidWindow, windowUpdate)
 		} else {
-			s.tr2.WindowsUpdateSize = uint32(ws)
+			tr.WindowsUpdateSize = uint32(ws)
 		}
 	}
 
+	return nil
+}
+
+func applyPriorities(priorities string, tr *http2.Transport) error {
 	if priorities != "0" {
 		rawPriorities := strings.Split(priorities, ",")
 		streamPriorities := make([]http2.StreamPriority, 0, len(rawPriorities))
@@ -146,12 +174,16 @@ func (s *Session) ApplyHTTP2(fp string) error {
 			})
 		}
 
-		s.tr2.StreamPriorities = streamPriorities
+		tr.StreamPriorities = streamPriorities
 
 	} else {
-		s.tr2.StreamPriorities = make([]http2.StreamPriority, 0)
+		tr.StreamPriorities = make([]http2.StreamPriority, 0)
 	}
 
+	return nil
+}
+
+func applyPreHeader(preHeader string, h *PHeader, tr *http2.Transport) error {
 	if preHeader != "0" {
 		headers := strings.Split(preHeader, ",")
 		if len(headers) != 4 {
@@ -161,28 +193,28 @@ func (s *Session) ApplyHTTP2(fp string) error {
 		for i, header := range headers {
 			switch header {
 			case "m":
-				s.PHeader[i] = Method
+				h[i] = Method
 			case "p":
-				s.PHeader[i] = Path
+				h[i] = Path
 			case "s":
-				s.PHeader[i] = Scheme
+				h[i] = Scheme
 			case "a":
-				s.PHeader[i] = Authority
+				h[i] = Authority
 			default:
 				return fmt.Errorf(invalidPre, header)
 			}
 		}
 	}
 
-	s.tr2.HeaderPriorities = defaultHeaderPriorities(s.Browser)
+	tr.HeaderPriorities = defaultHeaderPriorities("")
 
-	for _, setting := range s.tr2.Settings {
+	for _, setting := range tr.Settings {
 		switch setting.ID {
 		case http2.SettingInitialWindowSize:
-			s.tr2.InitialWindowSize = setting.Val
+			tr.InitialWindowSize = setting.Val
 
 		case http2.SettingHeaderTableSize:
-			s.tr2.HeaderTableSize = setting.Val
+			tr.HeaderTableSize = setting.Val
 		}
 	}
 

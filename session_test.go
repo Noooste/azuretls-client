@@ -3,8 +3,8 @@ package azuretls
 import (
 	"bytes"
 	"context"
+	"errors"
 	http "github.com/Noooste/fhttp"
-	"log"
 	"strings"
 	"testing"
 	"time"
@@ -80,7 +80,7 @@ func TestNewSessionWithContext(t *testing.T) {
 
 	_, err := session.Do(req)
 
-	if err == nil || !strings.Contains(err.Error(), "timeout") {
+	if err == nil || !(strings.Contains(err.Error(), "timeout") || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)) {
 		t.Fatal("TestSession_SetTimeout failed, expected: timeout, got: ", err)
 		return
 	}
@@ -141,6 +141,4 @@ func TestSession_Post(t *testing.T) {
 		t.Fatal("TestSession_Post failed, expected: not contains, got: ", resp.Body)
 		return
 	}
-
-	log.Println(string(resp.Body))
 }

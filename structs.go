@@ -24,9 +24,6 @@ const (
 // connection pool, and other attributes necessary to perform and customize
 // requests.
 type Session struct {
-	Headers      http.Header // Deprecated: OrderedHeaders should be used instead.
-	HeadersOrder HeaderOrder // Deprecated.
-
 	PHeader        PHeader
 	OrderedHeaders OrderedHeaders
 
@@ -79,12 +76,10 @@ type Request struct {
 	Body any
 	body []byte
 
-	PHeader     PHeader
-	Header      http.Header // Deprecated: OrderedHeaders should be used instead.
-	HeaderOrder HeaderOrder // Deprecated.
-
+	PHeader        PHeader
 	OrderedHeaders OrderedHeaders
-	conn           *Conn // Connection associated with the request.
+
+	conn *Conn // Connection associated with the request.
 
 	Proxy   string
 	Browser string

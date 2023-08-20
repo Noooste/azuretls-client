@@ -23,6 +23,9 @@ type Conn struct {
 	TimeOut            time.Duration
 	InsecureSkipVerify bool
 
+	Proxy       string
+	proxyDialer *proxyDialer
+
 	ClientHelloSpec func() *tls.ClientHelloSpec
 
 	mu  *sync.RWMutex
@@ -145,12 +148,12 @@ func (cp *ConnPool) Remove(u *url.URL) {
 	}
 }
 
-func (c *Conn) makeTLS(addr string, proxy string) error {
+func (c *Conn) makeTLS(addr string) error {
 	if c.checkTLS() {
 		return nil
 	}
 	if c.TLS == nil {
-		return c.NewTLS(addr, proxy)
+		return c.NewTLS(addr)
 	}
 	return nil
 }
@@ -212,6 +215,8 @@ func (s *Session) initConn(req *Request) (rConn *Conn, err error) {
 	rConn.ClientHelloSpec = s.GetClientHelloSpec
 	rConn.TimeOut = req.TimeOut
 	rConn.InsecureSkipVerify = req.InsecureSkipVerify
+	rConn.Proxy = req.Proxy
+
 	rConn.SetContext(s.ctx)
 
 	rConn.mu.Lock()
@@ -228,7 +233,7 @@ func (s *Session) initConn(req *Request) (rConn *Conn, err error) {
 
 	case SchemeHttps, SchemeWss:
 		// for secured http we need to make tls connection first
-		if err = rConn.makeTLS(host, req.Proxy); err != nil {
+		if err = rConn.makeTLS(host); err != nil {
 			rConn.Close()
 			return
 
@@ -241,7 +246,7 @@ func (s *Session) initConn(req *Request) (rConn *Conn, err error) {
 		// for http we need to make tcp connection first
 		if rConn.Conn == nil {
 			if rConn.Conn == nil {
-				if err = rConn.New(host, req.Proxy); err != nil {
+				if err = rConn.New(host); err != nil {
 					rConn.Close()
 					return
 				}
@@ -255,34 +260,12 @@ func (s *Session) initConn(req *Request) (rConn *Conn, err error) {
 	return
 }
 
-/*
-New make the connection to the remote server. If proxy is not empty, it will use the proxy to connect to the remote server.
-*/
-type dialer interface {
-	DialContext(ctx context.Context, network, addr string) (net.Conn, error)
-}
-
-func (c *Conn) New(addr, proxy string) (err error) {
-	var dial dialer
-
-	if proxy != "" {
-		dial, err = newConnectDialer(proxy)
-		if err != nil {
-			return
-		}
-		dial.(*connectDialer).Dialer.Timeout = c.TimeOut
-
-	} else {
-		dial = &net.Dialer{
-			Timeout: c.TimeOut,
-		}
-	}
-
-	c.Conn, err = dial.DialContext(c.ctx, "tcp", addr)
+func (c *Conn) New(addr string) (err error) {
+	c.Conn, err = c.DialContext(c.ctx, "tcp", addr)
 	return
 }
 
-func (c *Conn) NewTLS(addr, proxy string) (err error) {
+func (c *Conn) NewTLS(addr string) (err error) {
 	var done = make(chan bool, 1)
 	defer close(done)
 
@@ -303,7 +286,7 @@ func (c *Conn) NewTLS(addr, proxy string) (err error) {
 		done <- true
 	}()
 
-	if err = c.New(addr, proxy); err != nil {
+	if err = c.New(addr); err != nil {
 		return err
 	}
 
@@ -340,4 +323,19 @@ func (c *Conn) NewTLS(addr, proxy string) (err error) {
 	}
 
 	return c.TLS.HandshakeContext(c.ctx)
+}
+
+func (c *Conn) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	if c.Proxy != "" {
+		if err := c.assignProxy(c.Proxy); err != nil {
+			return nil, err
+		}
+		return c.proxyDialer.DialContext(ctx, network, addr)
+	}
+
+	dialer := &net.Dialer{
+		Timeout: c.TimeOut,
+	}
+
+	return dialer.DialContext(ctx, network, addr)
 }
