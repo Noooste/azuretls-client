@@ -20,22 +20,21 @@ const (
 	http2errClientConnGotGoAway = "http2: Transport received Server's graceful shutdown GOAWAY"
 )
 
-/*
-NewSession creates a new session
-It is recommended to use this function to create a new session instead of creating a new Session struct
-This function will set the default values for the session
-*/
+// NewSession creates a new session
+// It is a shortcut for NewSessionWithContext(context.Background())
 func NewSession() *Session {
 	return NewSessionWithContext(context.Background())
 }
 
+// NewSessionWithContext creates a new session with context
+// It is recommended to use this function to create a new session instead of creating a new Session struct
 func NewSessionWithContext(ctx context.Context) *Session {
 	cookieJar, _ := cookiejar.New(nil)
 
 	s := &Session{
-		Headers:        http.Header{},
-		HeadersOrder:   []string{},
-		OrderedHeaders: OrderedHeaders{},
+		Headers:        make(http.Header),
+		HeadersOrder:   make(HeaderOrder, 0),
+		OrderedHeaders: make(OrderedHeaders, 0),
 
 		CookieJar: cookieJar,
 		Browser:   Chrome,
@@ -43,9 +42,9 @@ func NewSessionWithContext(ctx context.Context) *Session {
 		Connections:        NewRequestConnPool(ctx),
 		GetClientHelloSpec: GetLastChromeVersion,
 
-		ServerPush: make(chan *Response, 10),
+		ServerPush: make(chan *Response),
 
-		mu: &sync.Mutex{},
+		mu: new(sync.Mutex),
 
 		TimeOut: 30 * time.Second,
 		ctx:     ctx,
@@ -283,7 +282,7 @@ func (s *Session) Get(url string, args ...any) (*Response, error) {
 /*
 Post provides shortcut for sending POST request
 */
-func (s *Session) Post(url string, data []byte, args ...any) (*Response, error) {
+func (s *Session) Post(url string, data any, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodPost,
 		Url:    url,
@@ -296,7 +295,7 @@ func (s *Session) Post(url string, data []byte, args ...any) (*Response, error) 
 /*
 Put provides shortcut for sending PUT request
 */
-func (s *Session) Put(url string, data []byte, args ...any) (*Response, error) {
+func (s *Session) Put(url string, data any, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodPut,
 		Url:    url,
@@ -307,7 +306,7 @@ func (s *Session) Put(url string, data []byte, args ...any) (*Response, error) {
 }
 
 /*
-Patch provides shortcut for sending PATCH request²
+Patch provides shortcut for sending PATCH request
 */
 func (s *Session) Patch(url string, data any, args ...any) (*Response, error) {
 	request := &Request{

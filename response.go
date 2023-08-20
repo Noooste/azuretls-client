@@ -30,7 +30,6 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 		headers[key] = value
 	}
 
-	response.Id = getRandomId()
 	response.StatusCode = httpResponse.StatusCode
 	response.Header = headers
 

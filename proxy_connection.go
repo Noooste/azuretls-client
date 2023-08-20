@@ -8,7 +8,6 @@ import (
 	http "github.com/Noooste/fhttp"
 	"github.com/Noooste/fhttp/http2"
 	"github.com/Noooste/utls"
-	"golang.org/x/net/proxy"
 	"io"
 	"net"
 
@@ -30,7 +29,7 @@ type connectDialer struct {
 	cachedH2RawConn    net.Conn
 }
 
-func newConnectDialer(proxyURLStr string) (proxy.ContextDialer, error) {
+func newConnectDialer(proxyURLStr string) (*connectDialer, error) {
 	proxyURL, err := url.Parse(proxyURLStr)
 	if err != nil {
 		return nil, err
