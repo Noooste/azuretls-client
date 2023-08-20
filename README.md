@@ -1,4 +1,5 @@
 # AzureTLS Client
+![Coverage](https://img.shields.io/badge/Coverage-66.0%25-yellow)
 
 The project aims to provide a simple way to modify and spoof TLS and HTTP2 information in Go.
 
