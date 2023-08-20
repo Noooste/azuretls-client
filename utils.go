@@ -17,18 +17,10 @@ const (
 	SchemeWss   = "wss"
 )
 
-var random = rand.New(rand.NewSource(time.Now().UnixNano()))
-
-func (r *Response) toString() string {
-	returnElement, _ := json.Marshal(r)
-	return string(returnElement)
-}
-
-func getRandomId() uint64 {
-	return random.Uint64()
-}
-
-var numberReg = regexp.MustCompile(`\d+`)
+var (
+	random    = rand.New(rand.NewSource(time.Now().UnixNano()))
+	numberReg = regexp.MustCompile(`\d+`)
+)
 
 func formatProxy(proxy string) string {
 	var split = strings.Split(strings.Trim(proxy, "\n\r"), ":")
@@ -38,7 +30,7 @@ func formatProxy(proxy string) string {
 			return "http://" + split[2] + ":" + split[3] + "@" + split[0] + ":" + split[1]
 		}
 
-		// proxy = ip:port:username:password
+		// proxy = username:password:ip:port
 		return "http://" + split[0] + ":" + split[1] + "@" + split[2] + ":" + split[3]
 
 	} else if len(split) == 2 {
@@ -50,19 +42,34 @@ func formatProxy(proxy string) string {
 		return "http://" + proxy
 	}
 
-	return proxy
+	return ""
 }
 
 func toBytes(b any) []byte {
 	switch b.(type) {
 	case string:
 		return []byte(b.(string))
+
 	case []byte:
 		return b.([]byte)
+
 	case io.Reader:
 		var buf = new(bytes.Buffer)
 		_, _ = io.Copy(buf, b.(io.Reader))
 		return buf.Bytes()
+
+	case bytes.Buffer:
+		buf := b.(bytes.Buffer)
+		return buf.Bytes()
+
+	case strings.Builder:
+		buf := b.(strings.Builder)
+		return []byte(buf.String())
+
+	case *strings.Builder:
+		buf := b.(*strings.Builder)
+		return []byte(buf.String())
+
 	default:
 		var dumped []byte
 		dumped, _ = json.Marshal(b)

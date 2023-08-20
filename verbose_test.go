@@ -33,7 +33,7 @@ func TestSession_EnableVerbose(t *testing.T) {
 		t.Fatal("VerboseIgnoreHost not set")
 	}
 
-	_, err := session.Get("https://httpbin.org/get")
+	_, err := session.Post("https://httpbin.org/post", "ahhhhhh")
 
 	if err != nil {
 		t.Error(err)

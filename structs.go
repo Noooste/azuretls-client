@@ -19,116 +19,108 @@ const (
 	Scheme    = ":scheme"
 )
 
+// Session represents the core structure for managing and conducting HTTP(S)
+// sessions. It holds configuration settings, headers, cookie storage,
+// connection pool, and other attributes necessary to perform and customize
+// requests.
 type Session struct {
-	Headers      http.Header //deprecated, use OrderedHeaders instead
-	HeadersOrder HeaderOrder //deprecated
-
-	PHeader PHeader
-
+	PHeader        PHeader
 	OrderedHeaders OrderedHeaders
 
-	CookieJar *cookiejar.Jar
-	Browser   string
+	CookieJar *cookiejar.Jar // Stores cookies across session requests.
+	Browser   string         // Name or identifier of the browser used in the session.
 
-	Connections *ConnPool
+	Connections *ConnPool // Pool of persistent connections to manage concurrent requests.
 
 	tr2 *http2.Transport
 	tr  *http.Transport
 
-	GetClientHelloSpec func() *tls.ClientHelloSpec
+	GetClientHelloSpec func() *tls.ClientHelloSpec // Function to provide custom TLS handshake details.
 
 	mu *sync.Mutex
 
-	Proxy       string
-	RotateProxy bool
+	Proxy      string // Proxy address.
+	ProxyHTTP2 bool   // If true, use HTTP2 for proxy connections.
 
-	Verbose           bool
-	VerbosePath       string
-	VerboseIgnoreHost []string
+	Verbose           bool                                                  // If true, print detailed logs or debugging information.
+	VerbosePath       string                                                // Path for logging verbose information.
+	VerboseIgnoreHost []string                                              // List of hosts to ignore when logging verbose info.
+	VerboseFunc       func(request *Request, response *Response, err error) // Custom function to handle verbose logging.
 
-	VerboseFunc func(request *Request, response *Response, err error)
+	TimeOut time.Duration // Maximum time to wait for request to complete.
 
-	TimeOut time.Duration
+	PreHook  func(request *Request) error                          // Function called before sending request.
+	Callback func(request *Request, response *Response, err error) // Function called after receiving a response.
 
-	PreHook  func(request *Request) error
-	Callback func(request *Request, response *Response, err error)
+	// Deprecated: This field is ignored as pin verification is always true.
+	// To disable pin verification, use InsecureSkipVerify.
+	VerifyPins         bool
+	InsecureSkipVerify bool // If true, server's certificate is not verified.
 
-	VerifyPins         bool // deprecated, this parameter is ignored as verify pins is always true. To disable pin verification, use the InsecureSkipVerify parameter instead
-	InsecureSkipVerify bool
+	ctx context.Context // Context for cancellable and timeout operations.
 
-	ctx context.Context
-
-	UserAgent, SecChUa string
-
-	ServerPush chan *Response
+	UserAgent, SecChUa string // Headers for User-Agent and Sec-Ch-Ua, respectively.
 }
 
+// Request represents the details and configuration for an individual HTTP(S)
+// request. It encompasses URL, headers, method, body, proxy settings,
+// timeouts, and other configurations necessary for customizing the request
+// and its execution.
 type Request struct {
 	HttpRequest *http.Request
 
-	Method string
+	Method string // HTTP method, e.g., GET, POST.
 
 	Url       string
-	parsedUrl *url.URL
+	parsedUrl *url.URL // Parsed version of Url.
 
 	Body any
 	body []byte
 
-	PHeader PHeader
-
-	Header      http.Header //deprecated, use OrderedHeaders instead
-	HeaderOrder HeaderOrder //deprecated, use OrderedHeaders instead
-
+	PHeader        PHeader
 	OrderedHeaders OrderedHeaders
-	conn           *Conn
 
-	Proxy   string
-	Browser string
+	conn *Conn // Connection associated with the request.
 
-	DisableRedirects bool
-	NoCookie         bool
+	proxy string
 
-	TimeOut time.Duration
+	DisableRedirects bool // If true, redirects won't be followed.
+	NoCookie         bool // If true, cookies won't be included in the request.
 
-	IsRedirected bool
+	TimeOut time.Duration // Maximum time to wait for request to complete.
 
-	FetchServerPush    bool
-	InsecureSkipVerify bool
+	IsRedirected bool // Indicates if the current request is a result of a redirection.
 
-	IgnoreBody bool
+	InsecureSkipVerify bool // If true, server's certificate is not verified.
 
-	Proto            string
-	listenServerPush bool
+	IgnoreBody bool // If true, the body of the response is not read.
 
-	contentLength int64
+	Proto string
 
-	retries uint8
-	ctx     context.Context
+	contentLength int64 // Length of content in the request.
+
+	retries uint8           // Number of retries for the request.
+	ctx     context.Context // Context for cancellable and timeout operations.
 }
 
+// Response encapsulates the received data and metadata from an HTTP(S)
+// request. This includes status code, body, headers, cookies, associated
+// request details, TLS connection state, etc.
 type Response struct {
-	Id         uint64
-	StatusCode int
-	Body       []byte
-	RawBody    io.ReadCloser
-	Header     http.Header
-	Cookies    map[string]string
-	Url        string
-	IgnoreBody bool
+	StatusCode int // HTTP status code, e.g., 200, 404.
 
-	HttpResponse *http.Response
+	Body       []byte            // Byte representation of the response body.
+	RawBody    io.ReadCloser     // Raw body stream.
+	Header     http.Header       // Response headers.
+	Cookies    map[string]string // Parsed cookies from the response.
+	Url        string            // URL from which the response was received.
+	IgnoreBody bool              // Indicates if the body of the response was ignored.
 
-	Request *Request
+	HttpResponse *http.Response // The underlying HTTP response.
 
-	TLS *tls.ConnectionState
+	Request *Request // Reference to the associated request.
 
-	ContentLength int64
-}
+	TLS *tls.ConnectionState // TLS connection details if the request was over HTTPS.
 
-type ServerPush struct {
-	StatusCode int               `json:"status_code"`
-	Body       string            `json:"body"`
-	Headers    map[string]string `json:"headers"`
-	Cookies    map[string]string `json:"cookies"`
-	Url        string            `json:"url"`
+	ContentLength int64 // Length of content in the response.
 }

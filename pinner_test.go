@@ -6,6 +6,10 @@ import (
 )
 
 func TestPins(t *testing.T) {
+	if skipProxy {
+		t.Skip("TestProxy skipped")
+	}
+
 	session := NewSession()
 
 	_, err := session.Get("https://example.com")
@@ -24,6 +28,10 @@ func TestPins(t *testing.T) {
 }
 
 func TestPins2(t *testing.T) {
+	if skipProxy {
+		t.Skip("TestProxy skipped")
+	}
+
 	session := NewSession()
 
 	session.SetProxy("http://localhost:8888")
@@ -38,6 +46,10 @@ func TestPins2(t *testing.T) {
 }
 
 func TestSession_AddPins(t *testing.T) {
+	if skipProxy {
+		t.Skip("TestProxy skipped")
+	}
+
 	session := NewSession()
 
 	if err := session.AddPins(&url.URL{
@@ -58,6 +70,10 @@ func TestSession_AddPins(t *testing.T) {
 }
 
 func TestSession_AddPins2(t *testing.T) {
+	if skipProxy {
+		t.Skip("TestProxy skipped")
+	}
+
 	session := NewSession()
 
 	if err := session.AddPins(&url.URL{

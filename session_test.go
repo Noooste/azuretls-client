@@ -3,8 +3,8 @@ package azuretls
 import (
 	"bytes"
 	"context"
+	"errors"
 	http "github.com/Noooste/fhttp"
-	"log"
 	"strings"
 	"testing"
 	"time"
@@ -33,11 +33,45 @@ func testProxy(t *testing.T, session *Session, proxy string, expected ...string)
 }
 
 func TestSession_SetProxy(t *testing.T) {
-	testProxy(t, NewSession(), "http://username:password@ip:9999")
-	testProxy(t, NewSession(), "http://ip:9999")
-	testProxy(t, NewSession(), "http://username:password@ip")
-	testProxy(t, NewSession(), "ip:9999:username:password", "http://username:password@ip:9999")
-	testProxy(t, NewSession(), "ip:9999", "http://ip:9999")
+	s := NewSession()
+	testProxy(t, s, "http://username:password@ip:9999")
+	testProxy(t, s, "http://ip:9999")
+	testProxy(t, s, "http://username:password@ip")
+	testProxy(t, s, "ip:9999:username:password", "http://username:password@ip:9999")
+	testProxy(t, s, "username:password:ip:9999", "http://username:password@ip:9999")
+	testProxy(t, s, "username:password@ip:9999", "http://username:password@ip:9999")
+	testProxy(t, s, "qqqqqq", "")
+	testProxy(t, s, "ip:9999", "http://ip:9999")
+}
+
+func TestSession_Ip(t *testing.T) {
+	if skipProxy {
+		t.Skip("TestProxy skipped")
+	}
+
+	session := NewSession()
+
+	response, err := session.Get("https://api.ipify.org/")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	oldIP := string(response.Body)
+
+	session.InsecureSkipVerify = true
+
+	session.SetProxy("http://localhost:8888")
+
+	ip, err := session.Ip()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if oldIP == ip {
+		t.Fatal("TestProxy failed, IP is not changed")
+	}
 }
 
 func TestSession_SetTimeout(t *testing.T) {
@@ -80,7 +114,7 @@ func TestNewSessionWithContext(t *testing.T) {
 
 	_, err := session.Do(req)
 
-	if err == nil || !strings.Contains(err.Error(), "timeout") {
+	if err == nil || !(strings.Contains(err.Error(), "timeout") || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)) {
 		t.Fatal("TestSession_SetTimeout failed, expected: timeout, got: ", err)
 		return
 	}
@@ -141,6 +175,4 @@ func TestSession_Post(t *testing.T) {
 		t.Fatal("TestSession_Post failed, expected: not contains, got: ", resp.Body)
 		return
 	}
-
-	log.Println(string(resp.Body))
 }
