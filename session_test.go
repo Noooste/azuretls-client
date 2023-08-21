@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	http "github.com/Noooste/fhttp"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -59,9 +60,9 @@ func TestSession_Ip(t *testing.T) {
 
 	oldIP := string(response.Body)
 
-	session.InsecureSkipVerify = true
-
-	session.SetProxy("http://localhost:8888")
+	if err = session.SetProxy(os.Getenv("HTTP_PROXY")); err != nil {
+		t.Fatal(err)
+	}
 
 	ip, err := session.Ip()
 
