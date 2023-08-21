@@ -60,7 +60,7 @@ func TestSession_Ip(t *testing.T) {
 
 	oldIP := string(response.Body)
 
-	if err = session.SetProxy(os.Getenv("HTTP_PROXY")); err != nil {
+	if err = session.SetProxy(os.Getenv("NON_SECURE_PROXY")); err != nil {
 		t.Fatal(err)
 	}
 
