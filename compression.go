@@ -70,11 +70,3 @@ func UnBrotliData(data []byte) (resData []byte, err error) {
 	respBody, err := ioutil.ReadAll(br)
 	return respBody, err
 }
-
-func DeflateData(data []byte) (resData []byte, err error) {
-	var buf = bytes.Buffer{}
-	zr := zlib.NewWriter(&buf)
-	zr.Write(data)
-	zr.Close()
-	return buf.Bytes(), err
-}

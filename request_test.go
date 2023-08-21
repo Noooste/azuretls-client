@@ -65,8 +65,6 @@ func TestRequest_NoCookies(t *testing.T) {
 		return
 	}
 
-	t.Log(string(resp.Body))
-
 	if strings.Contains(string(resp.Body), "test") {
 		t.Fatal("TestRequest_NoCookies failed, expected: false, got: true")
 		return
