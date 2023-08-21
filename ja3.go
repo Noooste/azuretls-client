@@ -2,14 +2,14 @@ package azuretls
 
 import (
 	"errors"
+	"fmt"
 	"github.com/Noooste/fhttp/http2"
 	tls "github.com/Noooste/utls"
 	"strconv"
 	"strings"
 )
 
-type TlsVersion uint16
-
+// TlsSpecifications struct contains various fields representing TLS handshake settings.
 type TlsSpecifications struct {
 	AlpnProtocols                           []string
 	SignatureAlgorithms                     []tls.SignatureScheme
@@ -50,18 +50,40 @@ func DefaultTlsSpecifications() TlsSpecifications {
 	}
 }
 
+// ApplyJa3 applies JA3 settings to the session from a fingerprint.
+// JA3 is a method for creating fingerprints from SSL/TLS client hellos,
+// which can be used for client identification or detection. The fingerprint is
+// constructed from an MD5 hash of string representations of various handshake
+// parameters, specifically:
+//
+//	<SSL Version>|<Accepted Ciphers>|<List of Extensions>|<Elliptic Curves>|<Elliptic Curve Formats>
+//
+// e.g.,
+//
+//	769,4865-4866-4867-49196-49195-52393-49200-49199-49172...|0-5-10-11-...|23-24-25|0
+//
+// This string is then MD5-hashed to produce a 32-character representation, which is the JA3 fingerprint.
+//
+// Any absent field in the client hello will raise an error.
 func (s *Session) ApplyJa3(ja3, navigator string) error {
-	_, err := stringToSpec(ja3, DefaultTlsSpecifications(), navigator)
-	if err != nil {
-		return err
-	}
-	s.GetClientHelloSpec = func() *tls.ClientHelloSpec {
-		specs, _ := stringToSpec(ja3, DefaultTlsSpecifications(), navigator)
-		return specs
-	}
-	return nil
+	return s.ApplyJa3WithSpecifications(ja3, DefaultTlsSpecifications(), navigator)
 }
 
+// ApplyJa3WithSpecifications applies JA3 settings to the session from a fingerprint.
+// JA3 is a method for creating fingerprints from SSL/TLS client hellos,
+// which can be used for client identification or detection. The fingerprint is
+// constructed from an MD5 hash of string representations of various handshake
+// parameters, specifically:
+//
+//	<SSL Version>|<Accepted Ciphers>|<List of Extensions>|<Elliptic Curves>|<Elliptic Curve Formats>
+//
+// e.g.,
+//
+//	769,4865-4866-4867-49196-49195-52393-49200-49199-49172...|0-5-10-11-...|23-24-25|0
+//
+// This string is then MD5-hashed to produce a 32-character representation, which is the JA3 fingerprint.
+//
+// Any absent field in the client hello will raise an error.
 func (s *Session) ApplyJa3WithSpecifications(ja3 string, specifications TlsSpecifications, navigator string) error {
 	_, err := stringToSpec(ja3, DefaultTlsSpecifications(), navigator)
 	if err != nil {
@@ -74,6 +96,10 @@ func (s *Session) ApplyJa3WithSpecifications(ja3 string, specifications TlsSpeci
 	return nil
 }
 
+const (
+	invalidJA3 = "invalid JA3 fingerprint : %s"
+)
+
 // stringToSpec converts a JA3 string to a tls.ClientHelloSpec
 // Use DefaultTlsSpecifications() to get the default specifications
 func stringToSpec(ja3 string, specifications TlsSpecifications, navigator string) (*tls.ClientHelloSpec, error) {
@@ -82,43 +108,89 @@ func stringToSpec(ja3 string, specifications TlsSpecifications, navigator string
 	information := strings.Split(ja3, ",")
 
 	if len(information) != 5 {
-		return nil, errors.New("invalid JA3")
+		return nil, fmt.Errorf(invalidJA3, "length is not 5")
+	}
+
+	v, err := strconv.Atoi(information[0])
+	if err != nil {
+		return nil, fmt.Errorf(invalidJA3, "invalid version")
+	}
+
+	if information[1] == "" {
+		return nil, fmt.Errorf(invalidJA3, "no cipher")
 	}
 
 	ciphers := strings.Split(information[1], "-")
+
 	rawExtensions := strings.Split(information[2], "-")
 
 	curves := strings.Split(information[3], "-")
-	if len(curves) == 1 && curves[0] == "" {
-		curves = []string{}
-	}
 
 	pointFormats := strings.Split(information[4], "-")
-	if len(pointFormats) == 1 && pointFormats[0] == "" {
-		pointFormats = []string{}
-	}
 
 	//ciphers suite
-	finalCiphers, convertErr := TurnToUint(ciphers, navigator)
+	finalCiphers, convertErr := turnToUint(ciphers, navigator)
 	if convertErr != "" {
 		return nil, errors.New(convertErr + "cipher")
 	}
+
 	specs.CipherSuites = finalCiphers
 
+	var (
+		extensions []tls.TLSExtension
+		maxVers    uint16
+	)
 	//extensions
-	extensions, minVers, maxVers, err := GetExtensions(rawExtensions, &specifications, pointFormats, curves, navigator)
+	if information[2] != "" {
+		extensions, _, maxVers, err = getExtensions(rawExtensions, &specifications, pointFormats, curves, navigator)
+	} else {
+		extensions, _, maxVers, err = []tls.TLSExtension{}, 0, tls.VersionTLS13, nil
+		if information[3] != "" {
+			var (
+				c   = make([]tls.CurveID, 0, len(curves))
+				val int
+			)
 
+			for _, curve := range curves {
+				val, err = strconv.Atoi(curve)
+				if err != nil {
+					return nil, errors.New(curve + " is not a valid curve")
+				}
+				c = append(c, tls.CurveID(val))
+			}
+
+			extensions = append(extensions, &tls.SupportedCurvesExtension{Curves: c})
+		}
+		if information[4] != "" {
+			var (
+				pf  = make([]uint8, 0, len(pointFormats))
+				val int
+			)
+
+			for _, pointFormat := range pointFormats {
+				val, err = strconv.Atoi(pointFormat)
+				if err != nil {
+					return nil, errors.New(pointFormat + " is not a valid point format")
+				}
+				pf = append(pf, uint8(val))
+			}
+
+			extensions = append(extensions, &tls.SupportedPointsExtension{SupportedPoints: pf})
+			specs.CompressionMethods = pf
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
+
 	specs.Extensions = extensions
-	specs.TLSVersMin = minVers
+	specs.TLSVersMin = uint16(v)
 	specs.TLSVersMax = maxVers
 
 	return specs, nil
 }
 
-func TurnToUint(ciphers []string, navigator string) ([]uint16, string) {
+func turnToUint(ciphers []string, navigator string) ([]uint16, string) {
 	var converted []uint16
 
 	if navigator == Chrome {
@@ -146,10 +218,13 @@ func isGrease(e uint16) bool {
 	return i == e
 }
 
-func GetExtensions(extensions []string, specifications *TlsSpecifications, defaultPointsFormat []string, defaultCurves []string, navigator string) ([]tls.TLSExtension, uint16, uint16, error) {
-	var builtExtensions []tls.TLSExtension
-	var minVers uint16 = tls.VersionTLS10
-	var maxVers uint16 = tls.VersionTLS13
+//gocyclo:ignore
+func getExtensions(extensions []string, specifications *TlsSpecifications, defaultPointsFormat []string, defaultCurves []string, navigator string) ([]tls.TLSExtension, uint16, uint16, error) {
+	var (
+		builtExtensions []tls.TLSExtension
+		minVers         uint16 = tls.VersionTLS10
+		maxVers         uint16 = tls.VersionTLS13
+	)
 
 	switch navigator {
 	case Chrome:
@@ -205,7 +280,7 @@ func GetExtensions(extensions []string, specifications *TlsSpecifications, defau
 			if specifications.SignatureAlgorithms != nil {
 				builtExtensions = append(builtExtensions, &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: specifications.SignatureAlgorithms})
 			} else {
-				builtExtensions = append(builtExtensions, &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: GetSupportedAlgorithms(navigator)})
+				builtExtensions = append(builtExtensions, &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: getSupportedAlgorithms(navigator)})
 			}
 			break
 
@@ -280,7 +355,7 @@ func GetExtensions(extensions []string, specifications *TlsSpecifications, defau
 					}
 				}
 			} else {
-				supportedVersions, minVers, maxVers = GetSupportedVersion(navigator)
+				supportedVersions, minVers, maxVers = getSupportedVersion(navigator)
 			}
 
 			builtExtensions = append(builtExtensions, &tls.SupportedVersionsExtension{
@@ -328,10 +403,6 @@ func GetExtensions(extensions []string, specifications *TlsSpecifications, defau
 			}
 			break
 
-		case "30032":
-			builtExtensions = append(builtExtensions, &tls.GenericExtension{Id: 0x7550, Data: []byte{0}})
-			break
-
 		case "13172":
 			builtExtensions = append(builtExtensions, &tls.NPNExtension{})
 			break
@@ -347,13 +418,16 @@ func GetExtensions(extensions []string, specifications *TlsSpecifications, defau
 		case "65281":
 			builtExtensions = append(builtExtensions, &tls.RenegotiationInfoExtension{Renegotiation: specifications.RenegotiationSupport})
 			break
+
+		default:
+			return nil, 0, 0, errors.New("invalid extension : " + extension)
 		}
 	}
 
 	return builtExtensions, minVers, maxVers, nil
 }
 
-func GetSupportedAlgorithms(navigator string) []tls.SignatureScheme {
+func getSupportedAlgorithms(navigator string) []tls.SignatureScheme {
 	switch navigator {
 	case Firefox:
 		return []tls.SignatureScheme{
@@ -405,7 +479,7 @@ func GetSupportedAlgorithms(navigator string) []tls.SignatureScheme {
 	}
 }
 
-func GetSupportedVersion(navigator string) ([]uint16, uint16, uint16) {
+func getSupportedVersion(navigator string) ([]uint16, uint16, uint16) {
 	switch navigator {
 	case Chrome:
 		return []uint16{

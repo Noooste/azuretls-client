@@ -1,0 +1,18 @@
+name: build
+
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.x'
+      - name: Run tests
+        run: go test -cover ./...
+        env:
+          HTTPS_PROXY: ${{ secrets.HTTPS_PROXY }}
+          HTTP_PROXY: ${{ secrets.HTTP_PROXY }}

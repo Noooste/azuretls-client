@@ -9,6 +9,7 @@ import (
 	"github.com/Noooste/go-utils"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -20,22 +21,19 @@ const (
 	http2errClientConnGotGoAway = "http2: Transport received Server's graceful shutdown GOAWAY"
 )
 
-/*
-NewSession creates a new session
-It is recommended to use this function to create a new session instead of creating a new Session struct
-This function will set the default values for the session
-*/
+// NewSession creates a new session
+// It is a shortcut for NewSessionWithContext(context.Background())
 func NewSession() *Session {
 	return NewSessionWithContext(context.Background())
 }
 
+// NewSessionWithContext creates a new session with context
+// It is recommended to use this function to create a new session instead of creating a new Session struct
 func NewSessionWithContext(ctx context.Context) *Session {
 	cookieJar, _ := cookiejar.New(nil)
 
 	s := &Session{
-		Headers:        http.Header{},
-		HeadersOrder:   []string{},
-		OrderedHeaders: OrderedHeaders{},
+		OrderedHeaders: make(OrderedHeaders, 0),
 
 		CookieJar: cookieJar,
 		Browser:   Chrome,
@@ -43,9 +41,10 @@ func NewSessionWithContext(ctx context.Context) *Session {
 		Connections:        NewRequestConnPool(ctx),
 		GetClientHelloSpec: GetLastChromeVersion,
 
-		ServerPush: make(chan *Response, 10),
+		UserAgent: utils.UserAgent,
+		SecChUa:   utils.SecChUa,
 
-		mu: &sync.Mutex{},
+		mu: new(sync.Mutex),
 
 		TimeOut: 30 * time.Second,
 		ctx:     ctx,
@@ -54,8 +53,13 @@ func NewSessionWithContext(ctx context.Context) *Session {
 	return s
 }
 
+// SetTimeout sets timeout for the session
 func (s *Session) SetTimeout(timeout time.Duration) {
 	s.TimeOut = timeout
+	if s.tr != nil {
+		s.tr.TLSHandshakeTimeout = timeout
+		s.tr.ResponseHeaderTimeout = timeout
+	}
 }
 
 func (s *Session) SetContext(ctx context.Context) {
@@ -65,8 +69,14 @@ func (s *Session) SetContext(ctx context.Context) {
 
 var proxyCheckReg = regexp.MustCompile(`^(https?://)(?:(\w+)(:(\w*))@)?(\w[\w\-_]{0,61}\w?\.(\w{1,6}|[\w-]{1,30}\.\w{2,3})|((\d{1,3})(?:\.\d{1,3}){3}))(:(\d{1,5}))$`)
 
-func (s *Session) SetProxy(proxy string) {
+func (s *Session) SetProxy(proxy string) error {
 	defer s.Close()
+
+	if proxy == "" {
+		return fmt.Errorf("proxy is empty")
+	} else if strings.HasPrefix(proxy, "socks5://") {
+		return fmt.Errorf("socks5 proxy is not supported yet")
+	}
 
 	switch {
 	case proxyCheckReg.MatchString(proxy), strings.HasPrefix(proxy, "http://"), strings.HasPrefix(proxy, "https://"):
@@ -74,6 +84,12 @@ func (s *Session) SetProxy(proxy string) {
 	default:
 		s.Proxy = formatProxy(proxy)
 	}
+
+	if err := s.assignProxy(s.Proxy); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *Session) Ip() (ip string, err error) {
@@ -85,13 +101,8 @@ func (s *Session) Ip() (ip string, err error) {
 }
 
 func (s *Session) send(request *Request) (response *Response, err error) {
-	if request.retries > 5 {
-		return nil, fmt.Errorf("retries exceeded")
-	}
-
 	var (
 		httpResponse *http.Response
-
 		roundTripper http.RoundTripper
 		rConn        *Conn
 	)
@@ -104,7 +115,7 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 	request.HttpRequest = httpRequest
 	request.parsedUrl = httpRequest.URL
 
-	if err = s.initTransport(request.Browser); err != nil {
+	if err = s.initTransport(s.Browser); err != nil {
 		utils.SafeGoRoutine(func() { s.saveVerbose(request, nil, err) })
 		return nil, err
 	}
@@ -159,9 +170,7 @@ func (s *Session) Do(request *Request, args ...any) (*Response, error) {
 }
 
 func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
-	err = s.prepareRequest(req, args...)
-
-	if err != nil {
+	if err = s.prepareRequest(req, args...); err != nil {
 		return
 	}
 
@@ -199,14 +208,12 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 				Method:             redirectMethod,
 				Url:                u.String(),
 				parsedUrl:          u,
-				Proxy:              oldReq.Proxy,
 				IgnoreBody:         oldReq.IgnoreBody,
-				Browser:            oldReq.Browser,
 				TimeOut:            oldReq.TimeOut,
 				InsecureSkipVerify: oldReq.InsecureSkipVerify,
-				listenServerPush:   oldReq.listenServerPush,
 				PHeader:            oldReq.PHeader,
 				ctx:                oldReq.ctx,
+				OrderedHeaders:     oldReq.OrderedHeaders,
 			}
 
 			err = s.prepareRequest(req, args...)
@@ -214,24 +221,16 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 				return
 			}
 
-			if oldReq.OrderedHeaders != nil {
-				req.OrderedHeaders = oldReq.OrderedHeaders.Clone()
-			} else if oldReq.Header != nil {
-				req.Header = oldReq.Header.Clone()
-				req.HeaderOrder = oldReq.HeaderOrder
-			}
-
 			oldRequest := reqs[0]
 
 			if includeBody && oldRequest.Body != nil {
 				req.Body = oldRequest.Body
 				req.contentLength = oldRequest.contentLength
+				req.OrderedHeaders.Set("content-length", strconv.Itoa(int(req.contentLength)))
 			} else {
 				req.contentLength = 0
-			}
-
-			if req.contentLength != 0 {
-				req.OrderedHeaders = req.OrderedHeaders.Del("content-length")
+				req.OrderedHeaders.Del("content-length")
+				req.OrderedHeaders.Del("content-type")
 			}
 
 			// Add the Referer header from the most recent
@@ -253,6 +252,7 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 		}
 
 		var shouldRedirect bool
+
 		redirectMethod, shouldRedirect, includeBody = redirectBehavior(req.Method, resp, reqs[0])
 		if !shouldRedirect {
 			req.CloseBody()
@@ -262,6 +262,8 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 		if redirectMethod == http.MethodGet {
 			req.Body = nil
 			req.contentLength = 0
+			req.OrderedHeaders.Del("content-length")
+			req.OrderedHeaders.Del("content-type")
 		}
 
 		req.CloseBody()
@@ -281,9 +283,22 @@ func (s *Session) Get(url string, args ...any) (*Response, error) {
 }
 
 /*
+Head provides shortcut for sending HEAD request
+*/
+func (s *Session) Head(url string, args ...any) (*Response, error) {
+	request := &Request{
+		Method:     http.MethodHead,
+		IgnoreBody: true,
+		Url:        url,
+	}
+
+	return s.do(request, args...)
+}
+
+/*
 Post provides shortcut for sending POST request
 */
-func (s *Session) Post(url string, data []byte, args ...any) (*Response, error) {
+func (s *Session) Post(url string, data any, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodPost,
 		Url:    url,
@@ -296,7 +311,7 @@ func (s *Session) Post(url string, data []byte, args ...any) (*Response, error) 
 /*
 Put provides shortcut for sending PUT request
 */
-func (s *Session) Put(url string, data []byte, args ...any) (*Response, error) {
+func (s *Session) Put(url string, data any, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodPut,
 		Url:    url,
@@ -307,11 +322,11 @@ func (s *Session) Put(url string, data []byte, args ...any) (*Response, error) {
 }
 
 /*
-Patch provides shortcut for sending PATCH request²
+Delete provides shortcut for sending DELETE request
 */
-func (s *Session) Patch(url string, data any, args ...any) (*Response, error) {
+func (s *Session) Delete(url string, data any, args ...any) (*Response, error) {
 	request := &Request{
-		Method: http.MethodPatch,
+		Method: http.MethodDelete,
 		Url:    url,
 		Body:   data,
 	}
@@ -320,36 +335,26 @@ func (s *Session) Patch(url string, data any, args ...any) (*Response, error) {
 }
 
 /*
-Delete provides shortcut for sending DELETE request
-*/
-func (s *Session) Delete(url string, args ...any) (*Response, error) {
-	request := &Request{
-		Method: http.MethodDelete,
-		Url:    url,
-	}
-
-	return s.do(request, args...)
-}
-
-/*
-Head provides shortcut for sending HEAD request
-*/
-func (s *Session) Head(url string, args ...any) (*Response, error) {
-	request := &Request{
-		Method: http.MethodHead,
-		Url:    url,
-	}
-
-	return s.do(request, args...)
-}
-
-/*
 Options provides shortcut for sending OPTIONS request
 */
-func (s *Session) Options(url string, args ...any) (*Response, error) {
+func (s *Session) Options(url string, data any, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodOptions,
 		Url:    url,
+		Body:   data,
+	}
+
+	return s.do(request, args...)
+}
+
+/*
+Patch provides shortcut for sending PATCH request
+*/
+func (s *Session) Patch(url string, data any, args ...any) (*Response, error) {
+	request := &Request{
+		Method: http.MethodPatch,
+		Url:    url,
+		Body:   data,
 	}
 
 	return s.do(request, args...)

@@ -132,8 +132,37 @@ func TestSession_ApplyJa3(t *testing.T) {
 	}
 }
 
-func TestGetLastIosVersion(t *testing.T) {
+func applyWrongJA3(t *testing.T, s *Session, ja3 string, navigator string) {
+	if err := s.ApplyJa3(ja3, navigator); err == nil {
+		t.Fatal("Expected error on ja3: " + ja3 + " with navigator: " + navigator)
+	}
+}
 
+func TestSession_ApplyJa32(t *testing.T) {
+	session := NewSession()
+	applyWrongJA3(t, session, "70,0,0,0,0,0", Chrome)
+	applyWrongJA3(t, session, ",4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", Chrome)
+	applyWrongJA3(t, session, "771,,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", Chrome)
+	applyWrongJA3(t, session, "a-771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", Safari)
+	applyWrongJA3(t, session, "771,a-4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", Safari)
+	applyWrongJA3(t, session, "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,a-45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", Safari)
+	applyWrongJA3(t, session, "771,a-4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,a-29-23-24,0", Safari)
+	applyWrongJA3(t, session, "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,a-0", Safari)
+
+	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,,29-23-24,0", Firefox); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,,,0", Firefox); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,,,", Firefox); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestGetLastIosVersion(t *testing.T) {
 	session := NewSession()
 
 	session.GetClientHelloSpec = GetLastIosVersion
@@ -186,5 +215,31 @@ func TestGetLastIosVersion(t *testing.T) {
 
 	if extensions[6].(map[string]any)["name"] != "application_layer_protocol_negotiation (16)" {
 		t.Fatal("Expected application_layer_protocol_negotiation (16), got ", extensions[6].(map[string]any)["name"])
+	}
+}
+
+func TestGetSupportedAlgorithms(t *testing.T) {
+	var navigators = []string{
+		Chrome,
+		Firefox,
+		Opera,
+		Safari,
+	}
+
+	for _, navigator := range navigators {
+		getSupportedAlgorithms(navigator)
+	}
+}
+
+func TestGetSupportedVersion(t *testing.T) {
+	var navigators = []string{
+		Chrome,
+		Firefox,
+		Opera,
+		Safari,
+	}
+
+	for _, navigator := range navigators {
+		getSupportedVersion(navigator)
 	}
 }
