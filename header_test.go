@@ -1,7 +1,6 @@
 package azuretls
 
 import (
-	http "github.com/Noooste/fhttp"
 	"regexp"
 	"testing"
 )
@@ -29,50 +28,15 @@ func TestHeader(t *testing.T) {
 		t.Fatal("TestHeader failed, expected: 200, got: ", response.StatusCode)
 	}
 
-	uaIndex := userAgentReg.FindIndex(response.Body)[0]
-	ctIndex := contentTypeReg.FindIndex(response.Body)[0]
-	aIndex := acceptReg.FindIndex(response.Body)[0]
-
-	if uaIndex > ctIndex {
-		t.Fatal("TestHeader failed, User-Agent should be before Content-Type")
-	}
-
-	if ctIndex > aIndex {
-		t.Fatal("TestHeader failed, Content-Type should be before Accept")
-	}
-}
-
-func TestHeaderDeprecated(t *testing.T) {
-	session := NewSession()
-
-	session.Headers = http.Header{
-		"user-agent":   {"test"},
-		"content-type": {"application/json"},
-		"accept":       {"application/json"},
-	}
-
-	session.HeadersOrder = []string{"user-agent", "content-type", "accept"}
-
-	response, err := session.Get("https://tls.peet.ws/api/all")
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if response.StatusCode != 200 {
-		t.Fatal("TestHeader failed, expected: 200, got: ", response.StatusCode)
+	if contentTypeReg.FindIndex(response.Body) != nil {
+		t.Fatal("TestHeader failed, Content-Type should not be present")
 	}
 
 	uaIndex := userAgentReg.FindIndex(response.Body)[0]
-	ctIndex := contentTypeReg.FindIndex(response.Body)[0]
 	aIndex := acceptReg.FindIndex(response.Body)[0]
 
-	if uaIndex > ctIndex {
+	if uaIndex > aIndex {
 		t.Fatal("TestHeader failed, User-Agent should be before Content-Type")
-	}
-
-	if ctIndex > aIndex {
-		t.Fatal("TestHeader failed, Content-Type should be before Accept")
 	}
 }
 

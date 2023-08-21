@@ -1,6 +1,7 @@
 package azuretls
 
 import (
+	"bytes"
 	"fmt"
 	http "github.com/Noooste/fhttp"
 	"net/url"
@@ -27,19 +28,21 @@ func (s *Session) isIgnored(host string) bool {
 	return false
 }
 
-func (s *Session) EnableVerbose(path string, ignoreHost []string) {
+func (s *Session) EnableVerbose(path string, ignoreHost []string) error {
 	if err := os.MkdirAll(path, 0755); err != nil {
-		panic(err)
+		return err
 	}
 
 	s.Verbose = true
 	s.VerbosePath = path
 
 	if ignoreHost == nil {
-		ignoreHost = []string{}
+		s.VerboseIgnoreHost = []string{}
+		return nil
 	}
 
-	s.VerboseIgnoreHost = append(ignoreHost, "ipinfo.org")
+	s.VerboseIgnoreHost = append(s.VerboseIgnoreHost, ignoreHost...)
+	return nil
 }
 
 func (s *Session) saveVerbose(request *Request, response *Response, err error) {
@@ -83,6 +86,7 @@ func (s *Session) saveVerbose(request *Request, response *Response, err error) {
 			iter++
 		}
 
+		request.proxy = s.Proxy
 		requestPart := request.String()
 
 		var responsePart string
@@ -99,24 +103,11 @@ func (s *Session) saveVerbose(request *Request, response *Response, err error) {
 }
 
 func (r *Request) String() string {
-	buffer := strings.Builder{}
+	var buffer bytes.Buffer
 	buffer.WriteString(r.Method + " " + r.Url + "\n\n")
 
-	if r.Proxy != "" {
-		buffer.WriteString("Proxy : " + r.Proxy + "\n\n")
-	}
-
-	var kvs []http.HeaderKeyValues
-
-	if headerOrder := r.HttpRequest.Header[http.HeaderOrderKey]; len(headerOrder) > 0 {
-		order := make(map[string]int)
-		for i, v := range headerOrder {
-			order[v] = i
-		}
-		kvs, _ = r.HttpRequest.Header.SortedKeyValuesBy(order, make(map[string]bool))
-
-	} else {
-		kvs, _ = r.HttpRequest.Header.SortedKeyValues(make(map[string]bool))
+	if r.proxy != "" {
+		buffer.WriteString("Proxy : " + r.proxy + "\n\n")
 	}
 
 	if h, ok := r.HttpRequest.Header[http.PHeaderOrderKey]; ok {
@@ -134,19 +125,7 @@ func (r *Request) String() string {
 		}
 	}
 
-	for _, kv := range kvs {
-		if kv.Key != http.HeaderOrderKey && kv.Key != http.PHeaderOrderKey {
-			for _, v := range kv.Values {
-				if strings.ToLower(kv.Key) == "cookie" {
-					for _, cookie := range strings.Split(v, "; ") {
-						buffer.WriteString("cookie : " + cookie + "\n")
-					}
-				} else {
-					buffer.WriteString(kv.Key + ": " + v + "\n")
-				}
-			}
-		}
-	}
+	writeHeaders(r.HttpRequest.Header, &buffer)
 
 	if r.Body != nil {
 		buffer.WriteByte('\n')
@@ -157,26 +136,42 @@ func (r *Request) String() string {
 }
 
 func (r *Response) String() string {
-	buffer := strings.Builder{}
+	var buffer bytes.Buffer
 
 	buffer.WriteString(strconv.Itoa(r.StatusCode) + "\n\n")
 
-	for key, value := range r.Header {
-		if key != http.HeaderOrderKey && key != http.PHeaderOrderKey {
-			if strings.ToLower(key) == "set-cookie" {
-				for _, v := range value {
-					buffer.WriteString("set-cookie : " + v + "\n")
-				}
-			} else {
-				for _, v := range value {
-					buffer.WriteString(key + ": " + v + "\n")
-				}
-			}
-		}
-	}
+	writeHeaders(r.HttpResponse.Header, &buffer)
 
 	buffer.WriteString("\n")
 	buffer.Write(r.Body)
 
 	return buffer.String()
+}
+
+func writeHeaders(header http.Header, buf *bytes.Buffer) {
+	var kvs []http.HeaderKeyValues
+
+	if headerOrder, ok := header[http.HeaderOrderKey]; ok && len(headerOrder) > 0 {
+		order := make(map[string]int)
+		for i, v := range headerOrder {
+			order[v] = i
+		}
+		kvs, _ = header.SortedKeyValuesBy(order, make(map[string]bool))
+	} else {
+		kvs, _ = header.SortedKeyValues(make(map[string]bool))
+	}
+
+	for _, kv := range kvs {
+		if kv.Key != http.HeaderOrderKey && kv.Key != http.PHeaderOrderKey {
+			for _, v := range kv.Values {
+				if strings.ToLower(kv.Key) == "cookie" {
+					for _, cookie := range strings.Split(v, "; ") {
+						buf.WriteString("cookie: " + cookie + "\n")
+					}
+				} else {
+					buf.WriteString(kv.Key + ": " + v + "\n")
+				}
+			}
+		}
+	}
 }

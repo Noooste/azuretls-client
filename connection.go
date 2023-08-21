@@ -4,31 +4,46 @@ import (
 	"context"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"github.com/Noooste/fhttp/http2"
 	tls "github.com/Noooste/utls"
-	"golang.org/x/net/proxy"
 	"net"
 	"net/url"
+	"runtime/debug"
+	"strings"
 	"sync"
 	"time"
 )
 
 type Conn struct {
-	TLS   *tls.UConn
-	HTTP2 *http2.ClientConn
-	Conn  net.Conn
+	TLS   *tls.UConn        // tls connection
+	HTTP2 *http2.ClientConn // http2 connection
+	h2tr  *http2.Transport
 
-	mu *sync.RWMutex
+	Conn net.Conn // tcp connection
 
-	Pins *PinManager
+	Pins *PinManager // pin manager
 
+	TimeOut            time.Duration
+	InsecureSkipVerify bool
+
+	ClientHelloSpec func() *tls.ClientHelloSpec
+
+	mu  *sync.RWMutex
 	ctx context.Context
 }
 
+/*
+NewConn allocate a new empty connection struct
+*/
 func NewConn() *Conn {
+	return NewConnWithContext(context.Background())
+}
+
+func NewConnWithContext(ctx context.Context) *Conn {
 	return &Conn{
 		mu:  new(sync.RWMutex),
-		ctx: context.Background(),
+		ctx: ctx,
 	}
 }
 
@@ -57,11 +72,11 @@ func (cp *ConnPool) SetContext(ctx context.Context) {
 
 func (cp *ConnPool) Close() {
 	cp.mu.Lock()
+	defer cp.mu.Unlock()
+
 	for _, c := range cp.hosts {
 		c.Close()
 	}
-	cp.hosts = make(map[string]*Conn)
-	cp.mu.Unlock()
 }
 
 func getHost(u *url.URL) string {
@@ -77,7 +92,7 @@ func getHost(u *url.URL) string {
 	return host
 }
 
-func (cp *ConnPool) Get(u *url.URL) (c *Conn, err error) {
+func (cp *ConnPool) Get(u *url.URL) (c *Conn) {
 	var (
 		ok       bool
 		hostName = getHost(u)
@@ -132,12 +147,12 @@ func (cp *ConnPool) Remove(u *url.URL) {
 	}
 }
 
-func (c *Conn) makeTLS(req *Request, verifyPins bool, clientSpec func() *tls.ClientHelloSpec) error {
+func (c *Conn) makeTLS(addr string) error {
 	if c.checkTLS() {
 		return nil
 	}
 	if c.TLS == nil {
-		return c.NewConn(req, verifyPins, clientSpec)
+		return c.NewTLS(addr)
 	}
 	return nil
 }
@@ -161,12 +176,8 @@ func (c *Conn) checkTLS() bool {
 func (c *Conn) tryUpgradeHTTP2(tr *http2.Transport) bool {
 	if c.HTTP2 != nil && c.HTTP2.CanTakeNewRequest() {
 		return true
-
 	} else if c.TLS.ConnectionState().NegotiatedProtocol == http2.NextProtoTLS {
 		var err error
-		if c.HTTP2 != nil {
-			return true
-		}
 		c.HTTP2, err = tr.NewClientConn(c.TLS)
 		return err == nil
 	}
@@ -190,121 +201,113 @@ func (c *Conn) Close() {
 	c.Pins = nil
 }
 
-func (s *Session) initConn(req *Request) (rConn *Conn, err error) {
+func (s *Session) initConn(req *Request) (conn *Conn, err error) {
 	// get connection from pool
-	rConn, err = s.Connections.Get(req.parsedUrl)
+	conn = s.Connections.Get(req.parsedUrl)
 
-	rConn.mu.Lock()
-	defer rConn.mu.Unlock()
+	host := getHost(req.parsedUrl)
 
-	if err != nil {
-		return
+	if conn.ClientHelloSpec == nil {
+		conn.ClientHelloSpec = s.GetClientHelloSpec
+	}
+
+	if conn.TimeOut == 0 {
+		conn.TimeOut = req.TimeOut
+	}
+
+	if conn.InsecureSkipVerify == false {
+		conn.InsecureSkipVerify = req.InsecureSkipVerify
+	}
+
+	conn.SetContext(s.ctx)
+
+	conn.mu.Lock()
+	defer conn.mu.Unlock()
+
+	if conn.Conn == nil {
+		var dialContext func(ctx context.Context, network, addr string) (net.Conn, error)
+
+		if s.proxyDialer != nil {
+			s.proxyDialer.ForceHTTP2 = s.H2Proxy
+			s.proxyDialer.tr = s.tr2
+			dialContext = s.proxyDialer.DialContext
+		} else {
+			dialContext = (&net.Dialer{Timeout: conn.TimeOut}).DialContext
+		}
+
+		conn.Conn, err = dialContext(s.ctx, "tcp", host)
+		if err != nil {
+			return
+		}
 	}
 
 	// init tls connection if needed
 	switch req.parsedUrl.Scheme {
+	case "":
+		return nil, errors.New("scheme is empty")
+
 	case SchemeHttps, SchemeWss:
 		// for secured http we need to make tls connection first
-		if err = rConn.makeTLS(req, !req.InsecureSkipVerify, s.GetClientHelloSpec); err != nil {
-			rConn.Close()
+		if err = conn.makeTLS(host); err != nil {
+			conn.Close()
 			return
 
-		} else if req.parsedUrl.Scheme != SchemeWss {
+		}
+
+		if req.parsedUrl.Scheme != SchemeWss {
 			// if tls connection is established, we can try to upgrade it to http2
-			rConn.tryUpgradeHTTP2(s.tr2)
+			conn.tryUpgradeHTTP2(s.tr2)
 		}
 
 	case SchemeHttp, SchemeWs:
-		// for http we need to make tcp connection first
-		if rConn.Conn == nil {
-			if rConn.Conn == nil {
-				if err = rConn.NewConn(req, false, nil); err != nil {
-					rConn.Close()
-					return
-				}
-			}
-		}
+		return
 
 	default:
-		err = errors.New("unknown scheme")
+		return nil, errors.New("unsupported scheme")
 	}
 
 	return
 }
 
-func (c *Conn) NewConn(req *Request, doPins bool, getSpec func() *tls.ClientHelloSpec) (err error) {
-	addr := req.parsedUrl.Host
+func (c *Conn) NewTLS(addr string) (err error) {
+	var done = make(chan bool, 1)
+	defer close(done)
 
-	if req.parsedUrl.Port() != "" {
-		addr += ":" + req.parsedUrl.Port()
-	} else {
-		if req.parsedUrl.Scheme == SchemeHttps {
-			addr += ":443"
-		} else {
-			addr += ":80"
-		}
-	}
-
-	var done chan bool
-
-	if req.parsedUrl.Scheme == SchemeHttps || req.parsedUrl.Scheme == SchemeWss {
-		done = make(chan bool, 1)
-		defer close(done)
-
-		go func() {
-			defer func() {
-				recover()
-			}()
-
-			if doPins && req.parsedUrl.Scheme == SchemeHttps && c.Pins == nil {
-				c.Pins = NewPinManager()
-				if err = c.Pins.New(addr); err != nil {
-					done <- false
-					return
-				}
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				done <- false
+				fmt.Println("panic:", err)
+				debug.PrintStack()
 			}
-
-			//check if channel is closed
-			done <- true
 		}()
-	}
 
-	if req.Proxy != "" {
-		var dialer proxy.ContextDialer
-		dialer, err = newConnectDialer(req.Proxy)
-		if err != nil {
-			return
+		var do bool
+		if c.Pins == nil && !c.InsecureSkipVerify {
+			c.Pins = NewPinManager()
+			do = true
 		}
 
-		dialer.(*connectDialer).Dialer.Timeout = req.TimeOut
-
-		c.Conn, err = dialer.DialContext(req.ctx, "tcp", addr)
-		if err != nil {
-			return
+		if !c.InsecureSkipVerify && (do || c.Pins.redo) {
+			if err = c.Pins.New(addr); err != nil {
+				done <- false
+				return
+			}
 		}
 
-	} else {
-		c.Conn, err = (&net.Dialer{
-			Timeout: req.TimeOut,
-		}).DialContext(req.ctx, "tcp", addr)
-
-		if err != nil {
-			return
-		}
-	}
-
-	if req.parsedUrl.Scheme != SchemeWss && req.parsedUrl.Scheme != SchemeHttps {
-		// we are done for http and ws
-		return
-	}
+		//check if channel is closed
+		done <- true
+	}()
 
 	if !<-done {
 		return errors.New("pin verification failed")
 	}
 
+	var hostname = strings.Split(addr, ":")[0]
+
 	config := tls.Config{
-		ServerName:         req.parsedUrl.Hostname(),
-		InsecureSkipVerify: req.InsecureSkipVerify,
+		ServerName:         hostname,
+		InsecureSkipVerify: c.InsecureSkipVerify,
 		VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 			if c.Pins == nil {
 				return nil
@@ -323,10 +326,8 @@ func (c *Conn) NewConn(req *Request, doPins bool, getSpec func() *tls.ClientHell
 	}
 
 	c.TLS = tls.UClient(c.Conn, &config, tls.HelloCustom)
-	if err = c.TLS.ApplyPreset(getSpec()); err != nil {
+	if err = c.TLS.ApplyPreset(c.ClientHelloSpec()); err != nil {
 		return
 	}
-	err = c.TLS.Handshake()
-
-	return
+	return c.TLS.HandshakeContext(c.ctx)
 }
