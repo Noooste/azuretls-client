@@ -161,27 +161,26 @@ func stringToSpec(ja3 string, specifications TlsSpecifications, navigator string
 
 			extensions = append(extensions, &tls.SupportedCurvesExtension{Curves: c})
 		}
+		if information[4] != "" {
+			var (
+				pf  = make([]uint8, 0, len(pointFormats))
+				val int
+			)
+
+			for _, pointFormat := range pointFormats {
+				val, err = strconv.Atoi(pointFormat)
+				if err != nil {
+					return nil, errors.New(pointFormat + " is not a valid point format")
+				}
+				pf = append(pf, uint8(val))
+			}
+
+			extensions = append(extensions, &tls.SupportedPointsExtension{SupportedPoints: pf})
+			specs.CompressionMethods = pf
+		}
 	}
 	if err != nil {
 		return nil, err
-	}
-
-	if information[4] != "" {
-		var (
-			pf  = make([]uint8, 0, len(pointFormats))
-			val int
-		)
-
-		for _, pointFormat := range pointFormats {
-			val, err = strconv.Atoi(pointFormat)
-			if err != nil {
-				return nil, errors.New(pointFormat + " is not a valid point format")
-			}
-			pf = append(pf, uint8(val))
-		}
-
-		extensions = append(extensions, &tls.SupportedPointsExtension{SupportedPoints: pf})
-		specs.CompressionMethods = pf
 	}
 
 	specs.Extensions = extensions

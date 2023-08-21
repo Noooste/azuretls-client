@@ -11,7 +11,8 @@ var skipProxy bool
 func TestProxyDialer_Dial(t *testing.T) {
 	session := NewSession()
 
-	if err := session.SetProxy("http://localhost:8888"); err != nil {
+	if err := session.SetProxy(os.Getenv("HTTP_PROXY")); err != nil {
+		skipProxy = true
 		t.Fatal(err)
 	}
 
@@ -23,7 +24,6 @@ func TestProxyDialer_Dial(t *testing.T) {
 }
 
 func testAssignProxyFormat(t *testing.T, proxy string) {
-
 	s := &Session{}
 
 	err := s.assignProxy(proxy)
@@ -63,10 +63,6 @@ func TestProxyDialer(t *testing.T) {
 }
 
 func TestProxy(t *testing.T) {
-	if skipProxy {
-		t.Skip("TestProxy skipped")
-	}
-
 	session := NewSession()
 
 	if err := session.SetProxy("socks5://test.com"); err == nil {
@@ -105,10 +101,6 @@ func TestProxy(t *testing.T) {
 }
 
 func TestProxy2(t *testing.T) {
-	if skipProxy {
-		t.Skip("TestProxy skipped")
-	}
-
 	session := NewSession()
 
 	session.H2Proxy = true
@@ -124,10 +116,6 @@ func TestProxy2(t *testing.T) {
 }
 
 func TestProxy3(t *testing.T) {
-	if skipProxy {
-		t.Skip("TestProxy skipped")
-	}
-
 	session := NewSession()
 	session.H2Proxy = true
 
