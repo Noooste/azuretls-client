@@ -1,5 +1,9 @@
 # AzureTLS Client
+[![GoDoc](https://godoc.org/github.com/Noooste/azuretls-client?status.svg)](https://godoc.org/github.com/Noooste/azuretls-client)
 ![Coverage](https://img.shields.io/badge/Coverage-83.5%25-brightgreen)
+[![build](https://github.com/Noooste/azuretls-client/actions/workflows/push.yml/badge.svg?branch=improvement)](https://github.com/Noooste/azuretls-client/actions/workflows/push.yml)
+[![Go Report Card](https://goreportcard.com/badge/Noooste/azuretls-client)](https://goreportcard.com/report/Noooste/azuretls-client)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Noooste/azuretls-client/blob/master/LICENSE)
 
 The project aims to provide a simple way to modify and spoof TLS and HTTP2 information in Go.
 
