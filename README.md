@@ -188,7 +188,7 @@ You can set a timeout to the session with the `session.SetTimeout` method. It ta
 ```go
 session := azuretls.NewSession()
 
-session.SetTimeout(10 * time.Second)
+session.SetTimeout(20 * time.Second)
 
 response, err := session.Get("https://tls.peet.ws/api/all")
 
