@@ -35,7 +35,7 @@ const (
 	invalidProxy = "invalid proxy `%s`, %s"
 )
 
-func (c *Conn) assignProxy(proxy string) error {
+func (s *Session) assignProxy(proxy string) error {
 	parsed, err := url.Parse(proxy)
 
 	if err != nil {
@@ -64,7 +64,7 @@ func (c *Conn) assignProxy(proxy string) error {
 		return fmt.Errorf(invalidProxy, proxy, "scheme "+parsed.Scheme+" is not supported")
 	}
 
-	c.proxyDialer = &proxyDialer{
+	s.proxyDialer = &proxyDialer{
 		ProxyURL:      parsed,
 		DefaultHeader: make(http.Header),
 	}
@@ -76,7 +76,7 @@ func (c *Conn) assignProxy(proxy string) error {
 			} else {
 				auth := parsed.User.Username() + ":" + password
 				basicAuth := "Basic " + base64.StdEncoding.EncodeToString([]byte(auth))
-				c.proxyDialer.DefaultHeader.Add("Proxy-Authorization", basicAuth)
+				s.proxyDialer.DefaultHeader.Add("Proxy-Authorization", basicAuth)
 			}
 		}
 	}

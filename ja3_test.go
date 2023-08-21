@@ -132,6 +132,58 @@ func TestSession_ApplyJa3(t *testing.T) {
 	}
 }
 
+func TestSession_ApplyJa32(t *testing.T) {
+	session := NewSession()
+
+	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-49-28-34-41-22-17-50-45-16-65281-51-18-11-27-35-23-10-5-17513-13172-21,29-23-24,0", Chrome); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := session.ApplyJa3("70,0,0,0,0,0", Chrome); err == nil {
+		t.Fatal("Expected error")
+	}
+
+	if err := session.ApplyJa3(",4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", Chrome); err == nil {
+		t.Fatal("Expected error")
+	}
+
+	if err := session.ApplyJa3("771,,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", Chrome); err == nil {
+		t.Fatal("Expected error")
+	}
+
+	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,,29-23-24,0", Chrome); err == nil {
+		t.Fatal("Expected error")
+	}
+
+	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-49-28-34-41-22-17-50-45-16-65281-51-18-11-27-35-23-10-5-17513-13172-21,,0", Chrome); err == nil {
+		t.Fatal("Expected error")
+	}
+
+	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,", Chrome); err == nil {
+		t.Fatal("Expected error")
+	}
+
+	if err := session.ApplyJa3("a-771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", Safari); err == nil {
+		t.Fatal("Expected error")
+	}
+
+	if err := session.ApplyJa3("771,a-4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", Safari); err == nil {
+		t.Fatal("Expected error")
+	}
+
+	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,a-45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", Safari); err == nil {
+		t.Fatal("Expected error")
+	}
+
+	if err := session.ApplyJa3("771,a-4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,a-29-23-24,0", Safari); err == nil {
+		t.Fatal("Expected error")
+	}
+
+	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,a-0", Safari); err == nil {
+		t.Fatal("Expected error")
+	}
+}
+
 func TestGetLastIosVersion(t *testing.T) {
 
 	session := NewSession()
@@ -189,7 +241,7 @@ func TestGetLastIosVersion(t *testing.T) {
 	}
 }
 
-func BenchmarkGetSupportedAlgorithms(b *testing.B) {
+func TestGetSupportedAlgorithms(t *testing.T) {
 	var navigators = []string{
 		Chrome,
 		Firefox,
@@ -199,5 +251,18 @@ func BenchmarkGetSupportedAlgorithms(b *testing.B) {
 
 	for _, navigator := range navigators {
 		GetSupportedAlgorithms(navigator)
+	}
+}
+
+func TestGetSupportedVersion(t *testing.T) {
+	var navigators = []string{
+		Chrome,
+		Firefox,
+		Opera,
+		Safari,
+	}
+
+	for _, navigator := range navigators {
+		GetSupportedVersion(navigator)
 	}
 }

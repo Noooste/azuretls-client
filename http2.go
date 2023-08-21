@@ -120,8 +120,6 @@ func applyWindowUpdate(windowUpdate string, tr *http2.Transport) error {
 	} else {
 		if ws, err := strconv.Atoi(windowUpdate); err != nil {
 			return fmt.Errorf(invalidWindow, windowUpdate)
-		} else if ws == 0 {
-			return fmt.Errorf(invalidWindow, windowUpdate)
 		} else {
 			tr.WindowsUpdateSize = uint32(ws)
 		}
@@ -152,6 +150,9 @@ func applyPriorities(priorities string, tr *http2.Transport) error {
 				return fmt.Errorf(invalidPriority, priority)
 			}
 
+			if s2[1] != "0" && s2[1] != "1" {
+				return fmt.Errorf(invalidPriority, priority)
+			}
 			exclusive = s2[1] == "1"
 
 			deps, err = strconv.Atoi(s2[2])

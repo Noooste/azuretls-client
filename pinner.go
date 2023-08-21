@@ -25,8 +25,9 @@ func Fingerprint(c *x509.Certificate) string {
 // for a particular web service, thus preventing man-in-the-middle attacks
 // due to rogue certificates.
 type PinManager struct {
-	mu *sync.RWMutex   // Read-Write mutex ensuring concurrent access safety.
-	m  map[string]bool // A map representing the certificate pins. If a pin exists and is set to true, it is considered valid.
+	redo bool
+	mu   *sync.RWMutex   // Read-Write mutex ensuring concurrent access safety.
+	m    map[string]bool // A map representing the certificate pins. If a pin exists and is set to true, it is considered valid.
 }
 
 // NewPinManager initializes a new instance of PinManager with
@@ -58,7 +59,9 @@ func (p *PinManager) Verify(c *x509.Certificate) bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
-	return p.m[fp]
+	v, ok := p.m[fp]
+
+	return ok && v
 }
 
 // New establishes a connection to the provided address, retrieves
@@ -92,11 +95,7 @@ func (p *PinManager) New(addr string) (err error) {
 // a session. This allows for URL-specific pinning, useful in scenarios
 // where different services (URLs) are trusted with different certificates.
 func (s *Session) AddPins(u *url.URL, pins []string) error {
-	conn, err := s.Connections.Get(u)
-	if err != nil {
-		return err
-	}
-
+	conn := s.Connections.Get(u)
 	conn.mu.Lock()
 	defer conn.mu.Unlock()
 
@@ -115,10 +114,7 @@ func (s *Session) AddPins(u *url.URL, pins []string) error {
 // with a specific URL in the session. This can be used to reset trust
 // settings or in scenarios where a service's certificate is no longer deemed trustworthy.
 func (s *Session) ClearPins(u *url.URL) error {
-	conn, err := s.Connections.Get(u)
-	if err != nil {
-		return err
-	}
+	conn := s.Connections.Get(u)
 
 	conn.mu.Lock()
 	defer conn.mu.Unlock()
@@ -126,6 +122,8 @@ func (s *Session) ClearPins(u *url.URL) error {
 	for k := range conn.Pins.m {
 		conn.Pins.m[k] = false
 	}
+
+	conn.Pins.redo = true
 
 	return nil
 }

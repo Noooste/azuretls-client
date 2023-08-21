@@ -39,8 +39,10 @@ type Session struct {
 
 	mu *sync.Mutex
 
-	Proxy      string // Proxy address.
-	ProxyHTTP2 bool   // If true, use HTTP2 for proxy connections.
+	Proxy          string // Proxy address.
+	H2Proxy        bool   // If true, use HTTP2 for proxy connections.
+	proxyDialer    *proxyDialer
+	proxyConnected bool
 
 	Verbose           bool                                                  // If true, print detailed logs or debugging information.
 	VerbosePath       string                                                // Path for logging verbose information.
@@ -99,8 +101,7 @@ type Request struct {
 
 	contentLength int64 // Length of content in the request.
 
-	retries uint8           // Number of retries for the request.
-	ctx     context.Context // Context for cancellable and timeout operations.
+	ctx context.Context // Context for cancellable and timeout operations.
 }
 
 // Response encapsulates the received data and metadata from an HTTP(S)

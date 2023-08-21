@@ -28,19 +28,21 @@ func (s *Session) isIgnored(host string) bool {
 	return false
 }
 
-func (s *Session) EnableVerbose(path string, ignoreHost []string) {
+func (s *Session) EnableVerbose(path string, ignoreHost []string) error {
 	if err := os.MkdirAll(path, 0755); err != nil {
-		panic(err)
+		return err
 	}
 
 	s.Verbose = true
 	s.VerbosePath = path
 
 	if ignoreHost == nil {
-		ignoreHost = []string{}
+		s.VerboseIgnoreHost = []string{}
+		return nil
 	}
 
-	s.VerboseIgnoreHost = append(ignoreHost, "ipinfo.org")
+	s.VerboseIgnoreHost = append(s.VerboseIgnoreHost, ignoreHost...)
+	return nil
 }
 
 func (s *Session) saveVerbose(request *Request, response *Response, err error) {
@@ -164,11 +166,7 @@ func writeHeaders(header http.Header, buf *bytes.Buffer) {
 			for _, v := range kv.Values {
 				if strings.ToLower(kv.Key) == "cookie" {
 					for _, cookie := range strings.Split(v, "; ") {
-						buf.WriteString("cookie : " + cookie + "\n")
-					}
-				} else if strings.ToLower(kv.Key) == "set-cookie" {
-					for _, val := range kv.Values {
-						buf.WriteString("set-cookie : " + val + "\n")
+						buf.WriteString("cookie: " + cookie + "\n")
 					}
 				} else {
 					buf.WriteString(kv.Key + ": " + v + "\n")

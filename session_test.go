@@ -96,6 +96,11 @@ func TestSession_SetTimeout(t *testing.T) {
 		t.Fatal("TestSession_SetTimeout failed, expected: timeout, got: ", err)
 		return
 	}
+
+	session.SetTimeout(30 * time.Second)
+	if session.tr.TLSHandshakeTimeout != 30*time.Second || session.tr.ResponseHeaderTimeout != 30*time.Second {
+		t.Fatal("TestSession_SetTimeout failed, expected: timeout, got: 30*time.Second", session.tr.TLSHandshakeTimeout, "and", session.tr.ResponseHeaderTimeout)
+	}
 }
 
 func TestNewSessionWithContext(t *testing.T) {
@@ -137,11 +142,13 @@ func TestNewSessionWithContext2(t *testing.T) {
 		cancel()
 	})
 
-	session := NewSessionWithContext(ctx)
+	session := NewSession()
+
+	session.SetContext(ctx)
 
 	_, err := session.Do(req)
 
-	if err == nil || err.Error() != "timeout" {
+	if err == nil || !(err.Error() == "timeout" || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)) {
 		t.Fatal("TestSession_SetTimeout failed, expected: timeout, got: ", err)
 		return
 	}
@@ -149,6 +156,8 @@ func TestNewSessionWithContext2(t *testing.T) {
 
 func TestSession_Post(t *testing.T) {
 	session := NewSession()
+	session.Browser = Firefox
+
 	req := &Request{
 		Method: http.MethodPost,
 		Url:    "https://httpbin.org/post",
@@ -173,6 +182,217 @@ func TestSession_Post(t *testing.T) {
 
 	if !bytes.Contains(resp.Body, []byte("test")) {
 		t.Fatal("TestSession_Post failed, expected: not contains, got: ", resp.Body)
+		return
+	}
+}
+
+func TestSessionPreHook(t *testing.T) {
+	session := NewSession()
+	session.Browser = Firefox
+
+	req := &Request{
+		Method: http.MethodPost,
+		Url:    "https://httpbin.org/post",
+		Body:   "test",
+	}
+
+	session.PreHook = func(req *Request) error {
+		req.OrderedHeaders = append(req.OrderedHeaders, []string{"X-Test", "test"})
+		return nil
+	}
+
+	resp, err := session.Do(req)
+	if err != nil {
+		t.Fatal("TestSessionPreHook failed, expected: nil, got: ", err)
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		t.Fatal("TestSessionPreHook failed, expected: 200, got: ", resp.StatusCode)
+		return
+	}
+
+	if resp.Body == nil {
+		t.Fatal("TestSessionPreHook failed, expected: not nil, got: ", resp.Body)
+		return
+	}
+
+	if !bytes.Contains(resp.Body, []byte("test")) {
+		t.Fatal("TestSessionPreHook failed, expected: not contains, got: ", resp.Body)
+		return
+	}
+
+	if !bytes.Contains(resp.Body, []byte("X-Test")) {
+		t.Fatal("TestSessionPreHook failed, expected: not contains, got: ", resp.Body)
+		return
+	}
+}
+
+func TestSessionPrehookError(t *testing.T) {
+	session := NewSession()
+	session.Browser = Firefox
+
+	req := &Request{
+		Method: http.MethodPost,
+		Url:    "https://httpbin.org/post",
+		Body:   "test",
+	}
+
+	session.PreHook = func(req *Request) error {
+		return errors.New("test")
+	}
+
+	_, err := session.Do(req)
+	if err == nil {
+		t.Fatal("TestSessionPrehookError failed, expected: error, got: nil")
+		return
+	}
+}
+
+func TestSessionCallback(t *testing.T) {
+	session := NewSession()
+	session.Browser = Firefox
+
+	req := &Request{
+		Method: http.MethodPost,
+		Url:    "https://www.google.com",
+		Body:   "test",
+	}
+
+	var called bool
+
+	session.Callback = func(req *Request, resp *Response, err error) {
+		called = true
+	}
+
+	_, err := session.Do(req)
+	if err != nil {
+		t.Fatal("TestSessionCallback failed, expected: nil, got: ", err)
+		return
+	}
+
+	if !called {
+		t.Fatal("TestSessionCallback failed, expected: called, got: ", called)
+		return
+	}
+}
+
+func TestSession_Put(t *testing.T) {
+	session := NewSession()
+	session.Browser = Firefox
+
+	resp, err := session.Put("https://httpbin.org/put", "test")
+	if err != nil {
+		t.Fatal("TestSession_Put failed, expected: nil, got: ", err)
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		t.Fatal("TestSession_Put failed, expected: 200, got: ", resp.StatusCode)
+		return
+	}
+
+	if resp.Body == nil {
+		t.Fatal("TestSession_Put failed, expected: not nil, got: ", resp.Body)
+		return
+	}
+
+	if !bytes.Contains(resp.Body, []byte("test")) {
+		t.Fatal("TestSession_Put failed, expected: not contains, got: ", resp.Body)
+		return
+	}
+}
+
+func TestSession_Delete(t *testing.T) {
+	session := NewSession()
+	session.Browser = Firefox
+
+	resp, err := session.Delete("https://httpbin.org/delete", "test")
+	if err != nil {
+		t.Fatal("TestSession_Delete failed, expected: nil, got: ", err)
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		t.Fatal("TestSession_Delete failed, expected: 200, got: ", resp.StatusCode)
+		return
+	}
+
+	if resp.Body == nil {
+		t.Fatal("TestSession_Delete failed, expected: not nil, got: ", resp.Body)
+		return
+	}
+
+	if !bytes.Contains(resp.Body, []byte("test")) {
+		t.Fatal("TestSession_Delete failed, expected: not contains, got: ", resp.Body)
+		return
+	}
+}
+
+func TestSession_Patch(t *testing.T) {
+	session := NewSession()
+	session.Browser = Firefox
+
+	resp, err := session.Patch("https://httpbin.org/patch", "test")
+	if err != nil {
+		t.Fatal("TestSession_Patch failed, expected: nil, got: ", err)
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		t.Fatal("TestSession_Patch failed, expected: 200, got: ", resp.StatusCode)
+		return
+	}
+
+	if resp.Body == nil {
+		t.Fatal("TestSession_Patch failed, expected: not nil, got: ", resp.Body)
+		return
+	}
+
+	if !bytes.Contains(resp.Body, []byte("test")) {
+		t.Fatal("TestSession_Patch failed, expected: not contains, got: ", resp.Body)
+		return
+	}
+}
+
+func TestSession_Head(t *testing.T) {
+	session := NewSession()
+	session.Browser = Firefox
+
+	resp, err := session.Head("https://httpbin.org/get")
+	if err != nil {
+		t.Fatal("TestSession_Head failed, expected: nil, got: ", err)
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		t.Fatal("TestSession_Head failed, expected: 200, got: ", resp.StatusCode)
+		return
+	}
+
+	if resp.Body != nil {
+		t.Fatal("TestSession_Head failed, expected: nil, got: ", resp.Body)
+		return
+	}
+}
+
+func TestSession_Options(t *testing.T) {
+	session := NewSession()
+	session.Browser = Firefox
+
+	resp, err := session.Options("https://httpbin.org/get", "test")
+	if err != nil {
+		t.Fatal("TestSession_Options failed, expected: nil, got: ", err)
+		return
+	}
+
+	if resp.StatusCode != 200 {
+		t.Fatal("TestSession_Options failed, expected: 200, got: ", resp.StatusCode)
+		return
+	}
+
+	if resp.Body == nil {
+		t.Fatal("TestSession_Options failed, expected: not nil, got: ", resp.Body)
 		return
 	}
 }

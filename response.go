@@ -2,6 +2,7 @@ package azuretls
 
 import (
 	"encoding/json"
+	"fmt"
 	http "github.com/Noooste/fhttp"
 	"github.com/Noooste/go-utils"
 	"io"
@@ -13,17 +14,18 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 	response.HttpResponse = httpResponse
 
 	var (
-		done    chan bool
+		done    = make(chan bool, 1)
 		headers = make(http.Header, len(httpResponse.Header))
 	)
 
 	if !response.IgnoreBody {
-		done = make(chan bool, 1)
 		defer close(done)
 		utils.SafeGoRoutine(func() {
 			response.Body, _ = response.ReadBody()
 			done <- true
 		})
+	} else {
+		done <- true
 	}
 
 	for key, value := range httpResponse.Header {
@@ -69,22 +71,24 @@ func (r *Response) ReadBody() ([]byte, error) {
 	return result, nil
 }
 
-func (r *Response) CloseBody() {
+func (r *Response) CloseBody() error {
 	if r.RawBody != nil {
-		_ = r.RawBody.Close()
+		return r.RawBody.Close()
 	}
+
+	return nil
 }
 
-func (r *Response) Load(v any) error {
+func (r *Response) Json(v any) error {
 	if r.Body == nil {
-		return nil
+		return fmt.Errorf("response body is nil")
 	}
 
 	return json.Unmarshal(r.Body, v)
 }
 
-func (r *Response) MustLoad(v any) {
-	if err := r.Load(v); err != nil {
+func (r *Response) MustJson(v any) {
+	if err := r.Json(v); err != nil {
 		panic(err)
 	}
 }

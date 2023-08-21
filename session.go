@@ -85,7 +85,9 @@ func (s *Session) SetProxy(proxy string) error {
 		s.Proxy = formatProxy(proxy)
 	}
 
-	s.Connections.Close()
+	if err := s.assignProxy(s.Proxy); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -99,10 +101,6 @@ func (s *Session) Ip() (ip string, err error) {
 }
 
 func (s *Session) send(request *Request) (response *Response, err error) {
-	if request.retries > 5 {
-		return nil, fmt.Errorf("retries exceeded")
-	}
-
 	var (
 		httpResponse *http.Response
 		roundTripper http.RoundTripper
@@ -285,6 +283,19 @@ func (s *Session) Get(url string, args ...any) (*Response, error) {
 }
 
 /*
+Head provides shortcut for sending HEAD request
+*/
+func (s *Session) Head(url string, args ...any) (*Response, error) {
+	request := &Request{
+		Method:     http.MethodHead,
+		IgnoreBody: true,
+		Url:        url,
+	}
+
+	return s.do(request, args...)
+}
+
+/*
 Post provides shortcut for sending POST request
 */
 func (s *Session) Post(url string, data any, args ...any) (*Response, error) {
@@ -311,11 +322,11 @@ func (s *Session) Put(url string, data any, args ...any) (*Response, error) {
 }
 
 /*
-Patch provides shortcut for sending PATCH request
+Delete provides shortcut for sending DELETE request
 */
-func (s *Session) Patch(url string, data any, args ...any) (*Response, error) {
+func (s *Session) Delete(url string, data any, args ...any) (*Response, error) {
 	request := &Request{
-		Method: http.MethodPatch,
+		Method: http.MethodDelete,
 		Url:    url,
 		Body:   data,
 	}
@@ -324,36 +335,26 @@ func (s *Session) Patch(url string, data any, args ...any) (*Response, error) {
 }
 
 /*
-Delete provides shortcut for sending DELETE request
-*/
-func (s *Session) Delete(url string, args ...any) (*Response, error) {
-	request := &Request{
-		Method: http.MethodDelete,
-		Url:    url,
-	}
-
-	return s.do(request, args...)
-}
-
-/*
-Head provides shortcut for sending HEAD request
-*/
-func (s *Session) Head(url string, args ...any) (*Response, error) {
-	request := &Request{
-		Method: http.MethodHead,
-		Url:    url,
-	}
-
-	return s.do(request, args...)
-}
-
-/*
 Options provides shortcut for sending OPTIONS request
 */
-func (s *Session) Options(url string, args ...any) (*Response, error) {
+func (s *Session) Options(url string, data any, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodOptions,
 		Url:    url,
+		Body:   data,
+	}
+
+	return s.do(request, args...)
+}
+
+/*
+Patch provides shortcut for sending PATCH request
+*/
+func (s *Session) Patch(url string, data any, args ...any) (*Response, error) {
+	request := &Request{
+		Method: http.MethodPatch,
+		Url:    url,
+		Body:   data,
 	}
 
 	return s.do(request, args...)

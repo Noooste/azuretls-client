@@ -2,7 +2,6 @@ package azuretls
 
 import (
 	"context"
-	"net/url"
 	"os"
 	"testing"
 )
@@ -10,13 +9,13 @@ import (
 var skipProxy bool
 
 func TestProxyDialer_Dial(t *testing.T) {
-	var c = &Conn{}
+	session := NewSession()
 
-	if err := c.assignProxy("http://localhost:8888"); err != nil {
+	if err := session.SetProxy("http://localhost:8888"); err != nil {
 		t.Fatal(err)
 	}
 
-	_, _, err := c.proxyDialer.initProxyConn(context.Background(), "tcp")
+	_, _, err := session.proxyDialer.initProxyConn(context.Background(), "tcp")
 
 	if err != nil {
 		skipProxy = true
@@ -24,9 +23,10 @@ func TestProxyDialer_Dial(t *testing.T) {
 }
 
 func testAssignProxyFormat(t *testing.T, proxy string) {
-	c := &Conn{}
 
-	err := c.assignProxy(proxy)
+	s := &Session{}
+
+	err := s.assignProxy(proxy)
 
 	if err == nil {
 		t.Fatal("TestProxyDialer_WrongFormat failed with ", proxy, ", expected: error, got: nil")
@@ -37,14 +37,16 @@ func TestProxyDialer_WrongFormat(t *testing.T) {
 	testAssignProxyFormat(t, "notgoodurl")
 	testAssignProxyFormat(t, "http://username@aaaaa")
 	testAssignProxyFormat(t, "http://username@aaaaa:9999")
+	testAssignProxyFormat(t, "@")
+	testAssignProxyFormat(t, "://aaaa")
 	testAssignProxyFormat(t, "socks5://aaaaa")
 	testAssignProxyFormat(t, "/qqqqq")
 }
 
 func testAssignProxy(t *testing.T, proxy string) {
-	c := &Conn{}
+	s := &Session{}
 
-	err := c.assignProxy(proxy)
+	err := s.assignProxy(proxy)
 
 	if err != nil {
 		t.Fatal("TestProxyDialer failed with ", proxy, ", expected: ", nil, ", got: ", err)
@@ -67,6 +69,12 @@ func TestProxy(t *testing.T) {
 
 	session := NewSession()
 
+	if err := session.SetProxy("socks5://test.com"); err == nil {
+		t.Fatal("testProxy failed, expected error, got nil")
+	} else if err = session.SetProxy(""); err == nil {
+		t.Fatal("testProxy failed, expected error, got nil")
+	}
+
 	response, err := session.Get("https://api.ipify.org/")
 
 	if err != nil {
@@ -76,6 +84,10 @@ func TestProxy(t *testing.T) {
 	oldIP := string(response.Body)
 
 	session.InsecureSkipVerify = true
+
+	if os.Getenv("HTTP_PROXY") == "" {
+		t.Fatal("TestProxy failed, HTTP_PROXY is not set")
+	}
 
 	session.SetProxy(os.Getenv("HTTP_PROXY"))
 
@@ -99,8 +111,10 @@ func TestProxy2(t *testing.T) {
 
 	session := NewSession()
 
-	session.ProxyHTTP2 = true
-	session.SetProxy(os.Getenv("HTTP_PROXY"))
+	session.H2Proxy = true
+	if err := session.SetProxy(os.Getenv("HTTP_PROXY")); err != nil {
+		t.Fatal(err)
+	}
 
 	_, err := session.Get("https://tls.peet.ws/api/all")
 
@@ -115,8 +129,11 @@ func TestProxy3(t *testing.T) {
 	}
 
 	session := NewSession()
-	session.ProxyHTTP2 = true
-	session.SetProxy(os.Getenv("HTTPS_PROXY"))
+	session.H2Proxy = true
+
+	if err := session.SetProxy(os.Getenv("HTTPS_PROXY")); err != nil {
+		t.Fatal(err)
+	}
 
 	_, err := session.Get("https://www.nike.com/fr/")
 
@@ -124,24 +141,15 @@ func TestProxy3(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c, err := session.Connections.Get(&url.URL{
-		Scheme: "https",
-		Host:   "www.nike.com",
-	})
+	oldConn := session.proxyDialer.h2Conn
 
-	oldConn := c.proxyDialer.h2Conn
+	_, err = session.proxyDialer.Dial("tcp", "www.nike.com:443")
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = c.proxyDialer.DialContext(context.Background(), "tcp", "www.nike.com:443")
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if c.proxyDialer.h2Conn != oldConn {
+	if session.proxyDialer.h2Conn != oldConn {
 		t.Fatal("TestProxy failed, Conn is not reused")
 	}
 
