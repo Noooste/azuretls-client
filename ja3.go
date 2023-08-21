@@ -51,15 +51,7 @@ func DefaultTlsSpecifications() TlsSpecifications {
 }
 
 func (s *Session) ApplyJa3(ja3, navigator string) error {
-	_, err := stringToSpec(ja3, DefaultTlsSpecifications(), navigator)
-	if err != nil {
-		return err
-	}
-	s.GetClientHelloSpec = func() *tls.ClientHelloSpec {
-		specs, _ := stringToSpec(ja3, DefaultTlsSpecifications(), navigator)
-		return specs
-	}
-	return nil
+	return s.ApplyJa3WithSpecifications(ja3, DefaultTlsSpecifications(), navigator)
 }
 
 func (s *Session) ApplyJa3WithSpecifications(ja3 string, specifications TlsSpecifications, navigator string) error {
@@ -85,34 +77,43 @@ func stringToSpec(ja3 string, specifications TlsSpecifications, navigator string
 		return nil, errors.New("invalid JA3")
 	}
 
+	for i := range information {
+		if information[i] == "" {
+			return nil, errors.New("invalid JA3")
+		}
+	}
+
+	v, err := strconv.Atoi(information[0])
+	if err != nil {
+		return nil, errors.New("invalid JA3")
+	}
+
 	ciphers := strings.Split(information[1], "-")
+
 	rawExtensions := strings.Split(information[2], "-")
 
 	curves := strings.Split(information[3], "-")
-	if len(curves) == 1 && curves[0] == "" {
-		curves = []string{}
-	}
 
 	pointFormats := strings.Split(information[4], "-")
-	if len(pointFormats) == 1 && pointFormats[0] == "" {
-		pointFormats = []string{}
-	}
 
 	//ciphers suite
 	finalCiphers, convertErr := TurnToUint(ciphers, navigator)
 	if convertErr != "" {
 		return nil, errors.New(convertErr + "cipher")
 	}
+
 	specs.CipherSuites = finalCiphers
 
 	//extensions
-	extensions, minVers, maxVers, err := GetExtensions(rawExtensions, &specifications, pointFormats, curves, navigator)
+	extensions, _, maxVers, err := GetExtensions(rawExtensions, &specifications, pointFormats, curves, navigator)
 
 	if err != nil {
 		return nil, err
 	}
+
 	specs.Extensions = extensions
-	specs.TLSVersMin = minVers
+	specs.TLSVersMin = uint16(v)
+
 	specs.TLSVersMax = maxVers
 
 	return specs, nil
@@ -146,10 +147,13 @@ func isGrease(e uint16) bool {
 	return i == e
 }
 
+//gocyclo:ignore
 func GetExtensions(extensions []string, specifications *TlsSpecifications, defaultPointsFormat []string, defaultCurves []string, navigator string) ([]tls.TLSExtension, uint16, uint16, error) {
-	var builtExtensions []tls.TLSExtension
-	var minVers uint16 = tls.VersionTLS10
-	var maxVers uint16 = tls.VersionTLS13
+	var (
+		builtExtensions []tls.TLSExtension
+		minVers         uint16 = tls.VersionTLS10
+		maxVers         uint16 = tls.VersionTLS13
+	)
 
 	switch navigator {
 	case Chrome:
@@ -328,10 +332,6 @@ func GetExtensions(extensions []string, specifications *TlsSpecifications, defau
 			}
 			break
 
-		case "30032":
-			builtExtensions = append(builtExtensions, &tls.GenericExtension{Id: 0x7550, Data: []byte{0}})
-			break
-
 		case "13172":
 			builtExtensions = append(builtExtensions, &tls.NPNExtension{})
 			break
@@ -347,6 +347,9 @@ func GetExtensions(extensions []string, specifications *TlsSpecifications, defau
 		case "65281":
 			builtExtensions = append(builtExtensions, &tls.RenegotiationInfoExtension{Renegotiation: specifications.RenegotiationSupport})
 			break
+
+		default:
+			return nil, 0, 0, errors.New("invalid extension : " + extension)
 		}
 	}
 

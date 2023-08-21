@@ -1,4 +1,5 @@
 # AzureTLS Client
+![Coverage](https://img.shields.io/badge/Coverage-66.0%25-yellow)
 
 The project aims to provide a simple way to modify and spoof TLS and HTTP2 information in Go.
 
@@ -67,40 +68,9 @@ fmt.Println(string(resp.Body))
 
 ### Headers
 
-You can set headers to the session in 2 different ways :
-- The first one would be to add the headers to the session with the `session.Headers`. However, you will need to apply the order of the headers with the `session.HeadersOrder`.
+Use `session.OrderedHeaders` method, which is `[][]string`..
 
 ```go
-session := azuretls.NewSession()
-
-session.Headers = http.Header{
-    "user-agent": {"test"},
-    "content-type": {"application/json"},
-    "accept": {"application/json"},
-}
-
-session.HeadersOrder = azuretls.HeaderOrder{
-    "user-agent",
-    "content-type",
-    "accept",
-}
-
-response, err := session.Get("https://tls.peet.ws/api/all")
-
-if err != nil {
-    panic(err)
-}
-
-fmt.Println(response.StatusCode)
-fmt.Println(string(response.Body))
-
-session.Close()
-```
-
-- The second one, which is the easiest one, is to use the `session.OrderedHeaders` method, which is `[][]string`. No need to apply the order of the headers, it's already done.
-
-```go
-// Second way
 session := azuretls.NewSession()
 
 session.OrderedHeaders = azuretls.OrderedHeaders{

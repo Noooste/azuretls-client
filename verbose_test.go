@@ -1,7 +1,9 @@
 package azuretls
 
 import (
+	http "github.com/Noooste/fhttp"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -21,7 +23,7 @@ func TestSession_EnableVerbose(t *testing.T) {
 		t.Fatal("VerbosePath not set")
 	}
 
-	if len(session.VerboseIgnoreHost) != 2 {
+	if len(session.VerboseIgnoreHost) != 1 {
 		t.Fatal("VerboseIgnoreHost not set")
 	}
 
@@ -29,18 +31,28 @@ func TestSession_EnableVerbose(t *testing.T) {
 		t.Fatal("VerboseIgnoreHost not set")
 	}
 
-	if session.VerboseIgnoreHost[1] != "ipinfo.org" {
-		t.Fatal("VerboseIgnoreHost not set")
+	if !session.isIgnored("test.httpbin.org") {
+		t.Fatal("test.httpbin.org is not ignored")
 	}
 
-	_, err := session.Get("https://httpbin.org/get")
+	if !session.isIgnored("httpbin.org") {
+		t.Fatal("test.httpbin.org is not ignored")
+	}
+
+	if err := session.EnableVerbose("", nil); err == nil {
+		t.Fatal(err)
+	}
+
+	_, err := session.Post("https://httpbin.org/post", "ahhhhhh")
 
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	session.EnableVerbose("./tmp", nil)
+	if err = session.EnableVerbose("./tmp", nil); err != nil {
+		t.Fatal(err)
+	}
 
 	_, err = session.Get("https://httpbin.org/get?t=v")
 
@@ -64,6 +76,28 @@ func TestSession_EnableVerbose(t *testing.T) {
 }
 
 func TestSession_EnableVerbose2(t *testing.T) {
+	req := (&Request{
+		HttpRequest: &http.Request{
+			Header: http.Header{
+				"cookie":     {"c1=v1; c2=v2"},
+				"set-cookie": {"c1=v1", "c2=v2"},
+			},
+		},
+		proxy: "test",
+		Body:  "aa",
+		body:  []byte("aa"),
+	}).String()
+
+	if !strings.Contains(req, "Proxy : test") {
+		t.Fatal("no proxy in req.String()")
+	} else if !strings.Contains(req, "\naa") {
+		t.Fatal("no body in req.String()")
+	} else if !strings.Contains(req, "cookie: c1=v1\ncookie: c2=v2") {
+		t.Fatal("no cookies in req.String()")
+	} else if !strings.Contains(req, "set-cookie: c1=v1\nset-cookie: c2=v2") {
+		t.Fatal("no set-cookie in req.String()")
+	}
+
 	defer os.RemoveAll("./tmp")
 
 	session := NewSession()
@@ -78,15 +112,11 @@ func TestSession_EnableVerbose2(t *testing.T) {
 		t.Fatal("VerbosePath not set")
 	}
 
-	if len(session.VerboseIgnoreHost) != 2 {
+	if len(session.VerboseIgnoreHost) != 1 {
 		t.Fatal("VerboseIgnoreHost not set")
 	}
 
 	if session.VerboseIgnoreHost[0] != "*.httpbin.org" {
-		t.Fatal("VerboseIgnoreHost not set")
-	}
-
-	if session.VerboseIgnoreHost[1] != "ipinfo.org" {
 		t.Fatal("VerboseIgnoreHost not set")
 	}
 
@@ -114,7 +144,7 @@ func TestSession_EnableVerbose2(t *testing.T) {
 		{"accept-language", "en-US,en;q=0.9"},
 	}
 
-	_, err = session.Get("http://httpbin.org/anything/test/test2%2ftest/", headers)
+	_, err = session.Get("https://httpbin.org/anything/test/test2%2ftest/", headers)
 
 	if err != nil {
 		t.Error(err)
