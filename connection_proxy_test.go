@@ -11,7 +11,7 @@ var skipProxy bool
 func TestProxyDialer_Dial(t *testing.T) {
 	session := NewSession()
 
-	if err := session.SetProxy(os.Getenv("HTTP_PROXY")); err != nil {
+	if err := session.SetProxy(os.Getenv("NON_SECURE_PROXY")); err != nil {
 		skipProxy = true
 		t.Fatal(err)
 	}
@@ -81,11 +81,11 @@ func TestProxy(t *testing.T) {
 
 	session.InsecureSkipVerify = true
 
-	if os.Getenv("HTTP_PROXY") == "" {
-		t.Fatal("TestProxy failed, HTTP_PROXY is not set")
+	if os.Getenv("NON_SECURE_PROXY") == "" {
+		t.Fatal("TestProxy failed, NON_SECURE_PROXY is not set")
 	}
 
-	session.SetProxy(os.Getenv("HTTP_PROXY"))
+	session.SetProxy(os.Getenv("NON_SECURE_PROXY"))
 
 	response, err = session.Get("https://api.ipify.org/")
 
@@ -104,7 +104,7 @@ func TestProxy2(t *testing.T) {
 	session := NewSession()
 
 	session.H2Proxy = true
-	if err := session.SetProxy(os.Getenv("HTTP_PROXY")); err != nil {
+	if err := session.SetProxy(os.Getenv("NON_SECURE_PROXY")); err != nil {
 		t.Fatal(err)
 	}
 
@@ -119,7 +119,7 @@ func TestProxy3(t *testing.T) {
 	session := NewSession()
 	session.H2Proxy = true
 
-	if err := session.SetProxy(os.Getenv("HTTPS_PROXY")); err != nil {
+	if err := session.SetProxy(os.Getenv("SECURE_PROXY")); err != nil {
 		t.Fatal(err)
 	}
 

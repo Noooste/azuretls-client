@@ -33,8 +33,8 @@ jobs:
           go test -v ./... -covermode=count -coverprofile=coverage.out
           go tool cover -func=coverage.out -o=coverage.out
         env:
-          HTTPS_PROXY: ${{ secrets.HTTPS_PROXY }}
-          HTTP_PROXY: ${{ secrets.HTTP_PROXY }}
+          SECURE_PROXY: ${{ secrets.SECURE_PROXY }}
+          NON_SECURE_PROXY: ${{ secrets.NON_SECURE_PROXY }}
 
       - name: Go Coverage Badge  # Pass the `coverage.out` output to this action
         uses: tj-actions/coverage-badge-go@v2
