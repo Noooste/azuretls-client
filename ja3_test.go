@@ -250,7 +250,7 @@ func TestGetSupportedAlgorithms(t *testing.T) {
 	}
 
 	for _, navigator := range navigators {
-		GetSupportedAlgorithms(navigator)
+		getSupportedAlgorithms(navigator)
 	}
 }
 
@@ -263,6 +263,6 @@ func TestGetSupportedVersion(t *testing.T) {
 	}
 
 	for _, navigator := range navigators {
-		GetSupportedVersion(navigator)
+		getSupportedVersion(navigator)
 	}
 }

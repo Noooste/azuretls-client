@@ -8,8 +8,7 @@ import (
 	"strings"
 )
 
-type TlsVersion uint16
-
+// TlsSpecifications struct contains various fields representing TLS handshake settings.
 type TlsSpecifications struct {
 	AlpnProtocols                           []string
 	SignatureAlgorithms                     []tls.SignatureScheme
@@ -50,10 +49,12 @@ func DefaultTlsSpecifications() TlsSpecifications {
 	}
 }
 
+// ApplyJa3 sets the JA3 string for the session using the default TLS specifications.
 func (s *Session) ApplyJa3(ja3, navigator string) error {
 	return s.ApplyJa3WithSpecifications(ja3, DefaultTlsSpecifications(), navigator)
 }
 
+// ApplyJa3WithSpecifications sets the JA3 string for the session using the provided TLS specifications.
 func (s *Session) ApplyJa3WithSpecifications(ja3 string, specifications TlsSpecifications, navigator string) error {
 	_, err := stringToSpec(ja3, DefaultTlsSpecifications(), navigator)
 	if err != nil {
@@ -97,7 +98,7 @@ func stringToSpec(ja3 string, specifications TlsSpecifications, navigator string
 	pointFormats := strings.Split(information[4], "-")
 
 	//ciphers suite
-	finalCiphers, convertErr := TurnToUint(ciphers, navigator)
+	finalCiphers, convertErr := turnToUint(ciphers, navigator)
 	if convertErr != "" {
 		return nil, errors.New(convertErr + "cipher")
 	}
@@ -105,7 +106,7 @@ func stringToSpec(ja3 string, specifications TlsSpecifications, navigator string
 	specs.CipherSuites = finalCiphers
 
 	//extensions
-	extensions, _, maxVers, err := GetExtensions(rawExtensions, &specifications, pointFormats, curves, navigator)
+	extensions, _, maxVers, err := getExtensions(rawExtensions, &specifications, pointFormats, curves, navigator)
 
 	if err != nil {
 		return nil, err
@@ -119,7 +120,7 @@ func stringToSpec(ja3 string, specifications TlsSpecifications, navigator string
 	return specs, nil
 }
 
-func TurnToUint(ciphers []string, navigator string) ([]uint16, string) {
+func turnToUint(ciphers []string, navigator string) ([]uint16, string) {
 	var converted []uint16
 
 	if navigator == Chrome {
@@ -148,7 +149,7 @@ func isGrease(e uint16) bool {
 }
 
 //gocyclo:ignore
-func GetExtensions(extensions []string, specifications *TlsSpecifications, defaultPointsFormat []string, defaultCurves []string, navigator string) ([]tls.TLSExtension, uint16, uint16, error) {
+func getExtensions(extensions []string, specifications *TlsSpecifications, defaultPointsFormat []string, defaultCurves []string, navigator string) ([]tls.TLSExtension, uint16, uint16, error) {
 	var (
 		builtExtensions []tls.TLSExtension
 		minVers         uint16 = tls.VersionTLS10
@@ -209,7 +210,7 @@ func GetExtensions(extensions []string, specifications *TlsSpecifications, defau
 			if specifications.SignatureAlgorithms != nil {
 				builtExtensions = append(builtExtensions, &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: specifications.SignatureAlgorithms})
 			} else {
-				builtExtensions = append(builtExtensions, &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: GetSupportedAlgorithms(navigator)})
+				builtExtensions = append(builtExtensions, &tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: getSupportedAlgorithms(navigator)})
 			}
 			break
 
@@ -284,7 +285,7 @@ func GetExtensions(extensions []string, specifications *TlsSpecifications, defau
 					}
 				}
 			} else {
-				supportedVersions, minVers, maxVers = GetSupportedVersion(navigator)
+				supportedVersions, minVers, maxVers = getSupportedVersion(navigator)
 			}
 
 			builtExtensions = append(builtExtensions, &tls.SupportedVersionsExtension{
@@ -356,7 +357,7 @@ func GetExtensions(extensions []string, specifications *TlsSpecifications, defau
 	return builtExtensions, minVers, maxVers, nil
 }
 
-func GetSupportedAlgorithms(navigator string) []tls.SignatureScheme {
+func getSupportedAlgorithms(navigator string) []tls.SignatureScheme {
 	switch navigator {
 	case Firefox:
 		return []tls.SignatureScheme{
@@ -408,7 +409,7 @@ func GetSupportedAlgorithms(navigator string) []tls.SignatureScheme {
 	}
 }
 
-func GetSupportedVersion(navigator string) ([]uint16, uint16, uint16) {
+func getSupportedVersion(navigator string) ([]uint16, uint16, uint16) {
 	switch navigator {
 	case Chrome:
 		return []uint16{
