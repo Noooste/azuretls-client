@@ -14,5 +14,5 @@ jobs:
       - name: Run tests
         run: go test -cover ./...
         env:
-          HTTPS_PROXY: ${{ secrets.HTTPS_PROXY }}
-          HTTP_PROXY: ${{ secrets.HTTP_PROXY }}
+          SECURE_PROXY: ${{ secrets.SECURE_PROXY }}
+          NON_SECURE_PROXY: ${{ secrets.NON_SECURE_PROXY }}
