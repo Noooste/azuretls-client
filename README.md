@@ -181,7 +181,7 @@ fmt.Println(response.StatusCode)
 fmt.Println(string(response.Body))
 ```
 
-If you can't trust the machine, you can still set manual pins before doing any requests to the session with method `session.AddPins`.
+If you can't trust the machine, you can still set manual pins before doing any requests with the session with method `session.AddPins`.
 The pins are generated from DER encoded SubjectPublicKeyInfo sha256 hashed and base64 encoded
 
 ```go
