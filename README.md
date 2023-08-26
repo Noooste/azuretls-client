@@ -1,39 +1,55 @@
-# AzureTLS Client
+# AzureTLS Client 
 [![GoDoc](https://godoc.org/github.com/Noooste/azuretls-client?status.svg)](https://godoc.org/github.com/Noooste/azuretls-client)
 ![Coverage](https://img.shields.io/badge/Coverage-84.3%25-brightgreen)
 [![build](https://github.com/Noooste/azuretls-client/actions/workflows/push.yml/badge.svg?branch=improvement)](https://github.com/Noooste/azuretls-client/actions/workflows/push.yml)
 [![Go Report Card](https://goreportcard.com/badge/Noooste/azuretls-client)](https://goreportcard.com/report/Noooste/azuretls-client)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Noooste/azuretls-client/blob/master/LICENSE)
 
-This golang package aims to personate JA3 fingerprint and HTTP/2 specifications.
 
-# Features
+# 📖 Introduction 
 
-- Latest Chrome ClientHello
-- Fully customizable ClientHello TLS (JA3 string + extension specifications)
-- Proxy and SSL Pinning support
-- HTTP/1.1 and HTTP/2 support
-- HTTP/2 Frames configuration (SETTINGS, PRIORITY, WINDOW_UPDATE)
+Welcome to AzureTLS Client, a robust and flexible HTTP client library for Golang designed with security and customization in mind. Whether you're building a web scraper, an API client, or any application that requires HTTP requests, AzureTLS Client provides a suite of features to meet your needs.
+
+## Why AzureTLS Client?
+
+- **Security**: With built-in SSL pinning and proxy support, AzureTLS Client takes security seriously, ensuring your connections are secure and reliable.
+  
+- **Customization**: Modify TLS ClientHello fingerprints, configure HTTP/2 settings, and even set ordered headers. AzureTLS Client is built to be as flexible as your project requires.
+  
+- **Performance**: Built on top of Golang's native packages, AzureTLS Client is designed for speed and efficiency, making it suitable for both small and large-scale applications.
+
+Whether you're a seasoned developer looking for a feature-rich HTTP client or you're just getting started with Golang, AzureTLS Client offers a blend of performance, customization, and security to help you build better applications.
+
+
+# 🌟 Features 
+
+- Latest Chrome ClientHello Support
+- HTTP/1.1 and HTTP/2 Compatibility
+- Customizable ClientHello TLS (JA3 strings and extensions)
+- Configurable HTTP/2 Frames (SETTINGS, PRIORITY, WINDOW_UPDATE)
+- Built-in Proxy Support
+- SSL Pinning
+- PreHook and Callback Functions
+- Integrated Cookie Jar
 
 
 
-Table of Contents
+📑 Table of Contents
 =================
 
-
-
-* [Table of Contents](#table-of-contents)
+* [Table of Contents](#-table-of-contents)
+* [Dependencies](#dependencies)
 * [Installation](#installation)
 * [Usage](#usage)
-    * [Create a Session](#create-a-session)
-    * [Modify TLS](#modify-tls)
-    * [Modify HTTP2](#modify-http2)
-    * [Headers](#headers)
-    * [Proxy](#proxy)
-    * [SSL Pinning](#ssl-pinning)
-    * [Timeout](#timeout)
-    * [PreHook and CallBack](#prehook-and-callback)
-    * [Cookies](#cookies)
+   * [Create a Session](#create-a-session)
+   * [Modify TLS Client Hello (JA3)](#modify-tls-client-hello-ja3)
+   * [Modify HTTP2](#modify-http2)
+   * [Headers](#headers)
+   * [Proxy](#proxy)
+   * [SSL Pinning](#ssl-pinning)
+   * [Timeout](#timeout)
+   * [PreHook and CallBack](#prehook-and-callback)
+   * [Cookies](#cookies)
 
 
 ## Dependencies
@@ -69,8 +85,8 @@ session := azuretls.NewSessionWithContext(context.Background())
 #
 ### Modify TLS Client Hello (JA3)
 
-To modify your client hello, you have 2 ways :
-- The first one is to use the `session.ApplyJA3` method, which takes the ja3 fingerprint and the target navigator (chrome, firefox, safari, ...).
+To modify your ClientHello, you have two options:
+- The first one is to use the `session.ApplyJA3` method, which takes the ja3 fingerprint and the target browser (chrome, firefox, safari, ...).
 - The second one is to assign a method to `session.GetClientHelloSpec` that returns TLS configuration.
 
 ```go
@@ -84,13 +100,14 @@ if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-523
 // Second way
 session.GetClientHelloSpec = azuretls.GetLastChromeVersion //func() *tls.ClientHelloSpec
 
-resp, err := session.Get("https://tls.peet.ws/api/all")
+response, err := session.Get("https://tls.peet.ws/api/all")
 
 if err != nil {
     panic(err)
 }
 
-fmt.Println(resp.StatusCode, string(resp.Body))
+// response *azuretls.Response
+fmt.Println(response.StatusCode, string(response.Body))
 ```
 
 #
@@ -104,13 +121,13 @@ if err := session.ApplyHTTP2("1:65536,2:0,3:1000,4:6291456,6:262144|15663105|0|m
     panic(err)
 }
 
-resp, err := session.Get("https://tls.peet.ws/api/all")
+response, err := session.Get("https://tls.peet.ws/api/all")
 
 if err != nil {
     panic(err)
 }
 
-fmt.Println(resp.StatusCode, string(resp.Body))
+fmt.Println(response.StatusCode, string(response.Body))
 ```
 #
 ### Headers
@@ -120,6 +137,7 @@ Use `session.OrderedHeaders` method, which is `[][]string`
 ```go
 session := azuretls.NewSession()
 
+// it will keep the order
 session.OrderedHeaders = azuretls.OrderedHeaders{
     {"user-agent", "test"},
     {"content-type", "application/json"},
@@ -139,13 +157,15 @@ fmt.Println(response.StatusCode, string(response.Body))
 ### Proxy
 
 You can set a proxy to the session with the `session.SetProxy` method.
-Proxy format supported :
+Supported proxy formats include:
 - `http(s)://ip:port`
 - `http(s)://username:password@ip:port`
 - `ip:port`
 - `ip:port:username:password`
 - `username:password:ip:port`
 - `username:password@ip:port`
+  
+*If a scheme is not provided, `http` will be used by default.*
 
 ```go
 session := azuretls.NewSession()
@@ -167,6 +187,8 @@ fmt.Println(response.StatusCode, string(response.Body))
 
 SSL pinning is enabled by default.
 
+*SSL pinning ensures that you are connecting to the intended server and mitigates the risk of man-in-the-middle attacks, such as those potentially executed using tools like Charles Proxy.*
+
 ```go
 session := azuretls.NewSession()
 
@@ -177,12 +199,17 @@ if err != nil {
     panic(err)
 }
 
-fmt.Println(response.StatusCode)
-fmt.Println(string(response.Body))
+fmt.Println(response.StatusCode, string(response.Body))
 ```
 
-If you can't trust the machine, you can still set manual pins before doing any requests with the session with method `session.AddPins`.
-The pins are generated from DER encoded SubjectPublicKeyInfo sha256 hashed and base64 encoded
+If you're concerned about the reliability of a machine, you can improve security by manually setting pins prior to initiating any requests within the session, using the `session.AddPins` method. 
+The pins are generated through the following series of steps:
+
+1. SubjectPublicKeyInfo is first DER-encoded.
+2. The DER-encoded data is then hashed using the SHA-256 algorithm.
+3. Finally, the hashed output is base64 encoded to generate the pin.
+
+*It's not necessary for every certificate in the chain to match a pin. If even a single certificate in the chain matches one of the pre-defined pins, the entire chain is considered valid : this approach allows for flexibility in the certificate chain while still providing an additional layer of security.* 
 
 ```go
 session := azuretls.NewSession()
@@ -204,7 +231,7 @@ if err != nil {
 }
 ```
 
-You can also call `session.ClearPins` before to remove any pins saved in the session for the given url.
+You can also call `session.ClearPins` beforehand to remove any saved pins in the session for the given URL
 
 To disable SSL Pinning, you can do `session.InsecureSkipVerify = true`
 
@@ -214,12 +241,15 @@ session := azuretls.NewSession()
 session.InsecureSkipVerify = true
 
 // do it at your own risk !
-_, err := session.Get("https://tls.peet.ws/api/all")
+response, err := session.Get("https://tls.peet.ws/api/all")
 
 if err != nil {
     panic(err)
 }
+
+fmt.Println(response.StatusCode, string(response.Body))
 ```
+
 #
 ### Timeout
 
@@ -241,14 +271,14 @@ fmt.Println(response.StatusCode, string(response.Body))
 #
 ### PreHook and CallBack
 
-You can modify all the requests done with the session before it does it by using prehook to the session with the `session.PreHook` method.
-You can also set callback to the session with the `session.CallBack` method.
+You can modify all outgoing requests in the session using the `session.PreHook` method before they are executed.
+You can also set a callback for the session using the `session.CallBack` method.
 
 ```go
 session := azuretls.NewSession()
 
 session.PreHook = func(request *azuretls.Request) error {
-    req.Header.Set("user-agent", "test")
+    request.Header.Set("user-agent", "test")
     return nil
 }
 
