@@ -3,11 +3,13 @@ package azuretls
 import (
 	"bytes"
 	"encoding/json"
+	"golang.org/x/net/idna"
 	"io"
 	"math/rand"
 	"regexp"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 const (
@@ -75,4 +77,38 @@ func toBytes(b any) []byte {
 		dumped, _ = json.Marshal(b)
 		return dumped
 	}
+}
+
+var portMap = map[string]string{
+	"http":   "80",
+	"https":  "443",
+	"socks5": "1080",
+}
+
+func idnaASCII(v string) (string, error) {
+	if isASCII(v) {
+		return v, nil
+	}
+	return idna.Lookup.ToASCII(v)
+}
+func isASCII(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] >= utf8.RuneSelf {
+			return false
+		}
+	}
+	return true
+}
+
+func isDomainOrSubdomain(sub, parent string) bool {
+	if sub == parent {
+		return true
+	}
+	// If sub is "foo.example.com" and parent is "example.com",
+	// that means sub must end in "."+parent.
+	// Do it without allocating.
+	if !strings.HasSuffix(sub, parent) {
+		return false
+	}
+	return sub[len(sub)-len(parent)-1] == '.'
 }
