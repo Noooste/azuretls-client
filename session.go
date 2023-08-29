@@ -92,14 +92,6 @@ func (s *Session) SetProxy(proxy string) error {
 	return nil
 }
 
-func (s *Session) Ip() (ip string, err error) {
-	r, err := s.Get("https://api.ipify.org")
-	if err != nil {
-		return
-	}
-	return string(r.Body), nil
-}
-
 func (s *Session) send(request *Request) (response *Response, err error) {
 	var (
 		httpResponse *http.Response
