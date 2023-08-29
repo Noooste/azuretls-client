@@ -4,9 +4,6 @@ import "testing"
 
 func TestSession_Websocket(t *testing.T) {
 	s := NewSession()
-	s.InsecureSkipVerify = true
-
-	s.SetProxy("http://localhost:8888")
 
 	_, err := s.NewWebsocket(nil)
 

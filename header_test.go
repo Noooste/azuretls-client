@@ -44,9 +44,6 @@ func TestHeader(t *testing.T) {
 func TestHeader2(t *testing.T) {
 	session := NewSession()
 
-	client := http.Client{}
-	client.Do(nil)
-
 	session.Header = http.Header{
 		"user-agent":   {"test"},
 		"content-type": {"application/json"},
