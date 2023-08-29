@@ -51,6 +51,17 @@ func (s *Session) NewWebsocketWithContext(ctx context.Context, req *Request, arg
 
 	req.formatHeader()
 
+	if !req.NoCookie {
+		cookies := s.CookieJar.Cookies(req.HttpRequest.URL)
+		if cookies != nil && len(cookies) > 0 {
+			if c := req.HttpRequest.Header.Get("Cookie"); c != "" {
+				req.HttpRequest.Header.Set("Cookie", c+"; "+cookiesToString(cookies))
+			} else {
+				req.HttpRequest.Header.Set("Cookie", cookiesToString(cookies))
+			}
+		}
+	}
+
 	ws.dialer = &websocket.Dialer{}
 	ws.dialer.Jar = s.CookieJar
 
