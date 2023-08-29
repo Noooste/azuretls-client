@@ -190,10 +190,9 @@ func (s *Session) makeHeadersCopier(ireq *Request) func(*Request) {
 		// See https://golang.org/issue/17494
 		if s.CookieJar != nil && icookies != nil {
 			var changed bool
-			resp := req.Response.HttpResponse // The response that caused the upcoming redirect
-			for _, c := range resp.Cookies() {
-				if _, ok := icookies[c.Name]; ok {
-					delete(icookies, c.Name)
+			for k := range req.Response.Cookies {
+				if _, ok := icookies[k]; ok {
+					delete(icookies, k)
 					changed = true
 				}
 			}
