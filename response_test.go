@@ -43,7 +43,7 @@ func TestResponse_Load(t *testing.T) {
 
 	var loaded map[string]interface{}
 
-	if err = response.Json(&loaded); err == nil {
+	if err = response.JSON(&loaded); err == nil {
 		t.Fatal("TestResponse_Load failed, expected: err, got: ", nil)
 	}
 
@@ -55,7 +55,7 @@ func TestResponse_Load(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = response.Json(&loaded); err != nil {
+	if err = response.JSON(&loaded); err != nil {
 		t.Fatal("TestResponse_Load failed, expected: nil, got: ", err)
 	}
 }
