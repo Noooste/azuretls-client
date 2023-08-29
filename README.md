@@ -5,7 +5,6 @@
 [![Go Report Card](https://goreportcard.com/badge/Noooste/azuretls-client)](https://goreportcard.com/report/Noooste/azuretls-client)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Noooste/azuretls-client/blob/master/LICENSE)
 
-
 # 📖 Introduction 
 
 Welcome to AzureTLS Client, a robust and flexible HTTP client library for Golang designed with security and customization in mind. Whether you're building a web scraper, an API client, or any application that requires HTTP requests, AzureTLS Client provides a suite of features to meet your needs.
