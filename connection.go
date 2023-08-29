@@ -80,16 +80,15 @@ func (cp *ConnPool) Close() {
 }
 
 func getHost(u *url.URL) string {
-	host := u.Host
-	if u.Port() == "" {
-		switch u.Scheme {
-		case SchemeHttps, SchemeWss:
-			host = net.JoinHostPort(host, "443")
-		case SchemeHttp, SchemeWs:
-			host = net.JoinHostPort(host, "80")
-		}
+	addr := u.Hostname()
+	if v, err := idnaASCII(addr); err == nil {
+		addr = v
 	}
-	return host
+	port := u.Port()
+	if port == "" {
+		port = portMap[u.Scheme]
+	}
+	return net.JoinHostPort(addr, port)
 }
 
 func (cp *ConnPool) Get(u *url.URL) (c *Conn) {

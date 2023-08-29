@@ -79,7 +79,7 @@ func (r *Response) CloseBody() error {
 	return nil
 }
 
-func (r *Response) Json(v any) error {
+func (r *Response) JSON(v any) error {
 	if r.Body == nil {
 		return fmt.Errorf("response body is nil")
 	}
@@ -87,8 +87,8 @@ func (r *Response) Json(v any) error {
 	return json.Unmarshal(r.Body, v)
 }
 
-func (r *Response) MustJson(v any) {
-	if err := r.Json(v); err != nil {
+func (r *Response) MustJSON(v any) {
+	if err := r.JSON(v); err != nil {
 		panic(err)
 	}
 }

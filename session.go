@@ -92,14 +92,6 @@ func (s *Session) SetProxy(proxy string) error {
 	return nil
 }
 
-func (s *Session) Ip() (ip string, err error) {
-	r, err := s.Get("https://api.ipify.org")
-	if err != nil {
-		return
-	}
-	return string(r.Body), nil
-}
-
 func (s *Session) send(request *Request) (response *Response, err error) {
 	var (
 		httpResponse *http.Response
@@ -107,13 +99,11 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 		rConn        *Conn
 	)
 
-	httpRequest, err := s.buildRequest(request.ctx, request)
-	if err != nil {
+	if err = s.buildRequest(request.ctx, request); err != nil {
 		return nil, err
 	}
 
-	request.HttpRequest = httpRequest
-	request.parsedUrl = httpRequest.URL
+	request.parsedUrl = request.HttpRequest.URL
 
 	if err = s.initTransport(s.Browser); err != nil {
 		utils.SafeGoRoutine(func() { s.saveVerbose(request, nil, err) })
@@ -133,7 +123,7 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 		roundTripper = s.tr
 	}
 
-	httpResponse, err = roundTripper.RoundTrip(httpRequest)
+	httpResponse, err = roundTripper.RoundTrip(request.HttpRequest)
 
 	defer func() {
 		if s.Callback != nil {
@@ -183,6 +173,7 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 	var (
 		redirectMethod string
 		includeBody    bool
+		copyHeaders    = s.makeHeadersCopier(req)
 	)
 
 	for {
@@ -208,13 +199,15 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 				Method:             redirectMethod,
 				Url:                u.String(),
 				parsedUrl:          u,
+				Response:           resp,
 				IgnoreBody:         oldReq.IgnoreBody,
 				TimeOut:            oldReq.TimeOut,
 				InsecureSkipVerify: oldReq.InsecureSkipVerify,
 				PHeader:            oldReq.PHeader,
 				ctx:                oldReq.ctx,
-				OrderedHeaders:     oldReq.OrderedHeaders,
 			}
+
+			copyHeaders(req)
 
 			err = s.prepareRequest(req, args...)
 			if err != nil {

@@ -6,8 +6,8 @@ require (
 	github.com/Noooste/fhttp v1.0.6
 	github.com/Noooste/go-utils v1.0.1
 	github.com/Noooste/utls v1.2.0
+	github.com/Noooste/websocket v1.0.1
 	github.com/andybalholm/brotli v1.0.5
-	golang.org/x/net v0.13.0
 )
 
 require (
@@ -17,6 +17,7 @@ require (
 	github.com/klauspost/compress v1.16.7 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	golang.org/x/crypto v0.11.0 // indirect
+	golang.org/x/net v0.13.0 // indirect
 	golang.org/x/sys v0.10.0 // indirect
 	golang.org/x/text v0.11.0 // indirect
 )

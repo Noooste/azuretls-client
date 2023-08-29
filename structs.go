@@ -27,6 +27,9 @@ type Session struct {
 	PHeader        PHeader
 	OrderedHeaders OrderedHeaders
 
+	Header      http.Header // Default headers for all requests. Deprecated: Use OrderedHeaders instead.
+	HeaderOrder HeaderOrder // Order of headers for all requests.
+
 	CookieJar *cookiejar.Jar // Stores cookies across session requests.
 	Browser   string         // Name or identifier of the browser used in the session.
 
@@ -70,6 +73,7 @@ type Session struct {
 // and its execution.
 type Request struct {
 	HttpRequest *http.Request
+	Response    *Response
 
 	Method string // HTTP method, e.g., GET, POST.
 
@@ -82,9 +86,14 @@ type Request struct {
 	PHeader        PHeader
 	OrderedHeaders OrderedHeaders
 
+	Header      http.Header // Headers for the request. Deprecated: Use OrderedHeaders instead.
+	HeaderOrder HeaderOrder // Order of headers for the request.
+
 	conn *Conn // Connection associated with the request.
 
-	proxy string
+	proxy   string
+	ua      string
+	browser string
 
 	DisableRedirects bool // If true, redirects won't be followed.
 	NoCookie         bool // If true, cookies won't be included in the request.
