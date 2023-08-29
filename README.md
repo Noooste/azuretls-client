@@ -30,6 +30,7 @@ Whether you're a seasoned developer looking for a feature-rich HTTP client or yo
 - SSL Pinning
 - PreHook and Callback Functions
 - Integrated Cookie Jar
+- Websockets with JA3
 
 
 
@@ -49,6 +50,7 @@ Whether you're a seasoned developer looking for a feature-rich HTTP client or yo
    * [Timeout](#timeout)
    * [PreHook and CallBack](#prehook-and-callback)
    * [Cookies](#cookies)
+   * [Websockets](#websockets)
 
 
 ## Dependencies
@@ -313,5 +315,22 @@ response, err := session.Get("https://tls.peet.ws/api/all")
 
 if err != nil {
     panic(err)
+}
+```
+
+### Websockets
+You can use websockets with `session.NewWebsocket` method.
+```go
+session := azuretls.NewSession()
+ws, err := session.NewWebsocket(&azuretls.Request{
+		Url: "wss://demo.piesocket.com/v3/channel_123?api_key=VCXCEuvhGcBDP7XhiJJUDvR1e1D3eiVjgZ9VRiaV&notify_self",
+		OrderedHeaders: azuretls.OrderedHeaders{
+			{"User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36"},
+		},
+})
+if err = ws.WriteJSON(map[string]string{
+  "event": "new_message",
+}); err != nil {
+  panic(err)
 }
 ```
