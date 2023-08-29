@@ -3,7 +3,6 @@ package azuretls
 import (
 	"context"
 	"errors"
-	"fmt"
 	http "github.com/Noooste/fhttp"
 	"github.com/Noooste/websocket"
 	"net"
@@ -80,7 +79,6 @@ func (s *Session) NewWebsocketWithContext(ctx context.Context, req *Request, arg
 	c, resp, err := ws.dialer.DialContext(ctx, req.parsedUrl.String(), h, h[http.HeaderOrderKey])
 
 	if err != nil {
-		fmt.Printf("error while dialing websocket: %v\n", err)
 		return nil, err
 	}
 

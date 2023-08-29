@@ -80,9 +80,11 @@ func toBytes(b any) []byte {
 }
 
 var portMap = map[string]string{
-	"http":   "80",
-	"https":  "443",
-	"socks5": "1080",
+	SchemeHttp:  "80",
+	SchemeHttps: "443",
+	SchemeWs:    "80",
+	SchemeWss:   "443",
+	"socks5":    "1080",
 }
 
 func idnaASCII(v string) (string, error) {

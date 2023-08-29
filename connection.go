@@ -205,6 +205,7 @@ func (s *Session) initConn(req *Request) (conn *Conn, err error) {
 	conn = s.Connections.Get(req.parsedUrl)
 
 	host := getHost(req.parsedUrl)
+	fmt.Println("host:", host)
 
 	if conn.ClientHelloSpec == nil {
 		conn.ClientHelloSpec = s.GetClientHelloSpec
