@@ -2,19 +2,17 @@ package azuretls
 
 import (
 	http "github.com/Noooste/fhttp"
+	"strings"
 )
 
+var cookieNameSanitizer = strings.NewReplacer("\n", "-", "\r", "-")
+
 func cookiesToString(cookies []*http.Cookie) string {
-	finalString := ""
+	var f = make([]string, 0, len(cookies))
 	for _, el := range cookies {
-		finalString += el.Name + "=" + el.Value + "; "
+		f = append(f, cookieNameSanitizer.Replace(el.Name)+"="+cookieNameSanitizer.Replace(el.Value))
 	}
-
-	if finalString != "" {
-		return finalString[:len(finalString)-2]
-	}
-
-	return finalString
+	return strings.Join(f, "; ")
 }
 
 func getCookiesMap(cookies []*http.Cookie) map[string]string {

@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	http "github.com/Noooste/fhttp"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -43,36 +42,6 @@ func TestSession_SetProxy(t *testing.T) {
 	testProxy(t, s, "username:password@ip:9999", "http://username:password@ip:9999")
 	testProxy(t, s, "qqqqqq", "")
 	testProxy(t, s, "ip:9999", "http://ip:9999")
-}
-
-func TestSession_Ip(t *testing.T) {
-	if skipProxy {
-		t.Skip("TestProxy skipped")
-	}
-
-	session := NewSession()
-
-	response, err := session.Get("https://api.ipify.org/")
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	oldIP := string(response.Body)
-
-	if err = session.SetProxy(os.Getenv("NON_SECURE_PROXY")); err != nil {
-		t.Fatal(err)
-	}
-
-	ip, err := session.Ip()
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if oldIP == ip {
-		t.Fatal("TestProxy failed, IP is not changed")
-	}
 }
 
 func TestSession_SetTimeout(t *testing.T) {

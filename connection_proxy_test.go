@@ -71,13 +71,19 @@ func TestProxy(t *testing.T) {
 		t.Fatal("testProxy failed, expected error, got nil")
 	}
 
-	response, err := session.Get("https://api.ipify.org/")
+	var loaded map[string]any
+
+	response, err := session.Get("https://tls.peet.ws/api/all")
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	oldIP := string(response.Body)
+	if err = response.JSON(&loaded); err != nil {
+		t.Fatal(err)
+	}
+
+	oldIP := loaded["ip"].(string)
 
 	session.InsecureSkipVerify = true
 
@@ -87,13 +93,17 @@ func TestProxy(t *testing.T) {
 
 	session.SetProxy(os.Getenv("NON_SECURE_PROXY"))
 
-	response, err = session.Get("https://api.ipify.org/")
+	response, err = session.Get("https://tls.peet.ws/api/all")
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	newIP := string(response.Body)
+	if err = response.JSON(&loaded); err != nil {
+		t.Fatal(err)
+	}
+
+	newIP := loaded["ip"].(string)
 
 	if oldIP == newIP {
 		t.Fatal("TestProxy failed, IP is not changed")

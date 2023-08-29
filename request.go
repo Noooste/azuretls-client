@@ -42,6 +42,11 @@ func (s *Session) fillEmptyValues(request *Request) {
 	if request.OrderedHeaders == nil {
 		if s.OrderedHeaders != nil && len(s.OrderedHeaders) > 0 {
 			request.OrderedHeaders = s.OrderedHeaders.Clone()
+		} else if s.Header != nil && len(s.Header) > 0 {
+			request.Header = s.Header.Clone()
+			request.HeaderOrder = s.HeaderOrder
+		} else {
+			request.OrderedHeaders = make(OrderedHeaders, 0)
 		}
 	}
 
@@ -49,28 +54,40 @@ func (s *Session) fillEmptyValues(request *Request) {
 		request.TimeOut = s.TimeOut
 	}
 
+	if request.Method == "" {
+		request.Method = http.MethodGet
+	}
+
 	request.InsecureSkipVerify = s.InsecureSkipVerify
 }
 
-func (s *Session) buildRequest(ctx context.Context, req *Request) (newReq *http.Request, err error) {
-	newReq, err = newRequest(ctx, s.Verbose || s.VerboseFunc != nil, req)
+func (s *Session) buildRequest(ctx context.Context, req *Request) (err error) {
+	req.HttpRequest, err = newRequest(ctx, s.Verbose || s.VerboseFunc != nil, req)
 
-	if !req.NoCookie {
-		cookies := s.CookieJar.Cookies(newReq.URL)
-		if cookies != nil && len(cookies) > 0 && newReq.Header.Get("Cookie") == "" {
-			newReq.Header.Set("Cookie", cookiesToString(cookies))
-		}
-	} else {
-		newReq.Header.Del("Cookie")
+	req.browser = s.Browser
+	req.ua = s.UserAgent
+
+	if err != nil {
+		return
 	}
 
 	if req.PHeader[0] == "" {
 		req.PHeader = s.PHeader
 	}
 
-	s.formatHeader(req, newReq)
+	req.formatHeader()
 
-	return newReq, nil
+	if !req.NoCookie {
+		cookies := s.CookieJar.Cookies(req.HttpRequest.URL)
+		if cookies != nil && len(cookies) > 0 {
+			if c := req.HttpRequest.Header.Get("Cookie"); c != "" {
+				req.HttpRequest.Header.Set("Cookie", c+"; "+cookiesToString(cookies))
+			} else {
+				req.HttpRequest.Header.Set("Cookie", cookiesToString(cookies))
+			}
+		}
+	}
+	return
 }
 
 func newRequest(ctx context.Context, verbose bool, req *Request) (newReq *http.Request, err error) {
@@ -106,55 +123,6 @@ func newRequest(ctx context.Context, verbose bool, req *Request) (newReq *http.R
 	}
 
 	return
-}
-
-func (s *Session) formatHeader(req *Request, httpReq *http.Request) {
-	httpReq.Header = make(http.Header, len(req.OrderedHeaders)+2)
-	httpReq.Header[http.HeaderOrderKey] = make([]string, 0, len(req.OrderedHeaders))
-
-	var setUserAgent = true
-	for _, el := range req.OrderedHeaders {
-		var startIndex = 1
-		if _, ok := httpReq.Header[el[0]]; !ok {
-			if setUserAgent && strings.ToLower(el[0]) == "user-agent" {
-				setUserAgent = false
-			}
-			httpReq.Header.Set(el[0], el[1])
-			httpReq.Header[http.HeaderOrderKey] = append(httpReq.Header[http.HeaderOrderKey], el[0])
-			startIndex = 2
-		}
-		for _, v := range el[startIndex:] {
-			httpReq.Header.Add(el[0], v)
-		}
-	}
-
-	if setUserAgent && s.UserAgent != "" {
-		httpReq.Header.Set("User-Agent", s.UserAgent)
-		httpReq.Header[http.HeaderOrderKey] = append(httpReq.Header[http.HeaderOrderKey], "User-Agent")
-	}
-
-	if req.PHeader[0] != "" {
-		for i, el := range req.PHeader {
-			if el[0] != ':' {
-				req.PHeader[i] = ":" + el
-			}
-		}
-		httpReq.Header[http.PHeaderOrderKey] = req.PHeader[:]
-	} else {
-		switch s.Browser {
-		case Firefox:
-			httpReq.Header[http.PHeaderOrderKey] = []string{Method, Path, Authority, Scheme}
-		case Ios:
-			httpReq.Header[http.PHeaderOrderKey] = []string{Method, Scheme, Path, Authority}
-		default: //chrome sub products
-			httpReq.Header[http.PHeaderOrderKey] = []string{Method, Authority, Scheme, Path}
-		}
-	}
-
-	if httpReq.Method == http.MethodGet {
-		httpReq.Header.Del("Content-Length")
-		httpReq.Header.Del("Content-Type")
-	}
 }
 
 func (r *Request) SetContext(ctx context.Context) {

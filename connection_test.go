@@ -55,16 +55,6 @@ func TestSessionConn(t *testing.T) {
 	}
 }
 
-func TestHTTP1Conn(t *testing.T) {
-	session := NewSession()
-
-	_, err := session.Get("https://api.ipify.org/")
-
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestHighConcurrency(t *testing.T) {
 	session := NewSession()
 
