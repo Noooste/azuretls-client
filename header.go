@@ -2,6 +2,7 @@ package azuretls
 
 import (
 	http "github.com/Noooste/fhttp"
+	"github.com/Noooste/go-utils"
 	"net/url"
 	"sort"
 	"strings"
@@ -103,17 +104,25 @@ func (r *Request) formatHeader() {
 		r.HttpRequest.Header[http.HeaderOrderKey] = make([]string, 0, len(r.OrderedHeaders))
 
 		for _, el := range r.OrderedHeaders {
-			var startIndex = 1
+			if len(el) == 0 {
+				continue
+			}
+
+			r.HttpRequest.Header[http.HeaderOrderKey] = append(r.HttpRequest.Header[http.HeaderOrderKey], el[0])
+			if len(el) == 1 {
+				// skip empty header value, the key indicate the order
+				continue
+			}
+
 			if _, ok := r.HttpRequest.Header[el[0]]; !ok {
 				if setUserAgent && strings.ToLower(el[0]) == "user-agent" {
 					setUserAgent = false
 				}
+
 				r.HttpRequest.Header.Set(el[0], el[1])
-				r.HttpRequest.Header[http.HeaderOrderKey] = append(r.HttpRequest.Header[http.HeaderOrderKey], el[0])
-				startIndex = 2
 			}
 
-			for _, v := range el[startIndex:] {
+			for _, v := range el[2:] {
 				r.HttpRequest.Header.Add(el[0], v)
 			}
 		}
@@ -122,12 +131,19 @@ func (r *Request) formatHeader() {
 		r.HttpRequest.Header = r.Header
 		r.HttpRequest.Header[http.HeaderOrderKey] = r.HeaderOrder
 
-		if r.HttpRequest.Header.Get("User-Agent") == "" {
-			setUserAgent = true
+		for k := range r.Header {
+			if strings.ToLower(k) == "user-agent" {
+				setUserAgent = false
+				break
+			}
 		}
 	}
 
-	if setUserAgent && r.ua != "" {
+	if setUserAgent {
+		if r.ua == "" {
+			r.ua = utils.UserAgent
+		}
+
 		r.HttpRequest.Header.Set("User-Agent", r.ua)
 	}
 

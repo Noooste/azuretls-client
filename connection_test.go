@@ -55,6 +55,30 @@ func TestSessionConn(t *testing.T) {
 	}
 }
 
+func TestHTTP1Conn(t *testing.T) {
+	session := NewSession()
+
+	_, err := session.Get("https://api.ipify.org/")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestCloudflareRequest(t *testing.T) {
+	session := NewSession()
+
+	response, err := session.Get("https://www.cloudflare.com/cdn-cgi/trace")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Fatal("TestHeader failed, expected: 200, got: ", response.StatusCode)
+	}
+}
+
 func TestHighConcurrency(t *testing.T) {
 	session := NewSession()
 

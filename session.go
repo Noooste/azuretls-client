@@ -69,6 +69,14 @@ func (s *Session) SetContext(ctx context.Context) {
 
 var proxyCheckReg = regexp.MustCompile(`^(https?://)(?:(\w+)(:(\w*))@)?(\w[\w\-_]{0,61}\w?\.(\w{1,6}|[\w-]{1,30}\.\w{2,3})|((\d{1,3})(?:\.\d{1,3}){3}))(:(\d{1,5}))$`)
 
+func (s *Session) Ip() (ip string, err error) {
+	r, err := s.Get("https://api.ipify.org")
+	if err != nil {
+		return
+	}
+	return string(r.Body), nil
+}
+
 func (s *Session) SetProxy(proxy string) error {
 	defer s.Close()
 
