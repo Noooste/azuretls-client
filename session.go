@@ -89,6 +89,7 @@ func (s *Session) SetProxy(proxy string) error {
 	switch {
 	case proxyCheckReg.MatchString(proxy), strings.HasPrefix(proxy, "http://"), strings.HasPrefix(proxy, "https://"):
 		s.Proxy = proxy
+
 	default:
 		s.Proxy = formatProxy(proxy)
 	}
