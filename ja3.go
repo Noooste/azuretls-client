@@ -23,7 +23,7 @@ type TlsSpecifications struct {
 }
 
 func DefaultTlsSpecifications() TlsSpecifications {
-	signatureAlg := []tls.SignatureScheme{tls.ECDSAWithP256AndSHA256,
+	signatureAlg := []tls.SignatureScheme{
 		tls.ECDSAWithP256AndSHA256,
 		tls.PSSWithSHA256,
 		tls.PKCS1WithSHA256,
@@ -309,14 +309,14 @@ func getExtensions(extensions []string, specifications *TlsSpecifications, defau
 			break
 
 		case "23":
-			builtExtensions = append(builtExtensions, &tls.UtlsExtendedMasterSecretExtension{})
+			builtExtensions = append(builtExtensions, &tls.ExtendedMasterSecretExtension{})
 			break
 
 		case "27":
 			if specifications.CertCompressionAlgos != nil {
-				builtExtensions = append(builtExtensions, &tls.CompressCertificateExtension{Algorithms: specifications.CertCompressionAlgos})
+				builtExtensions = append(builtExtensions, &tls.UtlsCompressCertExtension{Algorithms: specifications.CertCompressionAlgos})
 			} else {
-				builtExtensions = append(builtExtensions, &tls.CompressCertificateExtension{Algorithms: []tls.CertCompressionAlgo{tls.CertCompressionBrotli}})
+				builtExtensions = append(builtExtensions, &tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{tls.CertCompressionBrotli}})
 			}
 			break
 
@@ -519,7 +519,7 @@ func GetLastChromeVersion() *tls.ClientHelloSpec {
 			tls.PSSWithSHA512,
 			tls.PKCS1WithSHA512,
 		}},
-		&tls.UtlsExtendedMasterSecretExtension{},
+		&tls.ExtendedMasterSecretExtension{},
 		&tls.SessionTicketExtension{},
 		&tls.SCTExtension{},
 		&tls.RenegotiationInfoExtension{},
@@ -527,7 +527,7 @@ func GetLastChromeVersion() *tls.ClientHelloSpec {
 			tls.PskModeDHE,
 		}},
 		&tls.ApplicationSettingsExtension{SupportedProtocols: []string{http2.NextProtoTLS}},
-		&tls.CompressCertificateExtension{Algorithms: []tls.CertCompressionAlgo{
+		&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
 			tls.CertCompressionBrotli,
 		}},
 		&tls.SupportedVersionsExtension{Versions: []uint16{
@@ -612,7 +612,7 @@ func GetLastIosVersion() *tls.ClientHelloSpec {
 		Extensions: []tls.TLSExtension{
 			&tls.UtlsGREASEExtension{},
 			&tls.SNIExtension{},
-			&tls.UtlsExtendedMasterSecretExtension{},
+			&tls.ExtendedMasterSecretExtension{},
 			&tls.RenegotiationInfoExtension{Renegotiation: tls.RenegotiateOnceAsClient},
 			&tls.SupportedCurvesExtension{Curves: []tls.CurveID{
 				tls.CurveID(tls.GREASE_PLACEHOLDER),
@@ -652,7 +652,7 @@ func GetLastIosVersion() *tls.ClientHelloSpec {
 				tls.VersionTLS13,
 				tls.VersionTLS12,
 			}},
-			&tls.CompressCertificateExtension{Algorithms: []tls.CertCompressionAlgo{
+			&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
 				tls.CertCompressionZlib,
 			}},
 			&tls.UtlsGREASEExtension{},

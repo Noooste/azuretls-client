@@ -2,9 +2,26 @@ package azuretls
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 )
+
+func TestDefaultConfig(t *testing.T) {
+	session := NewSession()
+
+	response, err := session.Get("https://tls.peet.ws/api/all")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Fatal("Expected 200")
+	}
+
+	fmt.Println(string(response.Body))
+}
 
 func TestChrome(t *testing.T) {
 	// Chrome 80
@@ -76,7 +93,6 @@ func TestChrome(t *testing.T) {
 }
 
 func TestSession_ApplyJa3(t *testing.T) {
-
 	session := NewSession()
 
 	ja3Origin := "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24-25-26,0"

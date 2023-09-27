@@ -35,7 +35,6 @@ func defaultHeaderSettings(navigator string) []http2.Setting {
 		return []http2.Setting{
 			{ID: http2.SettingHeaderTableSize, Val: 65536},
 			{ID: http2.SettingEnablePush, Val: 0},
-			{ID: http2.SettingMaxConcurrentStreams, Val: 1e3},
 			{ID: http2.SettingInitialWindowSize, Val: 6291456},
 			{ID: http2.SettingMaxHeaderListSize, Val: 262144},
 		}
