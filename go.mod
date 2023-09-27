@@ -13,7 +13,6 @@ require (
 
 require (
 	github.com/cloudflare/circl v1.3.3 // indirect
-	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/gaukas/godicttls v0.0.4 // indirect
 	github.com/google/uuid v1.3.1 // indirect
 	github.com/klauspost/compress v1.17.0 // indirect
