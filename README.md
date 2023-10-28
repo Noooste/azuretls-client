@@ -56,7 +56,7 @@ Whether you're a seasoned developer looking for a feature-rich HTTP client or yo
 ## Dependencies
 
 ```
-golang ^1.18
+golang ^1.20
 ```
 
 ## Installation
