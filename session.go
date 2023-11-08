@@ -362,6 +362,26 @@ func (s *Session) Patch(url string, data any, args ...any) (*Response, error) {
 	return s.do(request, args...)
 }
 
+/*
+Connect initiates a connection to the specified URL
+*/
+func (s *Session) Connect(u string) error {
+	var request = &Request{}
+	var err error
+
+	request.parsedUrl, err = url.Parse(u)
+
+	if err = s.initTransport(s.Browser); err != nil {
+		return err
+	}
+
+	if _, err = s.initConn(request); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *Session) Close() {
 	s.Connections.Close()
 	s.Connections = NewRequestConnPool(s.ctx)
