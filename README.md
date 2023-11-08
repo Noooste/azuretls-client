@@ -82,6 +82,46 @@ session := azuretls.NewSession()
 // or with context
 session := azuretls.NewSessionWithContext(context.Background())
 ```
+### Make Requests
+
+#### GET
+```go
+session := azuretls.NewSession()
+
+response, err := session.Get("https://tls.peet.ws/api/all")
+
+if err != nil {
+    panic(err)
+}
+
+fmt.Println(response.StatusCode, string(response.Body))
+```
+
+#### POST
+
+To do a POST request, you can use as body:
+  - `string` 
+  - `[]byte`
+  - `io.Reader` 
+  - anything that can be marshalled to JSON
+
+```go
+session := azuretls.NewSession()
+
+response, err := session.Post("https://tls.peet.ws/api/all", `{"test": "test"}`)
+// or
+response, err := session.Post("https://tls.peet.ws/api/all", map[string]string{"test": "test"})
+// or
+response, err := session.Post("https://tls.peet.ws/api/all", []byte(`{"test": "test"}`))
+```
+
+#### PUT
+```go
+session := azuretls.NewSession()
+
+// same as POST
+response, err := session.Put("https://tls.peet.ws/api/all", `{"test": "test"}`)
+```
 
 #
 ### Modify TLS Client Hello (JA3)

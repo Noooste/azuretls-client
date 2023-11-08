@@ -2,7 +2,6 @@ package azuretls
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 	"testing"
 )
@@ -19,8 +18,6 @@ func TestDefaultConfig(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Fatal("Expected 200")
 	}
-
-	fmt.Println(string(response.Body))
 }
 
 func TestChrome(t *testing.T) {
