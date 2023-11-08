@@ -20,7 +20,7 @@ type Conn struct {
 	HTTP2 *http2.ClientConn // http2 connection
 	h2tr  *http2.Transport
 
-	Conn net.Conn // tcp connection
+	Conn net.Conn // Tcp connection
 
 	Pins *PinManager // pin manager
 

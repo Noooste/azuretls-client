@@ -3,9 +3,12 @@ package azuretls
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"golang.org/x/net/idna"
 	"io"
 	"math/rand"
+	"net/url"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -113,4 +116,64 @@ func isDomainOrSubdomain(sub, parent string) bool {
 		return false
 	}
 	return sub[len(sub)-len(parent)-1] == '.'
+}
+
+// UrlEncode encodes a map[string]string to url encoded string
+// Example:
+//
+//	UrlEncodeMap(map[string]string{"bar": "foo", "foo": "bar"})
+//	returns "bar=foo&foo=bar"
+//
+// If you want to encode a struct, you can use the `url` tag
+// Example:
+//
+//	type Foo struct {
+//		Bar string `url:"bar"`
+//		Baz string `url:"baz"`
+//	}
+//
+//	UrlEncode({
+//		Bar: "bar",
+//		Baz: "baz baz baz",
+//	})
+//	returns "bar=bar&baz=baz+baz+baz"
+func UrlEncode(obj any) string {
+	r := reflect.ValueOf(obj)
+
+	if r.Kind() == reflect.Ptr {
+		r = r.Elem()
+	}
+
+	switch r.Kind() {
+	case reflect.Map:
+		keys := r.MapKeys()
+		var result []string
+		for _, key := range keys {
+			result = append(result, fmt.Sprintf("%s=%v", key, r.MapIndex(key)))
+		}
+		return strings.Join(result, "&")
+
+	case reflect.Struct:
+		var result []string
+		for i := 0; i < r.NumField(); i++ {
+			if name, ok := r.Type().Field(i).Tag.Lookup("url"); ok {
+				//detect if omitempty is set
+				split := strings.Split(name, ",")
+				if len(split) > 1 && split[1] == "omitempty" {
+					if r.Field(i).IsZero() {
+						continue
+					}
+				}
+				result = append(result, fmt.Sprintf("%s=%s", split[0], url.QueryEscape(fmt.Sprintf("%v", r.Field(i)))))
+			}
+
+		}
+		return strings.Join(result, "&")
+
+	case reflect.String:
+		return url.QueryEscape(r.String())
+
+	default:
+		return ""
+	}
 }

@@ -41,3 +41,47 @@ func TestToBytes(t *testing.T) {
 		t.Fatal("TestToBytes failed, expected: ", string(testIntBytes), ", got: ", toBytes(testInt))
 	}
 }
+
+func TestUrlEncode(t *testing.T) {
+	type Foo struct {
+		Bar string `url:"bar"`
+		Baz string `url:"baz"`
+	}
+
+	var f = Foo{
+		Bar: "bar",
+		Baz: "baz baz baz",
+	}
+
+	var testString = "bar=bar&baz=baz+baz+baz"
+
+	if UrlEncode(f) != testString {
+		t.Fatal("TestUrlEncode failed, expected: ", testString, ", got: ", UrlEncode(f))
+	}
+}
+
+type q struct {
+	A int    `url:"a"`
+	B string `url:"b"`
+	C string `url:"c,omitempty"`
+}
+
+func TestQuery2(t *testing.T) {
+	dumped := UrlEncode(q{
+		A: 1,
+		B: "b",
+	})
+	if dumped != "a=1&b=b" {
+		t.Error("UrlEncode() failed, expected a=1&b=b, got", dumped)
+	}
+}
+
+func TestQuery3(t *testing.T) {
+	dumped := UrlEncode(map[string]any{
+		"a": "a",
+		"b": "b",
+	})
+	if dumped != "a=a&b=b" {
+		t.Error("UrlEncode() failed, expected a=a&b=b, got", dumped)
+	}
+}

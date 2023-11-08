@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	http "github.com/Noooste/fhttp"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -396,4 +397,50 @@ func TestSession_Options(t *testing.T) {
 		t.Fatal("TestSession_Options failed, expected: not nil, got: ", resp.Body)
 		return
 	}
+}
+
+func TestSession_Connect(t *testing.T) {
+	session := NewSession()
+	session.Browser = Firefox
+
+	err := session.Connect("https://httpbin.org/get")
+
+	if err != nil {
+		t.Fatal("TestSession_Connect failed, expected: nil, got: ", err)
+		return
+	}
+
+	conn := session.Connections.Get(&url.URL{
+		Scheme: "https",
+		Host:   "httpbin.org",
+	})
+
+	if conn == nil {
+		t.Fatal("TestSession_Connect failed, expected: not nil, got: ", conn)
+		return
+	}
+
+	resp, err := session.Get("https://httpbin.org/get")
+
+	if resp.StatusCode != 200 {
+		t.Fatal("TestSession_Options failed, expected: 200, got: ", resp.StatusCode)
+		return
+	}
+
+	if resp.Body == nil {
+		t.Fatal("TestSession_Options failed, expected: not nil, got: ", resp.Body)
+		return
+	}
+
+	conn2 := session.Connections.Get(&url.URL{
+		Scheme: "https",
+		Host:   "httpbin.org",
+	})
+
+	if conn2 != conn {
+		t.Fatal("TestSession_Connect failed, expected: same connection, got: ", conn2)
+		return
+	}
+
+	session.Close()
 }
