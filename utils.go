@@ -20,6 +20,8 @@ const (
 	SchemeHttps = "https"
 	SchemeWs    = "ws"
 	SchemeWss   = "wss"
+	Socks5      = "socks5"
+	Socks5H     = "socks5h"
 )
 
 var (
@@ -132,7 +134,7 @@ func isDomainOrSubdomain(sub, parent string) bool {
 //		Baz string `url:"baz"`
 //	}
 //
-//	UrlEncode({
+//	UrlEncode(Foo{
 //		Bar: "bar",
 //		Baz: "baz baz baz",
 //	})

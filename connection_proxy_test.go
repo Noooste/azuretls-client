@@ -39,7 +39,6 @@ func TestProxyDialer_WrongFormat(t *testing.T) {
 	testAssignProxyFormat(t, "http://username@aaaaa:9999")
 	testAssignProxyFormat(t, "@")
 	testAssignProxyFormat(t, "://aaaa")
-	testAssignProxyFormat(t, "socks5://aaaaa")
 	testAssignProxyFormat(t, "/qqqqq")
 }
 
@@ -65,9 +64,7 @@ func TestProxyDialer(t *testing.T) {
 func TestProxy(t *testing.T) {
 	session := NewSession()
 
-	if err := session.SetProxy("socks5://test.com"); err == nil {
-		t.Fatal("testProxy failed, expected error, got nil")
-	} else if err = session.SetProxy(""); err == nil {
+	if err := session.SetProxy(""); err == nil {
 		t.Fatal("testProxy failed, expected error, got nil")
 	}
 
@@ -155,5 +152,54 @@ func TestProxy3(t *testing.T) {
 
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestProxy4(t *testing.T) {
+	session := NewSession()
+
+	if err := session.SetProxy("socks5://test.com"); err != nil {
+		t.Fatal("testProxy failed, expected nil, got ", err)
+	} else if err = session.SetProxy(""); err == nil {
+		t.Fatal("testProxy failed, expected error, got nil")
+	}
+
+	var loaded map[string]any
+
+	session.ClearProxy()
+	response, err := session.Get("https://tls.peet.ws/api/all")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = response.JSON(&loaded); err != nil {
+		t.Fatal(err)
+	}
+
+	oldIP := loaded["ip"].(string)
+
+	session.InsecureSkipVerify = true
+
+	if os.Getenv("SOCKS5_PROXY") == "" {
+		t.Fatal("TestProxy failed, SOCKS5_PROXY is not set")
+	}
+
+	session.SetProxy(os.Getenv("SOCKS5_PROXY"))
+
+	response, err = session.Get("https://tls.peet.ws/api/all")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = response.JSON(&loaded); err != nil {
+		t.Fatal(err)
+	}
+
+	newIP := loaded["ip"].(string)
+
+	if oldIP == newIP {
+		t.Fatal("TestProxy failed, IP is not changed")
 	}
 }

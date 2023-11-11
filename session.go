@@ -8,7 +8,6 @@ import (
 	"github.com/Noooste/fhttp/cookiejar"
 	"github.com/Noooste/go-utils"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -67,8 +66,6 @@ func (s *Session) SetContext(ctx context.Context) {
 	s.Connections.SetContext(ctx)
 }
 
-var proxyCheckReg = regexp.MustCompile(`^(https?://)(?:(\w+)(:(\w*))@)?(\w[\w\-_]{0,61}\w?\.(\w{1,6}|[\w-]{1,30}\.\w{2,3})|((\d{1,3})(?:\.\d{1,3}){3}))(:(\d{1,5}))$`)
-
 func (s *Session) Ip() (ip string, err error) {
 	r, err := s.Get("https://api.ipify.org")
 	if err != nil {
@@ -82,12 +79,11 @@ func (s *Session) SetProxy(proxy string) error {
 
 	if proxy == "" {
 		return fmt.Errorf("proxy is empty")
-	} else if strings.HasPrefix(proxy, "socks5://") {
-		return fmt.Errorf("socks5 proxy is not supported yet")
 	}
 
 	switch {
-	case proxyCheckReg.MatchString(proxy), strings.HasPrefix(proxy, "http://"), strings.HasPrefix(proxy, "https://"):
+	case strings.HasPrefix(proxy, "socks5h://"), strings.HasPrefix(proxy, "socks5://"),
+		strings.HasPrefix(proxy, "http://"), strings.HasPrefix(proxy, "https://"):
 		s.Proxy = proxy
 
 	default:
@@ -99,6 +95,11 @@ func (s *Session) SetProxy(proxy string) error {
 	}
 
 	return nil
+}
+
+func (s *Session) ClearProxy() {
+	s.Proxy = ""
+	s.proxyDialer = nil
 }
 
 func (s *Session) send(request *Request) (response *Response, err error) {

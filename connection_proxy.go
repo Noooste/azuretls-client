@@ -9,9 +9,11 @@ import (
 	http "github.com/Noooste/fhttp"
 	"github.com/Noooste/fhttp/http2"
 	"github.com/Noooste/utls"
+	"golang.org/x/net/proxy"
 	"io"
 	"net"
 	"net/url"
+	"strings"
 	"sync"
 )
 
@@ -58,6 +60,11 @@ func (s *Session) assignProxy(proxy string) error {
 	case SchemeHttps:
 		if parsed.Port() == "" {
 			parsed.Host = net.JoinHostPort(parsed.Host, "443")
+		}
+
+	case Socks5, Socks5H:
+		if parsed.Port() == "" {
+			parsed.Host = net.JoinHostPort(parsed.Host, "1080")
 		}
 
 	default:
@@ -137,6 +144,19 @@ func (c *proxyDialer) connectHTTP2(req *http.Request, conn net.Conn, h2clientCon
 }
 
 func (c *proxyDialer) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
+	if c.ProxyURL == nil {
+		return nil, errors.New("proxy is not set")
+	}
+
+	if strings.HasPrefix(c.ProxyURL.Scheme, "socks") {
+		dial, err := proxy.FromURL(c.ProxyURL, proxy.Direct)
+		if err != nil {
+			return nil, err
+		}
+
+		return dial.(proxy.ContextDialer).DialContext(ctx, network, address)
+	}
+
 	req := (&http.Request{
 		Method: http.MethodConnect,
 		URL:    &url.URL{Host: address},

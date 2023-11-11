@@ -35,6 +35,7 @@ jobs:
         env:
           SECURE_PROXY: ${{ secrets.SECURE_PROXY }}
           NON_SECURE_PROXY: ${{ secrets.NON_SECURE_PROXY }}
+          SOCKS5_PROXY: ${{ secrets.SOCKS5_PROXY }}
 
       - name: Go Coverage Badge  # Pass the `coverage.out` output to this action
         uses: tj-actions/coverage-badge-go@v2
