@@ -1,6 +1,6 @@
 # AzureTLS Client 
 [![GoDoc](https://godoc.org/github.com/Noooste/azuretls-client?status.svg)](https://godoc.org/github.com/Noooste/azuretls-client)
-![Coverage](https://img.shields.io/badge/Coverage-81.9%25-brightgreen)
+![Coverage](https://img.shields.io/badge/Coverage-80.8%25-brightgreen)
 [![build](https://github.com/Noooste/azuretls-client/actions/workflows/push.yml/badge.svg?branch=improvement)](https://github.com/Noooste/azuretls-client/actions/workflows/push.yml)
 [![Go Report Card](https://goreportcard.com/badge/Noooste/azuretls-client)](https://goreportcard.com/report/Noooste/azuretls-client)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Noooste/azuretls-client/blob/master/LICENSE)
@@ -42,6 +42,15 @@ Whether you're a seasoned developer looking for a feature-rich HTTP client or yo
 * [Installation](#installation)
 * [Usage](#usage)
    * [Create a Session](#create-a-session)
+   * [Make Requests](#make-requests)
+      * [GET](#get)
+      * [POST](#post)
+      * [PUT](#put)
+      * [PATCH](#patch)
+      * [DELETE](#delete)
+      * [OPTIONS](#options)
+      * [HEAD](#head)
+      * [CONNECT](#connect)
    * [Modify TLS Client Hello (JA3)](#modify-tls-client-hello-ja3)
    * [Modify HTTP2](#modify-http2)
    * [Headers](#headers)
@@ -51,6 +60,9 @@ Whether you're a seasoned developer looking for a feature-rich HTTP client or yo
    * [PreHook and CallBack](#prehook-and-callback)
    * [Cookies](#cookies)
    * [Websockets](#websockets)
+   * [Utils](#utils)
+      * [Response to JSON](#response-to-json)
+      * [Url encode](#url-encode)
 
 
 ## Dependencies
@@ -84,6 +96,16 @@ session := azuretls.NewSessionWithContext(context.Background())
 ```
 ### Make Requests
 
+### REQUEST ARGUMENTS
+
+You can pass arguments to the request methods.
+Valid arguments are:
+- `azuretls.OrderedHeaders`: for ordered headers
+- `http.Header`: for headers
+- `azuretls.HeaderOrder`: for `http.Header` order, if the fiels 
+- `time.Duration`: for timeout
+- 
+- 
 #### GET
 ```go
 session := azuretls.NewSession()
@@ -121,6 +143,46 @@ session := azuretls.NewSession()
 
 // same as POST
 response, err := session.Put("https://tls.peet.ws/api/all", `{"test": "test"}`)
+```
+
+#### PATCH
+```go
+session := azuretls.NewSession()
+
+// same as POST
+response, err := session.Patch("https://tls.peet.ws/api/all", `{"test": "test"}`)
+```
+
+#### DELETE
+```go
+session := azuretls.NewSession()
+
+response, err := session.Delete("https://tls.peet.ws/api/all")
+```
+
+#### OPTIONS
+```go
+session := azuretls.NewSession()
+
+response, err := session.Options("https://tls.peet.ws/api/all")
+```
+
+#### HEAD
+```go
+session := azuretls.NewSession()
+
+response, err := session.Head("https://tls.peet.ws/api/all")
+```
+
+#### CONNECT
+
+`session.Connect` is a method that allows you to connect to a website without sending any HTTP request.
+It initiates a TLS handshake and HTTP connection.
+
+```go
+session := azuretls.NewSession()
+
+response, err := session.Connect("https://tls.peet.ws/api/all")
 ```
 
 #
@@ -194,13 +256,38 @@ if err != nil {
 fmt.Println(response.StatusCode, string(response.Body))
 ```
 
+You can also pass `azuretls.OrderedHeaders` or `http.Header` in the arguments of the request methods.
+
+```go
+session := azuretls.NewSession()
+
+headers := azuretls.OrderedHeaders{
+    {"user-agent", "test"},
+    {"content-type", "application/json"},
+    {"accept", "application/json"},
+}
+
+response, err = session.Get("https://tls.peet.ws/api/all", headers)
+
+if err != nil {
+    panic(err)
+}
+```
+
 #
 ### Proxy
 
 You can set a proxy to the session with the `session.SetProxy` method.
+
+If the proxy needs to be cleared, you can do `session.ClearProxy`.
+
 Supported proxy formats include:
+- `http(s)://ip`
 - `http(s)://ip:port`
 - `http(s)://username:password@ip:port`
+- `socks5(h)://ip`
+- `socks5(h)://ip:port`
+- `socks5(h)://username:password@ip:port`
 - `ip:port`
 - `ip:port:username:password`
 - `username:password:ip:port`
@@ -373,4 +460,53 @@ if err = ws.WriteJSON(map[string]string{
 }); err != nil {
   panic(err)
 }
+```
+
+### Utils
+
+#### Response to JSON
+
+You can convert the response to JSON with the `response.JSON` or `response.MustJSON` methods.
+```go
+session := azuretls.NewSession()
+
+response, err := session.Get("https://tls.peet.ws/api/all")
+
+if err != nil {
+    panic(err)
+}
+
+var data map[string]any
+
+if err := response.JSON(&data); err != nil {
+    panic(err)
+}
+
+fmt.Println(data)
+```
+
+#### Url encode
+
+You can encode a struct to url with the `azuretls.UrlEncode` method.
+
+```go
+session := azuretls.NewSession()
+
+type Foo struct {
+	Bar string `url:"bar"`
+	Baz string `url:"baz"`
+}
+
+body := azuretls.UrlEncode(Foo{
+	Bar: "bar",
+	Baz: "baz baz baz",
+})
+
+response, err := session.Post("https://tls.peet.ws/api/all", body)
+
+if err != nil {
+    panic(err)
+}
+
+fmt.Println(response.StatusCode, string(response.Body))
 ```

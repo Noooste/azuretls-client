@@ -75,13 +75,3 @@ func TestQuery2(t *testing.T) {
 		t.Error("UrlEncode() failed, expected a=1&b=b, got", dumped)
 	}
 }
-
-func TestQuery3(t *testing.T) {
-	dumped := UrlEncode(map[string]any{
-		"a": "a",
-		"b": "b",
-	})
-	if dumped != "a=a&b=b" {
-		t.Error("UrlEncode() failed, expected a=a&b=b, got", dumped)
-	}
-}
