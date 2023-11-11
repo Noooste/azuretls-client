@@ -134,7 +134,7 @@ func isDomainOrSubdomain(sub, parent string) bool {
 //		Baz string `url:"baz"`
 //	}
 //
-//	UrlEncode({
+//	UrlEncode(Foo{
 //		Bar: "bar",
 //		Baz: "baz baz baz",
 //	})

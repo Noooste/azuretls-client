@@ -60,6 +60,9 @@ Whether you're a seasoned developer looking for a feature-rich HTTP client or yo
    * [PreHook and CallBack](#prehook-and-callback)
    * [Cookies](#cookies)
    * [Websockets](#websockets)
+   * [Utils](#utils)
+      * [Response to JSON](#response-to-json)
+      * [Url encode](#url-encode)
 
 
 ## Dependencies
@@ -457,4 +460,53 @@ if err = ws.WriteJSON(map[string]string{
 }); err != nil {
   panic(err)
 }
+```
+
+### Utils
+
+#### Response to JSON
+
+You can convert the response to JSON with the `response.JSON` or `response.MustJSON` methods.
+```go
+session := azuretls.NewSession()
+
+response, err := session.Get("https://tls.peet.ws/api/all")
+
+if err != nil {
+    panic(err)
+}
+
+var data map[string]any
+
+if err := response.JSON(&data); err != nil {
+    panic(err)
+}
+
+fmt.Println(data)
+```
+
+#### Url encode
+
+You can encode a struct to url with the `azuretls.UrlEncode` method.
+
+```go
+session := azuretls.NewSession()
+
+type Foo struct {
+	Bar string `url:"bar"`
+	Baz string `url:"baz"`
+}
+
+body := azuretls.UrlEncode(Foo{
+	Bar: "bar",
+	Baz: "baz baz baz",
+})
+
+response, err := session.Post("https://tls.peet.ws/api/all", body)
+
+if err != nil {
+    panic(err)
+}
+
+fmt.Println(response.StatusCode, string(response.Body))
 ```
