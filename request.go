@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	http "github.com/Noooste/fhttp"
 	"io"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -24,6 +26,10 @@ func (s *Session) prepareRequest(request *Request, args ...any) error {
 			request.OrderedHeaders = oh.Clone()
 		case PHeader:
 			request.PHeader = arg.(PHeader)
+		case http.Header:
+			request.Header = arg.(http.Header)
+		case HeaderOrder:
+			request.HeaderOrder = arg.(HeaderOrder)
 		case time.Duration:
 			request.TimeOut = arg.(time.Duration)
 		}
@@ -107,12 +113,23 @@ func newRequest(ctx context.Context, verbose bool, req *Request) (newReq *http.R
 				case io.Reader:
 					reader = req.Body.(io.Reader)
 				default:
-					var dumped []byte
-					dumped, err = json.Marshal(req.Body)
-					if err != nil {
-						return nil, err
+					value := reflect.ValueOf(req.Body)
+
+					if value.Kind() == reflect.Ptr {
+						value = value.Elem()
 					}
-					reader = bytes.NewReader(dumped)
+
+					switch value.Kind() {
+					case reflect.Struct, reflect.Map, reflect.Slice, reflect.Array:
+						var dumped []byte
+						dumped, err = json.Marshal(req.Body)
+						if err != nil {
+							return nil, err
+						}
+						reader = bytes.NewReader(dumped)
+					default:
+						return nil, errors.New("unsupported body type : " + value.Kind().String())
+					}
 				}
 			}
 

@@ -100,7 +100,7 @@ func (r *Request) formatHeader() {
 	var setUserAgent = true
 
 	if r.OrderedHeaders != nil && len(r.OrderedHeaders) > 0 {
-		r.HttpRequest.Header = make(http.Header, len(r.OrderedHeaders)+2)
+		r.HttpRequest.Header = make(http.Header, len(r.OrderedHeaders)+2) // +2 for http.HeaderOrderKey and http.PHeaderOrderKey
 		r.HttpRequest.Header[http.HeaderOrderKey] = make([]string, 0, len(r.OrderedHeaders))
 
 		for _, el := range r.OrderedHeaders {
@@ -110,7 +110,7 @@ func (r *Request) formatHeader() {
 
 			r.HttpRequest.Header[http.HeaderOrderKey] = append(r.HttpRequest.Header[http.HeaderOrderKey], el[0])
 			if len(el) == 1 {
-				// skip empty header value, the key indicate the order
+				// skip empty header value, the key indicates the order
 				continue
 			}
 
@@ -129,7 +129,13 @@ func (r *Request) formatHeader() {
 
 	} else if r.Header != nil && len(r.Header) > 0 {
 		r.HttpRequest.Header = r.Header
-		r.HttpRequest.Header[http.HeaderOrderKey] = r.HeaderOrder
+		if r.HeaderOrder != nil && len(r.HeaderOrder) > 0 {
+			if v, ok := r.Header[http.HeaderOrderKey]; ok {
+				r.Header[http.HeaderOrderKey] = append(v, r.HeaderOrder...)
+			} else {
+				r.Header[http.HeaderOrderKey] = r.HeaderOrder
+			}
+		}
 
 		for k := range r.Header {
 			if strings.ToLower(k) == "user-agent" {

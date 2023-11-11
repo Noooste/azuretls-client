@@ -20,6 +20,8 @@ const (
 	SchemeHttps = "https"
 	SchemeWs    = "ws"
 	SchemeWss   = "wss"
+	Socks5      = "socks5"
+	Socks5H     = "socks5h"
 )
 
 var (
