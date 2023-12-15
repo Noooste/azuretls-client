@@ -256,3 +256,22 @@ func TestGetSupportedVersion(t *testing.T) {
 		getSupportedVersion(navigator)
 	}
 }
+
+func TestECH(t *testing.T) {
+	session := NewSession()
+
+	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,65037-45-13-18-35-23-5-65281-27-10-16-11-43-51-17513-0-21,29-23-24,0", Chrome); err != nil {
+		t.Fatal(err)
+	}
+
+	response, err := session.Get("https://tls.peet.ws/api/all")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Fatal("Expected 200")
+		return
+	}
+}
