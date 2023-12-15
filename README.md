@@ -175,7 +175,8 @@ response, err := session.Head("https://tls.peet.ws/api/all")
 #### CONNECT
 
 `session.Connect` is a method that allows you to connect to a website without sending any HTTP request.
-It initiates a TLS handshake and HTTP connection.
+It initiates the TLS handshake and the HTTP connection.
+This ensures that the server connection is made first, to avoid having to make these connections during the next requests.
 
 ```go
 session := azuretls.NewSession()
@@ -187,18 +188,20 @@ response, err := session.Connect("https://tls.peet.ws/api/all")
 ### Modify TLS Client Hello (JA3)
 
 To modify your ClientHello, you have two options:
-- The first one is to use the `session.ApplyJA3` method, which takes the ja3 fingerprint and the target browser (chrome, firefox, safari, ...).
+- The first one is to use the `session.ApplyJA3` method, which takes a JA3 fingerprint and the target browser (chrome, firefox, safari, ...).
 - The second one is to assign a method to `session.GetClientHelloSpec` that returns TLS configuration.
+
+You can retrieve your JA3 fingerprint there : [https://tls.peet.ws/api/all](https://tls.peet.ws/api/all)
 
 ```go
 session := azuretls.NewSession()
 
-// First way
+// First method
 if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24-25-26,0", azuretls.Chrome); err != nil {
     panic(err)
 }
 
-// Second way
+// Second method
 session.GetClientHelloSpec = azuretls.GetLastChromeVersion //func() *tls.ClientHelloSpec
 
 response, err := session.Get("https://tls.peet.ws/api/all")
@@ -214,7 +217,8 @@ fmt.Println(response.StatusCode, string(response.Body))
 #
 ### Modify HTTP2
 
-To modify HTTP2, you have to apply the HTTP2 fingerprint to the session. You can get your HTTP/2 fingerprint there : [https://tls.peet.ws/api/all](https://tls.peet.ws/api/all)
+To modify HTTP2, you have to apply the HTTP2 fingerprint to the session. 
+You can retrieve your HTTP/2 fingerprint there : [https://tls.peet.ws/api/all](https://tls.peet.ws/api/all)
 ```go
 session := azuretls.NewSession()
 
@@ -233,7 +237,7 @@ fmt.Println(response.StatusCode, string(response.Body))
 #
 ### Headers
 
-Use `session.OrderedHeaders` method, which is `[][]string`
+Use `session.OrderedHeaders` method (`[][]string` type)
 
 ```go
 session := azuretls.NewSession()
@@ -328,7 +332,7 @@ if err != nil {
 fmt.Println(response.StatusCode, string(response.Body))
 ```
 
-If you're concerned about the reliability of a machine, you can improve security by manually setting pins prior to initiating any requests within the session, using the `session.AddPins` method. 
+If you're concerned about the reliability of a server, you can improve security by manually setting pins prior to initiating any requests within the session, using the `session.AddPins` method. 
 The pins are generated through the following series of steps:
 
 1. SubjectPublicKeyInfo is first DER-encoded.
@@ -366,7 +370,7 @@ session := azuretls.NewSession()
 
 session.InsecureSkipVerify = true
 
-// do it at your own risk !
+// do it at your own risk
 response, err := session.Get("https://tls.peet.ws/api/all")
 
 if err != nil {
@@ -397,8 +401,8 @@ fmt.Println(response.StatusCode, string(response.Body))
 #
 ### PreHook and CallBack
 
-You can modify all outgoing requests in the session using the `session.PreHook` method before they are executed.
-You can also set a callback for the session using the `session.CallBack` method.
+You can use the `session.PreHook` method to modify all outgoing requests in the session before they are executed..
+You can also set a callback for the session using the `session.CallBack` method which will be called just after the response received.
 
 ```go
 session := azuretls.NewSession()
@@ -422,8 +426,7 @@ if err != nil {
 
 ### Cookies
 
-You can manage cookies in the cookie jar of the session.
-
+You can manage cookies with the jar of the session. Note that azuretls automatically manage cookies when doing requests.
 ```go
 session := azuretls.NewSession()
 
@@ -443,8 +446,9 @@ if err != nil {
 }
 ```
 
-### Websockets
-You can use websockets with `session.NewWebsocket` method.
+### Websocket
+
+You can use websocket with `session.NewWebsocket` method.
 ```go
 session := azuretls.NewSession()
 ws, err := session.NewWebsocket(&azuretls.Request{
@@ -464,7 +468,7 @@ if err = ws.WriteJSON(map[string]string{
 
 #### Response to JSON
 
-You can convert the response to JSON with the `response.JSON` or `response.MustJSON` methods.
+You can unmarshal the response body (JSON format) into a struct with the `response.JSON` or `response.MustJSON` methods.
 ```go
 session := azuretls.NewSession()
 
@@ -485,8 +489,7 @@ fmt.Println(data)
 
 #### Url encode
 
-You can encode a struct to url with the `azuretls.UrlEncode` method.
-
+You can convert a struct into an url encoded string (used for urls or `application/x-www-form-urlencoded`) with the `azuretls.UrlEncode` method.
 ```go
 session := azuretls.NewSession()
 
