@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Noooste/fhttp/http2"
 	tls "github.com/Noooste/utls"
+	"github.com/Noooste/utls/dicttls"
 	"strconv"
 	"strings"
 )
@@ -415,6 +416,25 @@ func getExtensions(extensions []string, specifications *TlsSpecifications, defau
 			}
 			break
 
+		case "65037":
+			builtExtensions = append(builtExtensions, &tls.GREASEEncryptedClientHelloExtension{
+				CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
+					{
+						KdfId:  dicttls.HKDF_SHA256,
+						AeadId: dicttls.AEAD_AES_128_GCM,
+					},
+					{
+						KdfId:  dicttls.HKDF_SHA256,
+						AeadId: dicttls.AEAD_AES_256_GCM,
+					},
+					{
+						KdfId:  dicttls.HKDF_SHA256,
+						AeadId: dicttls.AEAD_CHACHA20_POLY1305,
+					},
+				},
+				CandidatePayloadLens: []uint16{128, 160},
+			})
+
 		case "65281":
 			builtExtensions = append(builtExtensions, &tls.RenegotiationInfoExtension{Renegotiation: specifications.RenegotiationSupport})
 			break
@@ -545,6 +565,23 @@ func GetLastChromeVersion() *tls.ClientHelloSpec {
 		&tls.SupportedPointsExtension{SupportedPoints: []byte{
 			0x00, // pointFormatUncompressed
 		}},
+		&tls.GREASEEncryptedClientHelloExtension{
+			CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
+				{
+					KdfId:  dicttls.HKDF_SHA256,
+					AeadId: dicttls.AEAD_AES_128_GCM,
+				},
+				{
+					KdfId:  dicttls.HKDF_SHA256,
+					AeadId: dicttls.AEAD_AES_256_GCM,
+				},
+				{
+					KdfId:  dicttls.HKDF_SHA256,
+					AeadId: dicttls.AEAD_CHACHA20_POLY1305,
+				},
+			},
+			CandidatePayloadLens: []uint16{128, 160},
+		},
 		&tls.UtlsGREASEExtension{},
 		&tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle},
 	}
