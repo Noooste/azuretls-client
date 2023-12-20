@@ -516,7 +516,7 @@ func getSupportedVersion(navigator string) ([]uint16, uint16, uint16) {
 }
 
 // GetLastChromeVersion apply the latest Chrome version
-// Current Chrome version : 114
+// Current Chrome version : 120
 func GetLastChromeVersion() *tls.ClientHelloSpec {
 	extensions := []tls.TLSExtension{
 		&tls.UtlsGREASEExtension{},
