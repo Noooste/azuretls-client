@@ -59,7 +59,7 @@ Whether you're a seasoned developer looking for a feature-rich HTTP client or yo
    * [Timeout](#timeout)
    * [PreHook and CallBack](#prehook-and-callback)
    * [Cookies](#cookies)
-   * [Websockets](#websockets)
+   * [Websocket](#websocket)
    * [Utils](#utils)
       * [Response to JSON](#response-to-json)
       * [Url encode](#url-encode)
@@ -117,13 +117,13 @@ if err != nil {
 fmt.Println(response.StatusCode, string(response.Body))
 ```
 
-#### POST
-
-To do a POST request, you can use as body:
+To do a POST, PUT or PATCH requests, you can use as body:
   - `string` 
   - `[]byte`
   - `io.Reader` 
   - anything that can be marshalled to JSON
+    
+#### POST
 
 ```go
 session := azuretls.NewSession()
@@ -139,7 +139,7 @@ response, err := session.Post("https://tls.peet.ws/api/all", []byte(`{"test": "t
 ```go
 session := azuretls.NewSession()
 
-// same as POST
+// the body follows the same semantics as the POST request.
 response, err := session.Put("https://tls.peet.ws/api/all", `{"test": "test"}`)
 ```
 
@@ -147,7 +147,7 @@ response, err := session.Put("https://tls.peet.ws/api/all", `{"test": "test"}`)
 ```go
 session := azuretls.NewSession()
 
-// same as POST
+// the body follows the same semantics as the POST request.
 response, err := session.Patch("https://tls.peet.ws/api/all", `{"test": "test"}`)
 ```
 
