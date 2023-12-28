@@ -30,7 +30,7 @@ Whether you're a seasoned developer looking for a feature-rich HTTP client or yo
 - SSL Pinning
 - PreHook and Callback Functions
 - Integrated Cookie Jar
-- Websockets with JA3
+- Websocket with JA3
 
 
 
@@ -99,10 +99,10 @@ session := azuretls.NewSessionWithContext(context.Background())
 
 You can pass arguments to the request methods.
 Valid arguments are:
-- `azuretls.OrderedHeaders`: for ordered headers
-- `http.Header`: for headers
-- `azuretls.HeaderOrder`: for `http.Header` order, if the fiels 
-- `time.Duration`: for timeout
+- `azuretls.OrderedHeaders`: for ordered headers (of type `[][]string`)
+- `http.Header`: for headers (of type `map[string]string`)
+- `azuretls.HeaderOrder`: for `http.Header` order  (of type `[]string`)
+- `time.Duration`: for the request timeout
 
 #### GET
 ```go
@@ -401,7 +401,7 @@ fmt.Println(response.StatusCode, string(response.Body))
 #
 ### PreHook and CallBack
 
-You can use the `session.PreHook` method to modify all outgoing requests in the session before they are executed..
+You can use the `session.PreHook` method to modify all outgoing requests in the session before they are executed.
 You can also set a callback for the session using the `session.CallBack` method which will be called just after the response received.
 
 ```go
