@@ -2,7 +2,6 @@ package azuretls
 
 import (
 	http "github.com/Noooste/fhttp"
-	"github.com/Noooste/go-utils"
 	"net/url"
 	"sort"
 	"strings"
@@ -147,7 +146,7 @@ func (r *Request) formatHeader() {
 
 	if setUserAgent {
 		if r.ua == "" {
-			r.ua = utils.UserAgent
+			r.ua = defaultUserAgent
 		}
 
 		r.HttpRequest.Header.Set("User-Agent", r.ua)
