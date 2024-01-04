@@ -5,6 +5,7 @@ import (
 	"github.com/Noooste/azuretls-client"
 	"os"
 	"testing"
+	"time"
 )
 
 var skipProxy bool
@@ -191,4 +192,21 @@ func TestProxy4(t *testing.T) {
 	if oldIP == newIP {
 		t.Fatal("TestProxy failed, IP is not changed")
 	}
+}
+
+func TestBadProxy(t *testing.T) {
+	session := azuretls.NewSession()
+	session.SetTimeout(1 * time.Second)
+	defer session.Close()
+
+	if err := session.SetProxy("https://test.com"); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := session.Get("https://ipinfo.io/ip")
+
+	if err == nil || err.Error() != "proxy connection timeout" {
+		t.Fatal("TestBadProxy failed, expected error, got", err)
+	}
+
 }
