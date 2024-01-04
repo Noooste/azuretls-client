@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func (s *Session) isIgnored(host string) bool {
+func (s *Session) IsVerboseIgnored(host string) bool {
 	if s.VerboseIgnoreHost == nil {
 		return false
 	}
@@ -57,7 +57,7 @@ func (s *Session) saveVerbose(request *Request, response *Response, err error) {
 		return
 	}
 
-	if s.Verbose && !s.isIgnored(request.parsedUrl.Hostname()) {
+	if s.Verbose && !s.IsVerboseIgnored(request.parsedUrl.Hostname()) {
 		reqUrl := request.parsedUrl.Path
 		if reqUrl == "" {
 			reqUrl = "/"
@@ -86,7 +86,7 @@ func (s *Session) saveVerbose(request *Request, response *Response, err error) {
 			iter++
 		}
 
-		request.proxy = s.Proxy
+		request.Proxy = s.Proxy
 		requestPart := request.String()
 
 		var responsePart string
@@ -106,8 +106,8 @@ func (r *Request) String() string {
 	var buffer bytes.Buffer
 	buffer.WriteString(r.Method + " " + r.Url + "\n\n")
 
-	if r.proxy != "" {
-		buffer.WriteString("Proxy : " + r.proxy + "\n\n")
+	if r.Proxy != "" {
+		buffer.WriteString("Proxy : " + r.Proxy + "\n\n")
 	}
 
 	if h, ok := r.HttpRequest.Header[http.PHeaderOrderKey]; ok {
@@ -128,6 +128,9 @@ func (r *Request) String() string {
 	writeHeaders(r.HttpRequest.Header, &buffer)
 
 	if r.Body != nil {
+		if r.body == nil {
+			r.body = ToBytes(r.Body)
+		}
 		buffer.WriteByte('\n')
 		buffer.Write(r.body)
 	}

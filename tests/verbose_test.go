@@ -1,6 +1,7 @@
-package azuretls
+package azuretls_tests
 
 import (
+	"github.com/Noooste/azuretls-client"
 	http "github.com/Noooste/fhttp"
 	"os"
 	"strings"
@@ -11,7 +12,7 @@ import (
 func TestSession_EnableVerbose(t *testing.T) {
 	defer os.RemoveAll("./tmp")
 
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	session.EnableVerbose("./tmp", []string{"*.httpbin.org"})
 
@@ -31,11 +32,11 @@ func TestSession_EnableVerbose(t *testing.T) {
 		t.Fatal("VerboseIgnoreHost not set")
 	}
 
-	if !session.isIgnored("test.httpbin.org") {
+	if !session.IsVerboseIgnored("test.httpbin.org") {
 		t.Fatal("test.httpbin.org is not ignored")
 	}
 
-	if !session.isIgnored("httpbin.org") {
+	if !session.IsVerboseIgnored("httpbin.org") {
 		t.Fatal("test.httpbin.org is not ignored")
 	}
 
@@ -76,16 +77,15 @@ func TestSession_EnableVerbose(t *testing.T) {
 }
 
 func TestSession_EnableVerbose2(t *testing.T) {
-	req := (&Request{
+	req := (&azuretls.Request{
 		HttpRequest: &http.Request{
 			Header: http.Header{
 				"cookie":     {"c1=v1; c2=v2"},
 				"set-cookie": {"c1=v1", "c2=v2"},
 			},
 		},
-		proxy: "test",
+		Proxy: "test",
 		Body:  "aa",
-		body:  []byte("aa"),
 	}).String()
 
 	if !strings.Contains(req, "Proxy : test") {
@@ -100,7 +100,7 @@ func TestSession_EnableVerbose2(t *testing.T) {
 
 	defer os.RemoveAll("./tmp")
 
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	session.EnableVerbose("./tmp", []string{"*.httpbin.org"})
 
@@ -129,7 +129,7 @@ func TestSession_EnableVerbose2(t *testing.T) {
 
 	session.EnableVerbose("./tmp", nil)
 
-	var headers = OrderedHeaders{
+	var headers = azuretls.OrderedHeaders{
 		{"sec-ch-ua-mobile", "?0"},
 		{"user-agent", session.UserAgent},
 		{"content-type", "application/json; charset=UTF-8"},

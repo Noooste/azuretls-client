@@ -52,7 +52,7 @@ func formatProxy(proxy string) string {
 	return ""
 }
 
-func toBytes(b any) []byte {
+func ToBytes(b any) []byte {
 	switch b.(type) {
 	case string:
 		return []byte(b.(string))

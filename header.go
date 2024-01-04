@@ -24,14 +24,14 @@ func (ph PHeader) GetDefault() {
 
 // Clone returns a copy of the header.
 func (oh *OrderedHeaders) Clone() OrderedHeaders {
-	var clone = make(OrderedHeaders, len(*oh))
+	var clone = make(OrderedHeaders, 0, len(*oh))
 
-	for i, header := range *oh {
-		var fieldClone = make([]string, len(header))
-		for j, field := range header {
-			fieldClone[j] = field
+	for _, header := range *oh {
+		var fieldClone = make([]string, 0, len(header))
+		for _, field := range header {
+			fieldClone = append(fieldClone, field)
 		}
-		clone[i] = fieldClone
+		clone = append(clone, fieldClone)
 	}
 
 	return clone

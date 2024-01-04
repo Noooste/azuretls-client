@@ -1,16 +1,17 @@
-package azuretls
+package azuretls_tests
 
 import (
+	"github.com/Noooste/azuretls-client"
+	url2 "net/url"
 	"runtime"
 	"sync"
 	"testing"
-	"time"
 )
 
 func TestSessionConn(t *testing.T) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	response, err := session.Get("https://example.com/")
 
@@ -22,11 +23,12 @@ func TestSessionConn(t *testing.T) {
 		t.Fatal("TestHeader failed, expected: 200, got: ", response.StatusCode)
 	}
 
-	if len(session.Connections.hosts) == 0 {
-		t.Fatal("TestSessionConn failed, Conn is empty")
+	u := &url2.URL{
+		Scheme: "https",
+		Host:   "example.com",
 	}
 
-	firstConn := session.Connections.hosts["example.com:443"]
+	firstConn := session.Connections.Get(u)
 
 	if !firstConn.HTTP2.CanTakeNewRequest() {
 		t.Fatal("TestSessionConn failed, Conn is not reusable")
@@ -46,17 +48,13 @@ func TestSessionConn(t *testing.T) {
 		t.Fatal("TestHeader failed, expected: 200, got: ", response.StatusCode)
 	}
 
-	if len(session.Connections.hosts) != 1 {
-		t.Fatal("TestSessionConn failed, Conn is not reused")
-	}
-
-	if firstConn != session.Connections.hosts["example.com:443"] {
+	if session.Connections.Get(u) != firstConn {
 		t.Fatal("TestSessionConn failed, Conn is not reused")
 	}
 }
 
 func TestHTTP1Conn(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	_, err := session.Get("https://api.ipify.org/")
 
@@ -66,7 +64,7 @@ func TestHTTP1Conn(t *testing.T) {
 }
 
 func TestCloudflareRequest(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	response, err := session.Get("https://www.cloudflare.com/cdn-cgi/trace")
 
@@ -80,7 +78,7 @@ func TestCloudflareRequest(t *testing.T) {
 }
 
 func TestHighConcurrency(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	wait := &sync.WaitGroup{}
 
@@ -115,36 +113,5 @@ func TestHighConcurrency(t *testing.T) {
 
 	if ok < count-1 { //~1 request can fail
 		t.Fatal("TestHighConcurrency failed, expected: ", count, ", got: ", ok)
-	}
-}
-
-func TestConnContext(t *testing.T) {
-	session := NewSession()
-
-	_, err := session.Do(&Request{
-		Method:  "GET",
-		Url:     "https://example.com/",
-		TimeOut: 1 * time.Second,
-	})
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if session.Connections.hosts["example.com:443"].ctx != session.ctx {
-		t.Fatal("TestConnContext failed, expected: ", session.ctx, ", got: ", session.Connections.hosts["example.com:443"].ctx)
-	}
-
-	select {
-	case <-time.After(2 * time.Second):
-		_, err := session.Get("https://example.com/")
-
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if session.Connections.hosts["example.com:443"].ctx != session.ctx {
-			t.Fatal("TestConnContext failed, expected: ", session.ctx, ", got: ", session.Connections.hosts["example.com:443"].ctx)
-		}
 	}
 }

@@ -1,6 +1,7 @@
-package azuretls
+package azuretls_tests
 
 import (
+	"github.com/Noooste/azuretls-client"
 	http "github.com/Noooste/fhttp"
 	"net/url"
 	"strings"
@@ -8,7 +9,7 @@ import (
 )
 
 func TestRedirect(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	response, err := session.Get("https://httpbin.org/redirect/1")
 
@@ -26,7 +27,7 @@ func TestRedirect(t *testing.T) {
 }
 
 func TestRedirect2_307(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	response, err := session.Get("https://httpbin.org/status/307")
 
@@ -44,20 +45,20 @@ func TestRedirect2_307(t *testing.T) {
 }
 
 func TestRedirect2(t *testing.T) {
-	resp := &Response{
+	resp := &azuretls.Response{
 		StatusCode: http.StatusPermanentRedirect,
 		Header:     make(http.Header),
 	}
 
-	_, shouldRedirect, _ := redirectBehavior(http.MethodGet, resp, &Request{})
+	_, shouldRedirect, _ := azuretls.RedirectBehavior(http.MethodGet, resp, &azuretls.Request{})
 
 	if shouldRedirect {
 		t.Fatal("TestRedirect2 failed, expected no redirection")
 	}
 
 	resp.Header.Set("Location", "something")
-	_, shouldRedirect, _ = redirectBehavior(http.MethodGet, resp, &Request{
-		contentLength: 1,
+	_, shouldRedirect, _ = azuretls.RedirectBehavior(http.MethodGet, resp, &azuretls.Request{
+		ContentLength: 1,
 	})
 
 	if shouldRedirect {
@@ -65,17 +66,17 @@ func TestRedirect2(t *testing.T) {
 	}
 
 	resp.StatusCode = http.StatusFound
-	m, _, _ := redirectBehavior(http.MethodPost, resp, &Request{})
+	m, _, _ := azuretls.RedirectBehavior(http.MethodPost, resp, &azuretls.Request{})
 
 	if m != http.MethodGet {
 		t.Fatal("TestRedirect2 failed, expected no redirection")
 	}
 
-	if v := refererForURL(&url.URL{Host: "example.com", Scheme: SchemeHttps}, &url.URL{Host: "example.com", Scheme: SchemeHttp}); v != "" {
+	if v := azuretls.RefererForURL(&url.URL{Host: "example.com", Scheme: azuretls.SchemeHttps}, &url.URL{Host: "example.com", Scheme: azuretls.SchemeHttp}); v != "" {
 		t.Fatal("TestRedirect2 failed, expected no referer, got", v)
 	}
 
-	if v := refererForURL(&url.URL{User: &url.Userinfo{}, Host: "example.com", Scheme: SchemeHttps}, &url.URL{Host: "example.com", Scheme: SchemeHttp}); strings.Contains(v, "@") {
+	if v := azuretls.RefererForURL(&url.URL{User: &url.Userinfo{}, Host: "example.com", Scheme: azuretls.SchemeHttps}, &url.URL{Host: "example.com", Scheme: azuretls.SchemeHttp}); strings.Contains(v, "@") {
 		t.Fatal("TestRedirect2 failed, expected referer without @, got", v)
 	}
 }

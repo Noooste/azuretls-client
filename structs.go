@@ -35,8 +35,8 @@ type Session struct {
 
 	Connections *ConnPool // Pool of persistent connections to manage concurrent requests.
 
-	tr2 *http2.Transport
-	tr  *http.Transport
+	HTTP2Transport *http2.Transport
+	Transport      *http.Transport
 
 	GetClientHelloSpec func() *tls.ClientHelloSpec // Function to provide custom TLS handshake details.
 
@@ -44,7 +44,7 @@ type Session struct {
 
 	Proxy          string // Proxy address.
 	H2Proxy        bool   // If true, use HTTP2 for proxy connections.
-	proxyDialer    *proxyDialer
+	ProxyDialer    *proxyDialer
 	proxyConnected bool
 
 	Verbose           bool                                                  // If true, print detailed logs or debugging information.
@@ -91,7 +91,7 @@ type Request struct {
 
 	conn *Conn // Connection associated with the request.
 
-	proxy   string
+	Proxy   string
 	ua      string
 	browser string
 
@@ -108,7 +108,7 @@ type Request struct {
 
 	Proto string
 
-	contentLength int64 // Length of content in the request.
+	ContentLength int64 // Length of content in the request.
 
 	ctx context.Context // Context for cancellable and timeout operations.
 }

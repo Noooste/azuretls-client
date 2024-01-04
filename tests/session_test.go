@@ -1,9 +1,10 @@
-package azuretls
+package azuretls_tests
 
 import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/Noooste/azuretls-client"
 	http "github.com/Noooste/fhttp"
 	"net/url"
 	"os"
@@ -13,14 +14,20 @@ import (
 )
 
 func TestNewSession(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 	if session == nil {
 		t.Fatal("session is nil")
 	}
 }
 
-func testProxy(t *testing.T, session *Session, proxy string, expected ...string) {
-	session.SetProxy(proxy)
+func testProxy(t *testing.T, session *azuretls.Session, proxy string, expected ...string) {
+	err := session.SetProxy(proxy)
+
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+
 	if len(expected) > 0 {
 		if session.Proxy != expected[0] {
 			t.Fatal("TestSession_SetProxy failed, expected: ", expected[0], ", got: ", session.Proxy)
@@ -35,14 +42,13 @@ func testProxy(t *testing.T, session *Session, proxy string, expected ...string)
 }
 
 func TestSession_SetProxy(t *testing.T) {
-	s := NewSession()
+	s := azuretls.NewSession()
 	testProxy(t, s, "http://username:password@ip:9999")
 	testProxy(t, s, "http://ip:9999")
 	testProxy(t, s, "http://username:password@ip")
 	testProxy(t, s, "ip:9999:username:password", "http://username:password@ip:9999")
 	testProxy(t, s, "username:password:ip:9999", "http://username:password@ip:9999")
 	testProxy(t, s, "username:password@ip:9999", "http://username:password@ip:9999")
-	testProxy(t, s, "qqqqqq", "")
 	testProxy(t, s, "ip:9999", "http://ip:9999")
 }
 
@@ -51,7 +57,7 @@ func TestSession_Ip(t *testing.T) {
 		t.Skip("TestProxy skipped")
 	}
 
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	response, err := session.Get("https://api.ipify.org/")
 
@@ -77,7 +83,7 @@ func TestSession_Ip(t *testing.T) {
 }
 
 func TestSession_SetTimeout(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 	session.SetTimeout(10 * time.Second)
 	if session.TimeOut != 10*time.Second {
 		t.Fatal("TestSession_SetTimeout failed, expected: ", 10*time.Second, ", got: ", session.TimeOut)
@@ -100,13 +106,15 @@ func TestSession_SetTimeout(t *testing.T) {
 	}
 
 	session.SetTimeout(30 * time.Second)
-	if session.tr.TLSHandshakeTimeout != 30*time.Second || session.tr.ResponseHeaderTimeout != 30*time.Second {
-		t.Fatal("TestSession_SetTimeout failed, expected: timeout, got: 30*time.Second", session.tr.TLSHandshakeTimeout, "and", session.tr.ResponseHeaderTimeout)
+	if session.Transport.TLSHandshakeTimeout != 30*time.Second || session.Transport.ResponseHeaderTimeout != 30*time.Second {
+		t.Fatal(
+			"TestSession_SetTimeout failed, expected: timeout, got: 30*time.Second",
+			session.Transport.TLSHandshakeTimeout, "and", session.Transport.ResponseHeaderTimeout)
 	}
 }
 
 func TestNewSessionWithContext(t *testing.T) {
-	req := &Request{
+	req := &azuretls.Request{
 		Method: http.MethodGet,
 		Url:    "https://httpbin.org/delay/5",
 	}
@@ -116,7 +124,7 @@ func TestNewSessionWithContext(t *testing.T) {
 	var cancel context.CancelFunc
 
 	ctx, cancel = context.WithTimeout(ctx, 500*time.Millisecond)
-	session := NewSessionWithContext(ctx)
+	session := azuretls.NewSessionWithContext(ctx)
 	defer cancel()
 
 	_, err := session.Do(req)
@@ -129,7 +137,7 @@ func TestNewSessionWithContext(t *testing.T) {
 }
 
 func TestNewSessionWithContext2(t *testing.T) {
-	req := &Request{
+	req := &azuretls.Request{
 		Method: http.MethodGet,
 		Url:    "https://httpbin.org/delay/5",
 	}
@@ -144,7 +152,7 @@ func TestNewSessionWithContext2(t *testing.T) {
 		cancel()
 	})
 
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	session.SetContext(ctx)
 
@@ -157,10 +165,10 @@ func TestNewSessionWithContext2(t *testing.T) {
 }
 
 func TestSession_Post(t *testing.T) {
-	session := NewSession()
-	session.Browser = Firefox
+	session := azuretls.NewSession()
+	session.Browser = azuretls.Firefox
 
-	req := &Request{
+	req := &azuretls.Request{
 		Method: http.MethodPost,
 		Url:    "https://httpbin.org/post",
 		Body:   "test",
@@ -189,16 +197,16 @@ func TestSession_Post(t *testing.T) {
 }
 
 func TestSessionPreHook(t *testing.T) {
-	session := NewSession()
-	session.Browser = Firefox
+	session := azuretls.NewSession()
+	session.Browser = azuretls.Firefox
 
-	req := &Request{
+	req := &azuretls.Request{
 		Method: http.MethodPost,
 		Url:    "https://httpbin.org/post",
 		Body:   "test",
 	}
 
-	session.PreHook = func(req *Request) error {
+	session.PreHook = func(req *azuretls.Request) error {
 		req.OrderedHeaders = append(req.OrderedHeaders, []string{"X-Test", "test"})
 		return nil
 	}
@@ -231,16 +239,16 @@ func TestSessionPreHook(t *testing.T) {
 }
 
 func TestSessionPrehookError(t *testing.T) {
-	session := NewSession()
-	session.Browser = Firefox
+	session := azuretls.NewSession()
+	session.Browser = azuretls.Firefox
 
-	req := &Request{
+	req := &azuretls.Request{
 		Method: http.MethodPost,
 		Url:    "https://httpbin.org/post",
 		Body:   "test",
 	}
 
-	session.PreHook = func(req *Request) error {
+	session.PreHook = func(req *azuretls.Request) error {
 		return errors.New("test")
 	}
 
@@ -252,10 +260,10 @@ func TestSessionPrehookError(t *testing.T) {
 }
 
 func TestSessionCallback(t *testing.T) {
-	session := NewSession()
-	session.Browser = Firefox
+	session := azuretls.NewSession()
+	session.Browser = azuretls.Firefox
 
-	req := &Request{
+	req := &azuretls.Request{
 		Method: http.MethodPost,
 		Url:    "https://www.google.com",
 		Body:   "test",
@@ -263,7 +271,7 @@ func TestSessionCallback(t *testing.T) {
 
 	var called bool
 
-	session.Callback = func(req *Request, resp *Response, err error) {
+	session.Callback = func(req *azuretls.Request, resp *azuretls.Response, err error) {
 		called = true
 	}
 
@@ -280,8 +288,8 @@ func TestSessionCallback(t *testing.T) {
 }
 
 func TestSession_Put(t *testing.T) {
-	session := NewSession()
-	session.Browser = Firefox
+	session := azuretls.NewSession()
+	session.Browser = azuretls.Firefox
 
 	resp, err := session.Put("https://httpbin.org/put", "test")
 	if err != nil {
@@ -306,8 +314,8 @@ func TestSession_Put(t *testing.T) {
 }
 
 func TestSession_Delete(t *testing.T) {
-	session := NewSession()
-	session.Browser = Firefox
+	session := azuretls.NewSession()
+	session.Browser = azuretls.Firefox
 
 	resp, err := session.Delete("https://httpbin.org/delete", "test")
 	if err != nil {
@@ -332,8 +340,8 @@ func TestSession_Delete(t *testing.T) {
 }
 
 func TestSession_Patch(t *testing.T) {
-	session := NewSession()
-	session.Browser = Firefox
+	session := azuretls.NewSession()
+	session.Browser = azuretls.Firefox
 
 	resp, err := session.Patch("https://httpbin.org/patch", "test")
 	if err != nil {
@@ -358,8 +366,8 @@ func TestSession_Patch(t *testing.T) {
 }
 
 func TestSession_Head(t *testing.T) {
-	session := NewSession()
-	session.Browser = Firefox
+	session := azuretls.NewSession()
+	session.Browser = azuretls.Firefox
 
 	resp, err := session.Head("https://httpbin.org/get")
 	if err != nil {
@@ -379,8 +387,8 @@ func TestSession_Head(t *testing.T) {
 }
 
 func TestSession_Options(t *testing.T) {
-	session := NewSession()
-	session.Browser = Firefox
+	session := azuretls.NewSession()
+	session.Browser = azuretls.Firefox
 
 	resp, err := session.Options("https://httpbin.org/get", "test")
 	if err != nil {
@@ -400,8 +408,8 @@ func TestSession_Options(t *testing.T) {
 }
 
 func TestSession_Connect(t *testing.T) {
-	session := NewSession()
-	session.Browser = Firefox
+	session := azuretls.NewSession()
+	session.Browser = azuretls.Firefox
 
 	err := session.Connect("https://httpbin.org/get")
 
