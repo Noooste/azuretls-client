@@ -52,8 +52,8 @@ type Session struct {
 	VerboseIgnoreHost []string                                              // List of hosts to ignore when logging verbose info.
 	VerboseFunc       func(request *Request, response *Response, err error) // Custom function to handle verbose logging.
 
-	MaxRedirections uint          // Maximum number of redirects to follow.
-	TimeOut         time.Duration // Maximum time to wait for request to complete.
+	MaxRedirects uint          // Maximum number of redirects to follow.
+	TimeOut      time.Duration // Maximum time to wait for request to complete.
 
 	PreHook  func(request *Request) error                          // Function called before sending request.
 	Callback func(request *Request, response *Response, err error) // Function called after receiving a response.
@@ -97,7 +97,7 @@ type Request struct {
 	browser string
 
 	DisableRedirects bool // If true, redirects won't be followed.
-	MaxRedirections  uint // Maximum number of redirects to follow.
+	MaxRedirects     uint // Maximum number of redirects to follow.
 
 	NoCookie bool // If true, cookies won't be included in the request.
 
