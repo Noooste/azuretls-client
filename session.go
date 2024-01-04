@@ -41,7 +41,8 @@ func NewSessionWithContext(ctx context.Context) *Session {
 		GetClientHelloSpec: GetLastChromeVersion,
 
 		UserAgent: utils.UserAgent,
-		SecChUa:   utils.SecChUa,
+
+		MaxRedirections: 10,
 
 		mu: new(sync.Mutex),
 
