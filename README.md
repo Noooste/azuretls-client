@@ -89,9 +89,12 @@ import (
 ```go
 // without context
 session := azuretls.NewSession()
+// don't forget to close the session when you no longer need it, to free up resources
+defer session.Close() 
 
 // or with context
 session := azuretls.NewSessionWithContext(context.Background())
+defer session.Close()
 ```
 ### Make Requests
 
@@ -113,6 +116,7 @@ You can modify the maximum number of redirects with `session.MaxRedirects` or `r
 #### GET
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 response, err := session.Get("https://tls.peet.ws/api/all")
 
@@ -133,6 +137,7 @@ To do a POST, PUT or PATCH requests, you can use as body:
 
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 response, err := session.Post("https://tls.peet.ws/api/all", `{"test": "test"}`)
 // or
@@ -144,6 +149,7 @@ response, err := session.Post("https://tls.peet.ws/api/all", []byte(`{"test": "t
 #### PUT
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 // the body follows the same semantics as the POST request.
 response, err := session.Put("https://tls.peet.ws/api/all", `{"test": "test"}`)
@@ -152,6 +158,7 @@ response, err := session.Put("https://tls.peet.ws/api/all", `{"test": "test"}`)
 #### PATCH
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 // the body follows the same semantics as the POST request.
 response, err := session.Patch("https://tls.peet.ws/api/all", `{"test": "test"}`)
@@ -160,6 +167,7 @@ response, err := session.Patch("https://tls.peet.ws/api/all", `{"test": "test"}`
 #### DELETE
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 response, err := session.Delete("https://tls.peet.ws/api/all")
 ```
@@ -167,6 +175,7 @@ response, err := session.Delete("https://tls.peet.ws/api/all")
 #### OPTIONS
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 response, err := session.Options("https://tls.peet.ws/api/all")
 ```
@@ -174,6 +183,7 @@ response, err := session.Options("https://tls.peet.ws/api/all")
 #### HEAD
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 response, err := session.Head("https://tls.peet.ws/api/all")
 ```
@@ -186,6 +196,7 @@ This ensures that the server connection is made first, to avoid having to make t
 
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 response, err := session.Connect("https://tls.peet.ws/api/all")
 ```
@@ -201,6 +212,7 @@ You can retrieve your JA3 fingerprint there : [https://tls.peet.ws/api/all](http
 
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 // First method
 if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24-25-26,0", azuretls.Chrome); err != nil {
@@ -227,6 +239,7 @@ To modify HTTP2, you have to apply the HTTP2 fingerprint to the session.
 You can retrieve your HTTP/2 fingerprint there : [https://tls.peet.ws/api/all](https://tls.peet.ws/api/all)
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 if err := session.ApplyHTTP2("1:65536,2:0,3:1000,4:6291456,6:262144|15663105|0|m,s,a,p"); err != nil {
     panic(err)
@@ -247,6 +260,7 @@ Use `session.OrderedHeaders` method (`[][]string` type)
 
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 // it will keep the order
 session.OrderedHeaders = azuretls.OrderedHeaders{
@@ -268,6 +282,7 @@ You can also pass `azuretls.OrderedHeaders` or `http.Header` in the arguments of
 
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 headers := azuretls.OrderedHeaders{
     {"user-agent", "test"},
@@ -305,6 +320,7 @@ Supported proxy formats include:
 
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 if err := session.SetProxy("http://username:password@ip:port"); err != nil {
     panic(err)
@@ -327,6 +343,7 @@ SSL pinning is enabled by default.
 
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 // secured request
 response, err := session.Get("https://tls.peet.ws/api/all")
@@ -349,6 +366,7 @@ The pins are generated through the following series of steps:
 
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 session.AddPins(&url.URL{
         Scheme: "https",
@@ -373,6 +391,7 @@ To disable SSL Pinning, you can do `session.InsecureSkipVerify = true`
 
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 session.InsecureSkipVerify = true
 
@@ -393,6 +412,7 @@ You can set a timeout to the session with the `session.SetTimeout` method.
 
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 session.SetTimeout(5 * time.Second)
 
@@ -412,6 +432,7 @@ You can also set a callback for the session using the `session.CallBack` method 
 
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 session.PreHook = func(request *azuretls.Request) error {
     request.Header.Set("user-agent", "test")
@@ -435,6 +456,7 @@ if err != nil {
 You can manage cookies with the jar of the session. Note that azuretls automatically manage cookies when doing requests.
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 parsed, err := url.Parse("https://tls.peet.ws/api/all")
 
@@ -457,6 +479,8 @@ if err != nil {
 You can use websocket with `session.NewWebsocket` method.
 ```go
 session := azuretls.NewSession()
+defer session.Close()
+
 ws, err := session.NewWebsocket(&azuretls.Request{
 		Url: "wss://demo.piesocket.com/v3/channel_123?api_key=VCXCEuvhGcBDP7XhiJJUDvR1e1D3eiVjgZ9VRiaV&notify_self",
 		OrderedHeaders: azuretls.OrderedHeaders{
@@ -477,6 +501,7 @@ if err = ws.WriteJSON(map[string]string{
 You can unmarshal the response body (JSON format) into a struct with the `response.JSON` or `response.MustJSON` methods.
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 response, err := session.Get("https://tls.peet.ws/api/all")
 
@@ -498,6 +523,7 @@ fmt.Println(data)
 You can convert a struct into an url encoded string (used for urls or `application/x-www-form-urlencoded`) with the `azuretls.UrlEncode` method.
 ```go
 session := azuretls.NewSession()
+defer session.Close()
 
 type Foo struct {
 	Bar string `url:"bar"`
