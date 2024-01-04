@@ -456,7 +456,7 @@ func TestSession_Connect(t *testing.T) {
 func TestSession_TooManyRedirects(t *testing.T) {
 	session := azuretls.NewSession()
 
-	resp, err := session.Get("https://httpbin.org/redirect/10")
+	resp, err := session.Get("https://httpbin.org/redirect/11")
 
 	if err == nil || !strings.Contains(err.Error(), "too many Redirects") {
 		t.Fatal("TestSession_TooManyRedirects failed, expected: too many Redirects, got: ", err)
