@@ -106,8 +106,9 @@ Valid arguments are:
 
 #### REQUEST REDIRECTS
 
-By default, azuretls client will follow redirects. If you want to disable it, you can do `session.DisableRedirects = true`
-If not, it will follow the redirects until the `MaxRedirects` limit is reached (default: 10).
+By default, the azuretls client follows redirects. If you want to disable it, you can do `request.DisableRedirects = true`.
+Otherwise, it will follow redirects until the `MaxRedirects` limit is reached (default: 10).
+You can modify the maximum number of redirects with `session.MaxRedirects` or `request.MaxRedirects`.
 
 #### GET
 ```go
