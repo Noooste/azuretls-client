@@ -27,8 +27,10 @@ type Conn struct {
 
 	ClientHelloSpec func() *tls.ClientHelloSpec
 
-	mu  *sync.RWMutex
-	ctx context.Context
+	mu *sync.RWMutex
+
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 /*
@@ -79,6 +81,8 @@ func (cp *ConnPool) Close() {
 	for _, c := range cp.hosts {
 		c.Close()
 	}
+	cp.hosts = nil
+	cp.mu = nil
 }
 
 func getHost(u *url.URL) string {
@@ -201,7 +205,52 @@ func (c *Conn) Close() {
 		_ = c.HTTP2.Close()
 		c.HTTP2 = nil
 	}
+
+	if c.cancel != nil {
+		c.cancel()
+		c.cancel = nil
+	}
 	c.PinManager = nil
+}
+
+func (s *Session) getProxyConn(conn *Conn, host string) (err error) {
+	ctx, cancel := context.WithCancel(s.ctx)
+	s.ProxyDialer.ForceHTTP2 = s.H2Proxy
+	s.ProxyDialer.tr = s.HTTP2Transport
+	s.ProxyDialer.Dialer.Timeout = conn.TimeOut
+
+	timer := time.NewTimer(conn.TimeOut)
+	defer timer.Stop()
+
+	connChan := make(chan net.Conn, 1)
+	errChan := make(chan error, 1)
+
+	defer close(connChan)
+	defer close(errChan)
+
+	go func() {
+		proxyConn, dialErr := s.ProxyDialer.DialContext(ctx, "tcp", host)
+		if dialErr != nil {
+			errChan <- dialErr
+		}
+		connChan <- proxyConn
+	}()
+
+	select {
+	case <-timer.C:
+		cancel()
+		return errors.New("proxy connection timeout")
+
+	case c := <-connChan:
+		conn.Conn = c
+		conn.cancel = cancel
+
+	case err = <-errChan:
+		cancel()
+		return err
+	}
+
+	return nil
 }
 
 func (s *Session) initConn(req *Request) (conn *Conn, err error) {
@@ -228,20 +277,12 @@ func (s *Session) initConn(req *Request) (conn *Conn, err error) {
 	defer conn.mu.Unlock()
 
 	if conn.Conn == nil {
-		var dialContext func(ctx context.Context, network, addr string) (net.Conn, error)
-
 		if s.ProxyDialer != nil {
-			s.ProxyDialer.ForceHTTP2 = s.H2Proxy
-			s.ProxyDialer.tr = s.HTTP2Transport
-			dialContext = s.ProxyDialer.DialContext
-			s.ProxyDialer.Dialer.Timeout = conn.TimeOut
+			if err = s.getProxyConn(conn, host); err != nil {
+				return nil, err
+			}
 		} else {
-			dialContext = (&net.Dialer{Timeout: conn.TimeOut}).DialContext
-		}
-
-		conn.Conn, err = dialContext(s.ctx, "tcp", host)
-		if err != nil {
-			return
+			conn.Conn, err = (&net.Dialer{Timeout: conn.TimeOut}).DialContext(s.ctx, "tcp", host)
 		}
 	}
 

@@ -66,6 +66,8 @@ type Session struct {
 	ctx context.Context // Context for cancellable and timeout operations.
 
 	UserAgent string // Headers for User-Agent and Sec-Ch-Ua, respectively.
+
+	closed bool
 }
 
 // Request represents the details and configuration for an individual HTTP(S)

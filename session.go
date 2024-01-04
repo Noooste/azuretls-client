@@ -179,7 +179,7 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 		req.ctx = s.ctx
 	}
 
-	var reqs = make([]*Request, 0, 10)
+	var reqs = make([]*Request, 0, req.MaxRedirects+1)
 
 	var (
 		redirectMethod string
