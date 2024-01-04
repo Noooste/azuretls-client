@@ -1,6 +1,6 @@
 # AzureTLS Client 
 [![GoDoc](https://godoc.org/github.com/Noooste/azuretls-client?status.svg)](https://godoc.org/github.com/Noooste/azuretls-client)
-![Coverage](https://img.shields.io/badge/Coverage-0.0%25-red)
+![Coverage](https://img.shields.io/badge/Coverage-77.2%25-brightgreen)
 [![build](https://github.com/Noooste/azuretls-client/actions/workflows/push.yml/badge.svg?branch=improvement)](https://github.com/Noooste/azuretls-client/actions/workflows/push.yml)
 [![Go Report Card](https://goreportcard.com/badge/Noooste/azuretls-client)](https://goreportcard.com/report/Noooste/azuretls-client)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Noooste/azuretls-client/blob/master/LICENSE)
@@ -104,10 +104,10 @@ Valid arguments are:
 - `azuretls.HeaderOrder`: for `http.Header` order  (of type `[]string`)
 - `time.Duration`: for the request timeout
 
-#### REQUEST REDIRECTIONS
+#### REQUEST REDIRECTS
 
-By default, azuretls client will follow redirections. If you want to disable it, you can do `session.DisableRedirects = true`
-If not, it will follow the redirections until the `MaxRedirections` limit is reached (default: 10).
+By default, azuretls client will follow redirects. If you want to disable it, you can do `session.DisableRedirects = true`
+If not, it will follow the redirects until the `MaxRedirects` limit is reached (default: 10).
 
 #### GET
 ```go

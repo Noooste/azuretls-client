@@ -45,7 +45,7 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 
 	cookies := http.ReadSetCookies(httpResponse.Header)
 	s.CookieJar.SetCookies(u, cookies)
-	response.Cookies = getCookiesMap(cookies)
+	response.Cookies = GetCookiesMap(cookies)
 	response.ContentLength = httpResponse.ContentLength
 	response.TLS = httpResponse.TLS
 

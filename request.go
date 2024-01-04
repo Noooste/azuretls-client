@@ -64,11 +64,11 @@ func (s *Session) fillEmptyValues(request *Request) {
 		request.Method = http.MethodGet
 	}
 
-	if request.MaxRedirections == 0 {
-		if s.MaxRedirections == 0 {
-			s.MaxRedirections = 10
+	if request.MaxRedirects == 0 {
+		if s.MaxRedirects == 0 {
+			s.MaxRedirects = 10
 		}
-		request.MaxRedirections = s.MaxRedirections
+		request.MaxRedirects = s.MaxRedirects
 	}
 
 	request.InsecureSkipVerify = s.InsecureSkipVerify
