@@ -95,7 +95,7 @@ session := azuretls.NewSessionWithContext(context.Background())
 ```
 ### Make Requests
 
-### REQUEST ARGUMENTS
+#### REQUEST ARGUMENTS
 
 You can pass arguments to the request methods.
 Valid arguments are:
@@ -103,6 +103,11 @@ Valid arguments are:
 - `http.Header`: for headers (of type `map[string]string`)
 - `azuretls.HeaderOrder`: for `http.Header` order  (of type `[]string`)
 - `time.Duration`: for the request timeout
+
+#### REQUEST REDIRECTIONS
+
+By default, azuretls client will follow redirections. If you want to disable it, you can do `session.DisableRedirects = true`
+If not, it will follow the redirections until the `MaxRedirections` limit is reached (default: 10).
 
 #### GET
 ```go
