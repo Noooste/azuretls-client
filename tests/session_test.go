@@ -452,3 +452,33 @@ func TestSession_Connect(t *testing.T) {
 
 	session.Close()
 }
+
+func TestSession_TooManyRedirections(t *testing.T) {
+	session := azuretls.NewSession()
+
+	resp, err := session.Get("https://httpbin.org/redirect/10")
+
+	if err == nil || !strings.Contains(err.Error(), "too many redirections") {
+		t.Fatal("TestSession_TooManyRedirections failed, expected: too many redirections, got: ", err)
+		return
+	}
+
+	if resp != nil {
+		t.Fatal("TestSession_TooManyRedirections failed, expected: nil, got: ", resp)
+		return
+	}
+
+	session.MaxRedirections = 1
+
+	resp, err = session.Get("https://httpbin.org/redirect/2")
+
+	if err == nil || !strings.Contains(err.Error(), "too many redirections") {
+		t.Fatal("TestSession_TooManyRedirections failed, expected: too many redirections, got: ", err)
+		return
+	}
+
+	if resp != nil {
+		t.Fatal("TestSession_TooManyRedirections failed, expected: nil, got: ", resp)
+		return
+	}
+}

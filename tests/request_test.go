@@ -71,3 +71,25 @@ func TestRequest_NoCookies(t *testing.T) {
 		return
 	}
 }
+
+func TestRequest_TooManyRedirections(t *testing.T) {
+	session := azuretls.NewSession()
+
+	req := &azuretls.Request{
+		Method:          http.MethodGet,
+		Url:             "https://httpbin.org/redirect/5",
+		MaxRedirections: 1,
+	}
+
+	resp, err := session.Do(req)
+
+	if err == nil || !strings.Contains(err.Error(), "too many redirections") {
+		t.Fatal("TestSession_TooManyRedirections failed, expected: too many redirections, got: ", err)
+		return
+	}
+
+	if resp != nil {
+		t.Fatal("TestSession_TooManyRedirections failed, expected: nil, got: ", resp)
+		return
+	}
+}

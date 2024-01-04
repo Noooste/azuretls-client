@@ -52,7 +52,8 @@ type Session struct {
 	VerboseIgnoreHost []string                                              // List of hosts to ignore when logging verbose info.
 	VerboseFunc       func(request *Request, response *Response, err error) // Custom function to handle verbose logging.
 
-	TimeOut time.Duration // Maximum time to wait for request to complete.
+	MaxRedirections uint          // Maximum number of redirects to follow.
+	TimeOut         time.Duration // Maximum time to wait for request to complete.
 
 	PreHook  func(request *Request) error                          // Function called before sending request.
 	Callback func(request *Request, response *Response, err error) // Function called after receiving a response.
@@ -64,7 +65,7 @@ type Session struct {
 
 	ctx context.Context // Context for cancellable and timeout operations.
 
-	UserAgent, SecChUa string // Headers for User-Agent and Sec-Ch-Ua, respectively.
+	UserAgent string // Headers for User-Agent and Sec-Ch-Ua, respectively.
 }
 
 // Request represents the details and configuration for an individual HTTP(S)
@@ -96,7 +97,9 @@ type Request struct {
 	browser string
 
 	DisableRedirects bool // If true, redirects won't be followed.
-	NoCookie         bool // If true, cookies won't be included in the request.
+	MaxRedirections  uint // Maximum number of redirects to follow.
+
+	NoCookie bool // If true, cookies won't be included in the request.
 
 	TimeOut time.Duration // Maximum time to wait for request to complete.
 
