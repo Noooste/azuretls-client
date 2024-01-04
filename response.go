@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	http "github.com/Noooste/fhttp"
-	"github.com/Noooste/go-utils"
 	"io"
 	"net/url"
 )
@@ -18,12 +17,17 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 		headers = make(http.Header, len(httpResponse.Header))
 	)
 
+	defer close(done)
+
 	if !response.IgnoreBody {
-		defer close(done)
-		utils.SafeGoRoutine(func() {
+		go func() {
+			defer func() {
+				recover()
+			}()
+
 			response.Body, _ = response.ReadBody()
 			done <- true
-		})
+		}()
 	} else {
 		done <- true
 	}
