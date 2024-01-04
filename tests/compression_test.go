@@ -1,14 +1,15 @@
-package azuretls
+package azuretls_tests
 
 import (
+	"github.com/Noooste/azuretls-client"
 	"strings"
 	"testing"
 )
 
 func TestDecompressBody_Gzip(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 
-	session.OrderedHeaders = OrderedHeaders{
+	session.OrderedHeaders = azuretls.OrderedHeaders{
 		{"Accept-Encoding", "gzip"},
 	}
 
@@ -24,9 +25,9 @@ func TestDecompressBody_Gzip(t *testing.T) {
 }
 
 func TestDecompressBody_Deflate(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 
-	session.OrderedHeaders = OrderedHeaders{
+	session.OrderedHeaders = azuretls.OrderedHeaders{
 		{"Accept-Encoding", "deflate"},
 	}
 
@@ -42,9 +43,9 @@ func TestDecompressBody_Deflate(t *testing.T) {
 }
 
 func TestDecompressBody_Brotli(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 
-	session.OrderedHeaders = OrderedHeaders{
+	session.OrderedHeaders = azuretls.OrderedHeaders{
 		{"Accept-Encoding", "br"},
 	}
 

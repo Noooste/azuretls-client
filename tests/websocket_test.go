@@ -1,9 +1,12 @@
-package azuretls
+package azuretls_tests
 
-import "testing"
+import (
+	"github.com/Noooste/azuretls-client"
+	"testing"
+)
 
 func TestSession_Websocket(t *testing.T) {
-	s := NewSession()
+	s := azuretls.NewSession()
 
 	_, err := s.NewWebsocket(nil)
 
@@ -11,9 +14,9 @@ func TestSession_Websocket(t *testing.T) {
 		t.Fatal("TestSession_Websocket failed, expected: error, got: nil")
 	}
 
-	ws, err := s.NewWebsocket(&Request{
+	ws, err := s.NewWebsocket(&azuretls.Request{
 		Url: "wss://demo.piesocket.com/v3/channel_123?api_key=VCXCEuvhGcBDP7XhiJJUDvR1e1D3eiVjgZ9VRiaV&notify_self",
-		OrderedHeaders: OrderedHeaders{
+		OrderedHeaders: azuretls.OrderedHeaders{
 			{"User-Agent", "fhttp"},
 		},
 	})

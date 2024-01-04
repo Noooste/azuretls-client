@@ -11,23 +11,23 @@ func (s *Session) initTransport(browser string) (err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.tr == nil {
+	if s.Transport == nil {
 		s.initHTTP1()
 	}
 
-	if s.tr2 == nil {
+	if s.HTTP2Transport == nil {
 		if err = s.initHTTP2(browser); err != nil {
 			return
 		}
 	}
 
-	s.tr2.PushHandler = &http2.DefaultPushHandler{}
+	s.HTTP2Transport.PushHandler = &http2.DefaultPushHandler{}
 
 	return
 }
 
 func (s *Session) initHTTP1() {
-	s.tr = &http.Transport{
+	s.Transport = &http.Transport{
 		TLSHandshakeTimeout:   s.TimeOut,
 		ResponseHeaderTimeout: s.TimeOut,
 		DialTLSContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -46,7 +46,7 @@ func (s *Session) initHTTP1() {
 }
 
 func (s *Session) initHTTP2(browser string) error {
-	tr, err := http2.ConfigureTransports(s.tr) // upgrade to HTTP2, while keeping http.Transport
+	tr, err := http2.ConfigureTransports(s.Transport) // upgrade to HTTP2, while keeping http.Transport
 
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func (s *Session) initHTTP2(browser string) error {
 		}
 	}
 
-	s.tr2 = tr
+	s.HTTP2Transport = tr
 
 	return nil
 }

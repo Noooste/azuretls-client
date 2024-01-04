@@ -1,7 +1,8 @@
-package azuretls
+package azuretls_tests
 
 import (
 	"context"
+	"github.com/Noooste/azuretls-client"
 	http "github.com/Noooste/fhttp"
 	"net/url"
 	"strings"
@@ -10,9 +11,9 @@ import (
 )
 
 func TestRequest_SetContext(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 
-	req := &Request{
+	req := &azuretls.Request{
 		Method: http.MethodGet,
 		Url:    "https://httpbin.org/delay/5",
 	}
@@ -35,7 +36,7 @@ func TestRequest_SetContext(t *testing.T) {
 }
 
 func TestRequest_NoCookies(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	session.CookieJar.SetCookies(&url.URL{
 		Scheme: "https",
@@ -47,7 +48,7 @@ func TestRequest_NoCookies(t *testing.T) {
 		},
 	})
 
-	req := &Request{
+	req := &azuretls.Request{
 		Method:   http.MethodGet,
 		Url:      "https://httpbin.org/cookies",
 		NoCookie: true,

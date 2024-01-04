@@ -6,9 +6,9 @@ import (
 	"strings"
 )
 
-// refererForURL returns a referer without any authentication info or
+// RefererForURL returns a referer without any authentication info or
 // an empty string if lastReq scheme is https and newReq scheme is http.
-func refererForURL(lastReq, newReq *url.URL) string {
+func RefererForURL(lastReq, newReq *url.URL) string {
 	// https://tools.ietf.org/html/rfc7231#section-5.5.2
 	//   "Clients SHOULD NOT include a Referer header field in a
 	//    (non-secure) HTTP request if the referring page was
@@ -30,9 +30,9 @@ func refererForURL(lastReq, newReq *url.URL) string {
 	return referer
 }
 
-// redirectBehavior describes what should happen when the
+// RedirectBehavior describes what should happen when the
 // client encounters a 3xx status code from the server
-func redirectBehavior(reqMethod string, resp *Response, ireq *Request) (redirectMethod string, shouldRedirect, includeBody bool) {
+func RedirectBehavior(reqMethod string, resp *Response, ireq *Request) (redirectMethod string, shouldRedirect, includeBody bool) {
 	switch resp.StatusCode {
 	case 301, 302, 303:
 		redirectMethod = reqMethod
@@ -64,7 +64,7 @@ func redirectBehavior(reqMethod string, resp *Response, ireq *Request) (redirect
 			break
 		}
 
-		if ireq.Body == nil && ireq.contentLength != 0 {
+		if ireq.Body == nil && ireq.ContentLength != 0 {
 			shouldRedirect = false
 		}
 	}

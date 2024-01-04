@@ -87,9 +87,9 @@ func (s *Session) buildRequest(ctx context.Context, req *Request) (err error) {
 		cookies := s.CookieJar.Cookies(req.HttpRequest.URL)
 		if cookies != nil && len(cookies) > 0 {
 			if c := req.HttpRequest.Header.Get("Cookie"); c != "" {
-				req.HttpRequest.Header.Set("Cookie", c+"; "+cookiesToString(cookies))
+				req.HttpRequest.Header.Set("Cookie", c+"; "+CookiesToString(cookies))
 			} else {
-				req.HttpRequest.Header.Set("Cookie", cookiesToString(cookies))
+				req.HttpRequest.Header.Set("Cookie", CookiesToString(cookies))
 			}
 		}
 	}
@@ -99,7 +99,7 @@ func (s *Session) buildRequest(ctx context.Context, req *Request) (err error) {
 func newRequest(ctx context.Context, verbose bool, req *Request) (newReq *http.Request, err error) {
 	if req.Body != nil {
 		if verbose {
-			req.body = toBytes(req.Body)
+			req.body = ToBytes(req.Body)
 			newReq, err = http.NewRequestWithContext(ctx, strings.ToUpper(req.Method), req.Url, bytes.NewReader(req.body))
 		} else {
 			//prepare new request

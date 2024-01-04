@@ -4,12 +4,10 @@ import (
 	"context"
 	"crypto/x509"
 	"errors"
-	"fmt"
 	"github.com/Noooste/fhttp/http2"
 	tls "github.com/Noooste/utls"
 	"net"
 	"net/url"
-	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -22,7 +20,7 @@ type Conn struct {
 
 	Conn net.Conn // Tcp connection
 
-	Pins *PinManager // pin manager
+	PinManager *PinManager // pin manager
 
 	TimeOut            time.Duration
 	InsecureSkipVerify bool
@@ -49,6 +47,10 @@ func NewConnWithContext(ctx context.Context) *Conn {
 
 func (c *Conn) SetContext(ctx context.Context) {
 	c.ctx = ctx
+}
+
+func (c *Conn) GetContext() context.Context {
+	return c.ctx
 }
 
 type ConnPool struct {
@@ -175,7 +177,9 @@ func (c *Conn) checkTLS() bool {
 func (c *Conn) tryUpgradeHTTP2(tr *http2.Transport) bool {
 	if c.HTTP2 != nil && c.HTTP2.CanTakeNewRequest() {
 		return true
-	} else if c.TLS.ConnectionState().NegotiatedProtocol == http2.NextProtoTLS {
+	}
+
+	if c.TLS.ConnectionState().NegotiatedProtocol == http2.NextProtoTLS {
 		var err error
 		c.HTTP2, err = tr.NewClientConn(c.TLS)
 		return err == nil
@@ -197,7 +201,7 @@ func (c *Conn) Close() {
 		_ = c.HTTP2.Close()
 		c.HTTP2 = nil
 	}
-	c.Pins = nil
+	c.PinManager = nil
 }
 
 func (s *Session) initConn(req *Request) (conn *Conn, err error) {
@@ -226,10 +230,11 @@ func (s *Session) initConn(req *Request) (conn *Conn, err error) {
 	if conn.Conn == nil {
 		var dialContext func(ctx context.Context, network, addr string) (net.Conn, error)
 
-		if s.proxyDialer != nil {
-			s.proxyDialer.ForceHTTP2 = s.H2Proxy
-			s.proxyDialer.tr = s.tr2
-			dialContext = s.proxyDialer.DialContext
+		if s.ProxyDialer != nil {
+			s.ProxyDialer.ForceHTTP2 = s.H2Proxy
+			s.ProxyDialer.tr = s.HTTP2Transport
+			dialContext = s.ProxyDialer.DialContext
+			s.ProxyDialer.Dialer.Timeout = conn.TimeOut
 		} else {
 			dialContext = (&net.Dialer{Timeout: conn.TimeOut}).DialContext
 		}
@@ -255,7 +260,7 @@ func (s *Session) initConn(req *Request) (conn *Conn, err error) {
 
 		if req.parsedUrl.Scheme != SchemeWss {
 			// if tls connection is established, we can try to upgrade it to http2
-			conn.tryUpgradeHTTP2(s.tr2)
+			conn.tryUpgradeHTTP2(s.HTTP2Transport)
 		}
 
 	case SchemeHttp, SchemeWs:
@@ -269,37 +274,17 @@ func (s *Session) initConn(req *Request) (conn *Conn, err error) {
 }
 
 func (c *Conn) NewTLS(addr string) (err error) {
-	var done = make(chan bool, 1)
-	defer close(done)
+	do := false
 
-	go func() {
-		defer func() {
-			if err := recover(); err != nil {
-				done <- false
-				fmt.Println("panic:", err)
-				debug.PrintStack()
-			}
-		}()
+	if c.PinManager == nil && !c.InsecureSkipVerify {
+		c.PinManager = NewPinManager()
+		do = true
+	}
 
-		var do bool
-		if c.Pins == nil && !c.InsecureSkipVerify {
-			c.Pins = NewPinManager()
-			do = true
+	if !c.InsecureSkipVerify && (do || c.PinManager.redo) {
+		if err = c.PinManager.New(addr); err != nil {
+			return errors.New("pin verification failed")
 		}
-
-		if !c.InsecureSkipVerify && (do || c.Pins.redo) {
-			if err = c.Pins.New(addr); err != nil {
-				done <- false
-				return
-			}
-		}
-
-		//check if channel is closed
-		done <- true
-	}()
-
-	if !<-done {
-		return errors.New("pin verification failed")
 	}
 
 	var hostname = strings.Split(addr, ":")[0]
@@ -308,13 +293,13 @@ func (c *Conn) NewTLS(addr string) (err error) {
 		ServerName:         hostname,
 		InsecureSkipVerify: c.InsecureSkipVerify,
 		VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
-			if c.Pins == nil {
+			if c.PinManager == nil {
 				return nil
 			}
 
 			for _, chain := range verifiedChains {
 				for _, cert := range chain {
-					if c.Pins.Verify(cert) {
+					if c.PinManager.Verify(cert) {
 						return nil
 					}
 				}

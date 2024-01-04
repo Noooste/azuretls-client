@@ -26,7 +26,7 @@ type proxyDialer struct {
 	DialTLS func(network string, address string) (net.Conn, string, error)
 
 	h2Mu   sync.Mutex
-	h2Conn *http2.ClientConn
+	H2Conn *http2.ClientConn
 	conn   net.Conn
 
 	tr         *http2.Transport
@@ -71,7 +71,7 @@ func (s *Session) assignProxy(proxy string) error {
 		return fmt.Errorf(invalidProxy, proxy, "scheme "+parsed.Scheme+" is not supported")
 	}
 
-	s.proxyDialer = &proxyDialer{
+	s.ProxyDialer = &proxyDialer{
 		ProxyURL:      parsed,
 		DefaultHeader: make(http.Header),
 	}
@@ -83,7 +83,7 @@ func (s *Session) assignProxy(proxy string) error {
 			} else {
 				auth := parsed.User.Username() + ":" + password
 				basicAuth := "Basic " + base64.StdEncoding.EncodeToString([]byte(auth))
-				s.proxyDialer.DefaultHeader.Add("Proxy-Authorization", basicAuth)
+				s.ProxyDialer.DefaultHeader.Add("Proxy-Authorization", basicAuth)
 			}
 		}
 	}
@@ -153,7 +153,6 @@ func (c *proxyDialer) DialContext(ctx context.Context, network, address string) 
 		if err != nil {
 			return nil, err
 		}
-
 		return dial.(proxy.ContextDialer).DialContext(ctx, network, address)
 	}
 
@@ -176,10 +175,10 @@ func (c *proxyDialer) DialContext(ctx context.Context, network, address string) 
 
 	c.h2Mu.Lock()
 	unlocked := false
-	if c.h2Conn != nil && c.conn != nil {
-		if c.h2Conn.CanTakeNewRequest() {
+	if c.H2Conn != nil && c.conn != nil {
+		if c.H2Conn.CanTakeNewRequest() {
 			rc := c.conn
-			cc := c.h2Conn
+			cc := c.H2Conn
 			c.h2Mu.Unlock()
 			unlocked = true
 			proxyConn, err := c.connectHTTP2(req, rc, cc)
@@ -193,7 +192,7 @@ func (c *proxyDialer) DialContext(ctx context.Context, network, address string) 
 		c.h2Mu.Unlock()
 	}
 
-	rawConn, negotiatedProtocol, err := c.initProxyConn(ctx, network)
+	rawConn, negotiatedProtocol, err := c.InitProxyConn(ctx, network)
 
 	if err != nil {
 		return nil, err
@@ -208,7 +207,7 @@ func (c *proxyDialer) DialContext(ctx context.Context, network, address string) 
 	return proxyConn, nil
 }
 
-func (c *proxyDialer) initProxyConn(ctx context.Context, network string) (rawConn net.Conn, negotiatedProtocol string, err error) {
+func (c *proxyDialer) InitProxyConn(ctx context.Context, network string) (rawConn net.Conn, negotiatedProtocol string, err error) {
 	switch c.ProxyURL.Scheme {
 	case SchemeHttp:
 		rawConn, err = c.Dialer.DialContext(ctx, network, c.ProxyURL.Host)
@@ -252,7 +251,7 @@ func (c *proxyDialer) connect(req *http.Request, conn net.Conn, negotiatedProtoc
 		if h2clientConn, err := c.tr.NewClientConn(conn); err == nil {
 			if proxyConn, err := c.connectHTTP2(req, conn, h2clientConn); err == nil {
 				c.h2Mu.Lock()
-				c.h2Conn = h2clientConn
+				c.H2Conn = h2clientConn
 				c.conn = conn
 				c.h2Mu.Unlock()
 				return proxyConn, err

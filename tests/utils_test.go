@@ -1,7 +1,8 @@
-package azuretls
+package azuretls_tests
 
 import (
 	"bytes"
+	"github.com/Noooste/azuretls-client"
 	"strings"
 	"testing"
 )
@@ -10,35 +11,35 @@ func TestToBytes(t *testing.T) {
 	var testString = "test"
 	var testBytes = []byte(testString)
 
-	if !bytes.Equal(toBytes(testString), testBytes) {
-		t.Fatal("TestToBytes failed, expected: ", testBytes, ", got: ", toBytes(testString))
+	if !bytes.Equal(azuretls.ToBytes(testString), testBytes) {
+		t.Fatal("TestToBytes failed, expected: ", testBytes, ", got: ", azuretls.ToBytes(testString))
 	}
 
 	buf := new(bytes.Buffer)
 	buf.Write(testBytes)
-	got := toBytes(buf)
+	got := azuretls.ToBytes(buf)
 	if !bytes.Equal(got, testBytes) {
 		t.Fatal("TestToBytes failed, expected: ", string(testBytes), ", got: ", string(got))
 	}
 
 	buf2 := bytes.Buffer{}
 	buf2.Write(testBytes)
-	got = toBytes(buf2)
+	got = azuretls.ToBytes(buf2)
 	if !bytes.Equal(got, testBytes) {
 		t.Fatal("TestToBytes failed, expected: ", string(testBytes), ", got: ", string(got))
 	}
 
 	buf3 := new(strings.Builder)
 	buf3.Write(testBytes)
-	got = toBytes(buf3)
+	got = azuretls.ToBytes(buf3)
 	if !bytes.Equal(got, testBytes) {
 		t.Fatal("TestToBytes failed, expected: ", string(testBytes), ", got: ", string(got))
 	}
 
 	var testInt = 1
 	var testIntBytes = []byte{49}
-	if !bytes.Equal(toBytes(testInt), testIntBytes) {
-		t.Fatal("TestToBytes failed, expected: ", string(testIntBytes), ", got: ", toBytes(testInt))
+	if !bytes.Equal(azuretls.ToBytes(testInt), testIntBytes) {
+		t.Fatal("TestToBytes failed, expected: ", string(testIntBytes), ", got: ", azuretls.ToBytes(testInt))
 	}
 }
 
@@ -55,8 +56,8 @@ func TestUrlEncode(t *testing.T) {
 
 	var testString = "bar=bar&baz=baz+baz+baz"
 
-	if UrlEncode(f) != testString {
-		t.Fatal("TestUrlEncode failed, expected: ", testString, ", got: ", UrlEncode(f))
+	if azuretls.UrlEncode(f) != testString {
+		t.Fatal("TestUrlEncode failed, expected: ", testString, ", got: ", azuretls.UrlEncode(f))
 	}
 }
 
@@ -67,7 +68,7 @@ type q struct {
 }
 
 func TestQuery2(t *testing.T) {
-	dumped := UrlEncode(q{
+	dumped := azuretls.UrlEncode(q{
 		A: 1,
 		B: "b",
 	})
