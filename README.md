@@ -104,10 +104,10 @@ Valid arguments are:
 - `azuretls.HeaderOrder`: for `http.Header` order  (of type `[]string`)
 - `time.Duration`: for the request timeout
 
-#### REQUEST REDIRECTIONS
+#### REQUEST REDIRECTS
 
-By default, azuretls client will follow redirections. If you want to disable it, you can do `session.DisableRedirects = true`
-If not, it will follow the redirections until the `MaxRedirections` limit is reached (default: 10).
+By default, azuretls client will follow redirects. If you want to disable it, you can do `session.DisableRedirects = true`
+If not, it will follow the redirects until the `MaxRedirects` limit is reached (default: 10).
 
 #### GET
 ```go

@@ -1,4 +1,4 @@
-package azuretls_tests
+package azuretls_test
 
 import (
 	"github.com/Noooste/azuretls-client"

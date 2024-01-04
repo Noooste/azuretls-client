@@ -28,7 +28,7 @@ func CookiesToString(cookies []*http.Cookie) string {
 	return buf.String()
 }
 
-func getCookiesMap(cookies []*http.Cookie) map[string]string {
+func GetCookiesMap(cookies []*http.Cookie) map[string]string {
 	var result = make(map[string]string, len(cookies))
 
 	for _, cookie := range cookies {

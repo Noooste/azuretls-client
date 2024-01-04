@@ -42,7 +42,7 @@ func NewSessionWithContext(ctx context.Context) *Session {
 
 		UserAgent: utils.UserAgent,
 
-		MaxRedirections: 10,
+		MaxRedirects: 10,
 
 		mu: new(sync.Mutex),
 
@@ -188,7 +188,7 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 	)
 
 	var i uint
-	for i = 0; i < req.MaxRedirections; i++ {
+	for i = 0; i < req.MaxRedirects; i++ {
 		// For all but the first request, create the next
 		// request hop and replace req.
 		if len(reqs) > 0 {
@@ -274,7 +274,7 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 		req.CloseBody()
 	}
 
-	return nil, errors.New("too many redirections")
+	return nil, errors.New("too many Redirects")
 }
 
 /*
