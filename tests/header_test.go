@@ -1,6 +1,7 @@
-package azuretls
+package azuretls_tests
 
 import (
+	"github.com/Noooste/azuretls-client"
 	http "github.com/Noooste/fhttp"
 	"regexp"
 	"testing"
@@ -11,9 +12,9 @@ var contentTypeReg = regexp.MustCompile(`content-type`)
 var acceptReg = regexp.MustCompile(`accept`)
 
 func TestHeader(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 
-	session.OrderedHeaders = OrderedHeaders{
+	session.OrderedHeaders = azuretls.OrderedHeaders{
 		{"user-agent", "test"},
 		{"content-type", "application/json"},
 		{"accept", "application/json"},
@@ -42,7 +43,7 @@ func TestHeader(t *testing.T) {
 }
 
 func TestHeader2(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	session.Header = http.Header{
 		"user-agent":   {"test"},
@@ -75,7 +76,7 @@ func TestHeader2(t *testing.T) {
 }
 
 func TestOrderedHeaders_Get(t *testing.T) {
-	headers := OrderedHeaders{
+	headers := azuretls.OrderedHeaders{
 		{"user-agent", "test"},
 		{"content-type", "application/json"},
 		{"accept", "application/json"},
@@ -87,7 +88,7 @@ func TestOrderedHeaders_Get(t *testing.T) {
 }
 
 func TestOrderedHeaders_Add(t *testing.T) {
-	headers := OrderedHeaders{
+	headers := azuretls.OrderedHeaders{
 		{"user-agent", "test"},
 		{"content-type", "application/json"},
 		{"accept", "application/json"},
@@ -106,7 +107,7 @@ func TestOrderedHeaders_Add(t *testing.T) {
 
 func TestOrderedHeaders_Del(t *testing.T) {
 
-	headers := OrderedHeaders{
+	headers := azuretls.OrderedHeaders{
 		{"user-agent", "test"},
 		{"content-type", "application/json"},
 		{"accept", "application/json"},
@@ -125,7 +126,7 @@ func TestOrderedHeaders_Del(t *testing.T) {
 
 func TestOrderedHeaders_Set(t *testing.T) {
 
-	headers := OrderedHeaders{
+	headers := azuretls.OrderedHeaders{
 		{"user-agent", "test"},
 		{"content-type", "application/json"},
 		{"accept", "application/json"},
@@ -144,7 +145,7 @@ func TestOrderedHeaders_Set(t *testing.T) {
 
 func TestOrderedHeaders_Set2(t *testing.T) {
 
-	headers := OrderedHeaders{
+	headers := azuretls.OrderedHeaders{
 		{"user-agent", "test"},
 		{"content-type", "application/json"},
 		{"accept", "application/json"},

@@ -55,9 +55,9 @@ func (s *Session) NewWebsocketWithContext(ctx context.Context, req *Request, arg
 		cookies := s.CookieJar.Cookies(req.parsedUrl)
 		if cookies != nil && len(cookies) > 0 {
 			if c := req.HttpRequest.Header.Get("Cookie"); c != "" {
-				req.HttpRequest.Header.Set("Cookie", c+"; "+cookiesToString(cookies))
+				req.HttpRequest.Header.Set("Cookie", c+"; "+CookiesToString(cookies))
 			} else {
-				req.HttpRequest.Header.Set("Cookie", cookiesToString(cookies))
+				req.HttpRequest.Header.Set("Cookie", CookiesToString(cookies))
 			}
 		}
 	}

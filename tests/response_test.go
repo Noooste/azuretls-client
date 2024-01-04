@@ -1,15 +1,16 @@
-package azuretls
+package azuretls_tests
 
 import (
+	"github.com/Noooste/azuretls-client"
 	http "github.com/Noooste/fhttp"
 	"io"
 	"testing"
 )
 
 func TestResponse_CloseBody(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 
-	response, err := session.Do(&Request{
+	response, err := session.Do(&azuretls.Request{
 		Method:     "GET",
 		Url:        "https://tls.peet.ws/api/all",
 		IgnoreBody: true,
@@ -29,9 +30,9 @@ func TestResponse_CloseBody(t *testing.T) {
 }
 
 func TestResponse_Load(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 
-	var response, err = session.Do(&Request{
+	var response, err = session.Do(&azuretls.Request{
 		Method:     http.MethodGet,
 		Url:        "https://tls.peet.ws/api/all",
 		IgnoreBody: true,

@@ -55,9 +55,9 @@ func NewSessionWithContext(ctx context.Context) *Session {
 // SetTimeout sets timeout for the session
 func (s *Session) SetTimeout(timeout time.Duration) {
 	s.TimeOut = timeout
-	if s.tr != nil {
-		s.tr.TLSHandshakeTimeout = timeout
-		s.tr.ResponseHeaderTimeout = timeout
+	if s.Transport != nil {
+		s.Transport.TLSHandshakeTimeout = timeout
+		s.Transport.ResponseHeaderTimeout = timeout
 	}
 }
 
@@ -99,7 +99,7 @@ func (s *Session) SetProxy(proxy string) error {
 
 func (s *Session) ClearProxy() {
 	s.Proxy = ""
-	s.proxyDialer = nil
+	s.ProxyDialer = nil
 }
 
 func (s *Session) send(request *Request) (response *Response, err error) {
@@ -130,7 +130,7 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 	if rConn.HTTP2 != nil {
 		roundTripper = rConn.HTTP2
 	} else {
-		roundTripper = s.tr
+		roundTripper = s.Transport
 	}
 
 	httpResponse, err = roundTripper.RoundTrip(request.HttpRequest)
@@ -178,7 +178,7 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 		req.ctx = s.ctx
 	}
 
-	var reqs []*Request
+	var reqs = make([]*Request, 0, 10)
 
 	var (
 		redirectMethod string
@@ -192,14 +192,14 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 		if len(reqs) > 0 {
 			loc := resp.Header.Get("Location")
 			if loc == "" {
-				resp.CloseBody()
+				_ = resp.CloseBody()
 				return nil, fmt.Errorf("%d response missing Location header", resp.StatusCode)
 			}
 
 			var u *url.URL
 			u, err = req.parsedUrl.Parse(loc)
 			if err != nil {
-				resp.CloseBody()
+				_ = resp.CloseBody()
 				return nil, fmt.Errorf("failed to parse Location header %q: %v", loc, err)
 			}
 
@@ -228,17 +228,17 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 
 			if includeBody && oldRequest.Body != nil {
 				req.Body = oldRequest.Body
-				req.contentLength = oldRequest.contentLength
-				req.OrderedHeaders.Set("content-length", strconv.Itoa(int(req.contentLength)))
+				req.ContentLength = oldRequest.ContentLength
+				req.OrderedHeaders.Set("content-length", strconv.Itoa(int(req.ContentLength)))
 			} else {
-				req.contentLength = 0
+				req.ContentLength = 0
 				req.OrderedHeaders.Del("content-length")
 				req.OrderedHeaders.Del("content-type")
 			}
 
 			// Add the Referer header from the most recent
 			// request URL to the new one, if it's not https->http:
-			if ref := refererForURL(reqs[len(reqs)-1].parsedUrl, req.parsedUrl); ref != "" {
+			if ref := RefererForURL(reqs[len(reqs)-1].parsedUrl, req.parsedUrl); ref != "" {
 				req.OrderedHeaders.Set("referer", ref)
 			}
 		}
@@ -256,7 +256,7 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 
 		var shouldRedirect bool
 
-		redirectMethod, shouldRedirect, includeBody = redirectBehavior(req.Method, resp, reqs[0])
+		redirectMethod, shouldRedirect, includeBody = RedirectBehavior(req.Method, resp, reqs[0])
 		if !shouldRedirect {
 			req.CloseBody()
 			return resp, nil
@@ -264,7 +264,7 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 
 		if redirectMethod == http.MethodGet {
 			req.Body = nil
-			req.contentLength = 0
+			req.ContentLength = 0
 			req.OrderedHeaders.Del("content-length")
 			req.OrderedHeaders.Del("content-type")
 		}

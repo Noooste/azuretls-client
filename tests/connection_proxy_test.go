@@ -1,7 +1,8 @@
-package azuretls
+package azuretls_tests
 
 import (
 	"context"
+	"github.com/Noooste/azuretls-client"
 	"os"
 	"testing"
 )
@@ -9,43 +10,25 @@ import (
 var skipProxy bool
 
 func TestProxyDialer_Dial(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	if err := session.SetProxy(os.Getenv("NON_SECURE_PROXY")); err != nil {
 		skipProxy = true
 		t.Fatal(err)
 	}
 
-	_, _, err := session.proxyDialer.initProxyConn(context.Background(), "tcp")
+	_, _, err := session.ProxyDialer.InitProxyConn(context.Background(), "tcp")
 
 	if err != nil {
 		skipProxy = true
 	}
 }
 
-func testAssignProxyFormat(t *testing.T, proxy string) {
-	s := &Session{}
-
-	err := s.assignProxy(proxy)
-
-	if err == nil {
-		t.Fatal("TestProxyDialer_WrongFormat failed with ", proxy, ", expected: error, got: nil")
-	}
-}
-
-func TestProxyDialer_WrongFormat(t *testing.T) {
-	testAssignProxyFormat(t, "notgoodurl")
-	testAssignProxyFormat(t, "http://username@aaaaa")
-	testAssignProxyFormat(t, "http://username@aaaaa:9999")
-	testAssignProxyFormat(t, "@")
-	testAssignProxyFormat(t, "://aaaa")
-	testAssignProxyFormat(t, "/qqqqq")
-}
-
 func testAssignProxy(t *testing.T, proxy string) {
-	s := &Session{}
+	s := azuretls.NewSession()
+	defer s.Close()
 
-	err := s.assignProxy(proxy)
+	err := s.SetProxy(proxy)
 
 	if err != nil {
 		t.Fatal("TestProxyDialer failed with ", proxy, ", expected: ", nil, ", got: ", err)
@@ -62,7 +45,7 @@ func TestProxyDialer(t *testing.T) {
 }
 
 func TestProxy(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	if err := session.SetProxy(""); err == nil {
 		t.Fatal("testProxy failed, expected error, got nil")
@@ -110,7 +93,7 @@ func TestProxy(t *testing.T) {
 func TestProxy2(t *testing.T) {
 	t.SkipNow()
 
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	session.H2Proxy = true
 	if err := session.SetProxy(os.Getenv("NON_SECURE_PROXY")); err != nil {
@@ -127,7 +110,7 @@ func TestProxy2(t *testing.T) {
 func TestProxy3(t *testing.T) {
 	t.SkipNow()
 
-	session := NewSession()
+	session := azuretls.NewSession()
 	session.H2Proxy = true
 
 	if err := session.SetProxy(os.Getenv("SECURE_PROXY")); err != nil {
@@ -140,15 +123,15 @@ func TestProxy3(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	oldConn := session.proxyDialer.h2Conn
+	oldConn := session.ProxyDialer.H2Conn
 
-	_, err = session.proxyDialer.Dial("tcp", "www.nike.com:443")
+	_, err = session.ProxyDialer.Dial("tcp", "www.nike.com:443")
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if session.proxyDialer.h2Conn != oldConn {
+	if session.ProxyDialer.H2Conn != oldConn {
 		t.Fatal("TestProxy failed, Conn is not reused")
 	}
 
@@ -162,7 +145,7 @@ func TestProxy3(t *testing.T) {
 func TestProxy4(t *testing.T) {
 	t.SkipNow()
 
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	if err := session.SetProxy("socks5://test.com"); err != nil {
 		t.Fatal("testProxy failed, expected nil, got ", err)

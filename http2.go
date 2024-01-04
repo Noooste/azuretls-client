@@ -28,13 +28,13 @@ const (
 func (s *Session) ApplyHTTP2(fp string) error {
 	// check if HTTP2 is already initialized
 	// if not initialize it
-	if s.tr2 == nil {
-		if s.tr == nil {
+	if s.HTTP2Transport == nil {
+		if s.Transport == nil {
 			s.initHTTP1()
 		}
 
 		var err error
-		s.tr2, err = http2.ConfigureTransports(s.tr)
+		s.HTTP2Transport, err = http2.ConfigureTransports(s.Transport)
 		if err != nil {
 			return err
 		}
@@ -54,19 +54,19 @@ func (s *Session) ApplyHTTP2(fp string) error {
 		preHeader    = split[3]
 	)
 
-	if err := applySettings(settings, s.tr2); err != nil {
+	if err := applySettings(settings, s.HTTP2Transport); err != nil {
 		return err
 	}
 
-	if err := applyWindowUpdate(windowUpdate, s.tr2); err != nil {
+	if err := applyWindowUpdate(windowUpdate, s.HTTP2Transport); err != nil {
 		return err
 	}
 
-	if err := applyPriorities(priorities, s.tr2); err != nil {
+	if err := applyPriorities(priorities, s.HTTP2Transport); err != nil {
 		return err
 	}
 
-	if err := applyPreHeader(preHeader, &s.PHeader, s.tr2); err != nil {
+	if err := applyPreHeader(preHeader, &s.PHeader, s.HTTP2Transport); err != nil {
 		return err
 	}
 

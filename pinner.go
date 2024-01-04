@@ -91,6 +91,21 @@ func (p *PinManager) New(addr string) (err error) {
 	return nil
 }
 
+func (p *PinManager) GetPins() []string {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	var pins = make([]string, 0, len(p.m))
+	for k, v := range p.m {
+		if !v {
+			continue
+		}
+		pins = append(pins, k)
+	}
+
+	return pins
+}
+
 // AddPins associates a set of certificate pins with a given URL within
 // a session. This allows for URL-specific pinning, useful in scenarios
 // where different services (URLs) are trusted with different certificates.
@@ -99,12 +114,12 @@ func (s *Session) AddPins(u *url.URL, pins []string) error {
 	conn.mu.Lock()
 	defer conn.mu.Unlock()
 
-	if conn.Pins == nil {
-		conn.Pins = NewPinManager()
+	if conn.PinManager == nil {
+		conn.PinManager = NewPinManager()
 	}
 
 	for _, pin := range pins {
-		conn.Pins.m[pin] = true
+		conn.PinManager.m[pin] = true
 	}
 
 	return nil
@@ -119,11 +134,11 @@ func (s *Session) ClearPins(u *url.URL) error {
 	conn.mu.Lock()
 	defer conn.mu.Unlock()
 
-	for k := range conn.Pins.m {
-		conn.Pins.m[k] = false
+	for k := range conn.PinManager.m {
+		conn.PinManager.m[k] = false
 	}
 
-	conn.Pins.redo = true
+	conn.PinManager.redo = true
 
 	return nil
 }

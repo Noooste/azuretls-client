@@ -1,6 +1,7 @@
-package azuretls
+package azuretls_tests
 
 import (
+	"github.com/Noooste/azuretls-client"
 	"net/url"
 	"testing"
 )
@@ -10,7 +11,7 @@ func TestPins(t *testing.T) {
 		t.Skip("TestProxy skipped")
 	}
 
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	_, err := session.Get("https://example.com")
 
@@ -18,12 +19,13 @@ func TestPins(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(session.Connections.hosts) == 0 {
-		t.Fatal("TestPins failed, Conn is empty")
+	url := &url.URL{
+		Scheme: "https",
+		Host:   "example.com",
 	}
 
-	if len(session.Connections.hosts["example.com:443"].Pins.m) == 0 {
-		t.Fatal("TestPins failed, Pins is empty")
+	if len(session.Connections.Get(url).PinManager.GetPins()) == 0 {
+		t.Fatal("TestPins failed, PinManager is empty")
 	}
 }
 
@@ -32,7 +34,7 @@ func TestSession_AddPins(t *testing.T) {
 		t.Skip("TestProxy skipped")
 	}
 
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	if err := session.AddPins(&url.URL{
 		Scheme: "https",
@@ -56,7 +58,7 @@ func TestSession_AddPins2(t *testing.T) {
 		t.Skip("TestProxy skipped")
 	}
 
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	if err := session.AddPins(&url.URL{
 		Scheme: "https",
@@ -81,7 +83,7 @@ func TestSession_ClearPins(t *testing.T) {
 		t.Skip("TestProxy skipped")
 	}
 
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	if err := session.AddPins(&url.URL{
 		Scheme: "https",

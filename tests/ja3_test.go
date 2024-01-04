@@ -1,13 +1,14 @@
-package azuretls
+package azuretls_tests
 
 import (
 	"encoding/json"
+	"github.com/Noooste/azuretls-client"
 	"strings"
 	"testing"
 )
 
 func TestDefaultConfig(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	response, err := session.Get("https://tls.peet.ws/api/all")
 
@@ -23,9 +24,9 @@ func TestDefaultConfig(t *testing.T) {
 func TestChrome(t *testing.T) {
 	// Chrome 80
 
-	session := NewSession()
+	session := azuretls.NewSession()
 
-	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", Chrome); err != nil {
+	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", azuretls.Chrome); err != nil {
 		t.Fatal(err)
 	}
 
@@ -90,11 +91,11 @@ func TestChrome(t *testing.T) {
 }
 
 func TestSession_ApplyJa3(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 
 	ja3Origin := "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24-25-26,0"
 
-	if err := session.ApplyJa3(ja3Origin, Chrome); err != nil {
+	if err := session.ApplyJa3(ja3Origin, azuretls.Chrome); err != nil {
 		t.Fatal(err)
 	}
 
@@ -145,40 +146,40 @@ func TestSession_ApplyJa3(t *testing.T) {
 	}
 }
 
-func applyWrongJA3(t *testing.T, s *Session, ja3 string, navigator string) {
+func applyWrongJA3(t *testing.T, s *azuretls.Session, ja3 string, navigator string) {
 	if err := s.ApplyJa3(ja3, navigator); err == nil {
 		t.Fatal("Expected error on ja3: " + ja3 + " with navigator: " + navigator)
 	}
 }
 
 func TestSession_ApplyJa32(t *testing.T) {
-	session := NewSession()
-	applyWrongJA3(t, session, "70,0,0,0,0,0", Chrome)
-	applyWrongJA3(t, session, ",4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", Chrome)
-	applyWrongJA3(t, session, "771,,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", Chrome)
-	applyWrongJA3(t, session, "a-771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", Safari)
-	applyWrongJA3(t, session, "771,a-4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", Safari)
-	applyWrongJA3(t, session, "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,a-45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", Safari)
-	applyWrongJA3(t, session, "771,a-4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,a-29-23-24,0", Safari)
-	applyWrongJA3(t, session, "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,a-0", Safari)
+	session := azuretls.NewSession()
+	applyWrongJA3(t, session, "70,0,0,0,0,0", azuretls.Chrome)
+	applyWrongJA3(t, session, ",4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", azuretls.Chrome)
+	applyWrongJA3(t, session, "771,,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", azuretls.Chrome)
+	applyWrongJA3(t, session, "a-771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", azuretls.Safari)
+	applyWrongJA3(t, session, "771,a-4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", azuretls.Safari)
+	applyWrongJA3(t, session, "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,a-45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", azuretls.Safari)
+	applyWrongJA3(t, session, "771,a-4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,a-29-23-24,0", azuretls.Safari)
+	applyWrongJA3(t, session, "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,a-0", azuretls.Safari)
 
-	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,,29-23-24,0", Firefox); err != nil {
+	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,,29-23-24,0", azuretls.Firefox); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,,,0", Firefox); err != nil {
+	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,,,0", azuretls.Firefox); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,,,", Firefox); err != nil {
+	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,,,", azuretls.Firefox); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestGetLastIosVersion(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 
-	session.GetClientHelloSpec = GetLastIosVersion
+	session.GetClientHelloSpec = azuretls.GetLastIosVersion
 
 	response, err := session.Get("https://tls.peet.ws/api/all")
 
@@ -231,36 +232,10 @@ func TestGetLastIosVersion(t *testing.T) {
 	}
 }
 
-func TestGetSupportedAlgorithms(t *testing.T) {
-	var navigators = []string{
-		Chrome,
-		Firefox,
-		Opera,
-		Safari,
-	}
-
-	for _, navigator := range navigators {
-		getSupportedAlgorithms(navigator)
-	}
-}
-
-func TestGetSupportedVersion(t *testing.T) {
-	var navigators = []string{
-		Chrome,
-		Firefox,
-		Opera,
-		Safari,
-	}
-
-	for _, navigator := range navigators {
-		getSupportedVersion(navigator)
-	}
-}
-
 func TestECH(t *testing.T) {
-	session := NewSession()
+	session := azuretls.NewSession()
 
-	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,65037-45-13-18-35-23-5-65281-27-10-16-11-43-51-17513-0-21,29-23-24,0", Chrome); err != nil {
+	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,65037-45-13-18-35-23-5-65281-27-10-16-11-43-51-17513-0-21,29-23-24,0", azuretls.Chrome); err != nil {
 		t.Fatal(err)
 	}
 
