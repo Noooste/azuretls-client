@@ -186,7 +186,8 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 		copyHeaders    = s.makeHeadersCopier(req)
 	)
 
-	for {
+	var i uint
+	for i = 0; i < req.MaxRedirections; i++ {
 		// For all but the first request, create the next
 		// request hop and replace req.
 		if len(reqs) > 0 {
@@ -271,6 +272,8 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 
 		req.CloseBody()
 	}
+
+	return nil, errors.New("too many redirections")
 }
 
 /*
