@@ -6,7 +6,6 @@ import (
 	"fmt"
 	http "github.com/Noooste/fhttp"
 	"github.com/Noooste/fhttp/cookiejar"
-	"github.com/Noooste/go-utils"
 	"net/url"
 	"strconv"
 	"strings"
@@ -40,7 +39,7 @@ func NewSessionWithContext(ctx context.Context) *Session {
 		Connections:        NewRequestConnPool(ctx),
 		GetClientHelloSpec: GetLastChromeVersion,
 
-		UserAgent: utils.UserAgent,
+		UserAgent: defaultUserAgent,
 
 		MaxRedirects: 10,
 
@@ -117,12 +116,12 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 	request.parsedUrl = request.HttpRequest.URL
 
 	if err = s.initTransport(s.Browser); err != nil {
-		utils.SafeGoRoutine(func() { s.saveVerbose(request, nil, err) })
+		s.saveVerbose(request, nil, err)
 		return nil, err
 	}
 
 	if rConn, err = s.initConn(request); err != nil {
-		utils.SafeGoRoutine(func() { s.saveVerbose(request, nil, err) })
+		s.saveVerbose(request, nil, err)
 		return nil, err
 	}
 
@@ -155,11 +154,7 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 	}
 
 	s.buildResponse(response, httpResponse)
-
-	utils.SafeGoRoutine(func() {
-		s.saveVerbose(request, response, err)
-	})
-
+	s.saveVerbose(request, response, err)
 	return response, nil
 }
 
