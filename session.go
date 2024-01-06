@@ -135,6 +135,11 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 
 	httpResponse, err = roundTripper.RoundTrip(request.HttpRequest)
 
+	response = &Response{
+		IgnoreBody: request.IgnoreBody,
+		Request:    request,
+	}
+
 	defer func() {
 		if s.Callback != nil {
 			s.Callback(request, response, err)
@@ -146,11 +151,6 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 			return nil, fmt.Errorf("timeout")
 		}
 		return
-	}
-
-	response = &Response{
-		IgnoreBody: request.IgnoreBody,
-		Request:    request,
 	}
 
 	s.buildResponse(response, httpResponse)
