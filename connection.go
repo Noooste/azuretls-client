@@ -215,6 +215,8 @@ func (c *Conn) Close() {
 
 func (s *Session) getProxyConn(conn *Conn, host string) (err error) {
 	ctx, cancel := context.WithCancel(s.ctx)
+	defer cancel()
+
 	s.ProxyDialer.ForceHTTP2 = s.H2Proxy
 	s.ProxyDialer.tr = s.HTTP2Transport
 	s.ProxyDialer.Dialer.Timeout = conn.TimeOut
@@ -225,31 +227,32 @@ func (s *Session) getProxyConn(conn *Conn, host string) (err error) {
 	connChan := make(chan net.Conn, 1)
 	errChan := make(chan error, 1)
 
-	defer close(connChan)
-	defer close(errChan)
-
 	go func() {
+		defer close(connChan)
+		defer close(errChan)
+
 		proxyConn, dialErr := s.ProxyDialer.DialContext(ctx, "tcp", host)
-		if dialErr != nil && errChan != nil {
-			errChan <- dialErr
+		if dialErr != nil {
+			select {
+			case errChan <- dialErr:
+			case <-ctx.Done():
+			}
+			return
 		}
 
-		if connChan != nil {
-			connChan <- proxyConn
+		select {
+		case connChan <- proxyConn:
+		case <-ctx.Done():
 		}
 	}()
 
 	select {
 	case <-timer.C:
-		cancel()
 		return errors.New("proxy connection timeout")
-
 	case c := <-connChan:
 		conn.Conn = c
 		conn.cancel = cancel
-
 	case err = <-errChan:
-		cancel()
 		return err
 	}
 
