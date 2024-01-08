@@ -230,10 +230,13 @@ func (s *Session) getProxyConn(conn *Conn, host string) (err error) {
 
 	go func() {
 		proxyConn, dialErr := s.ProxyDialer.DialContext(ctx, "tcp", host)
-		if dialErr != nil {
+		if dialErr != nil && errChan != nil {
 			errChan <- dialErr
 		}
-		connChan <- proxyConn
+
+		if connChan != nil {
+			connChan <- proxyConn
+		}
 	}()
 
 	select {
