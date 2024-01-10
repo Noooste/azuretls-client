@@ -230,10 +230,17 @@ func (s *Session) getProxyConn(conn *Conn, host string) (err error) {
 
 	go func() {
 		proxyConn, dialErr := s.ProxyDialer.DialContext(ctx, "tcp", host)
-		if dialErr != nil {
-			errChan <- dialErr
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			if dialErr != nil {
+				errChan <- dialErr
+				connChan <- nil
+			}
+			connChan <- proxyConn
+			errChan <- nil
 		}
-		connChan <- proxyConn
 	}()
 
 	select {
@@ -242,12 +249,12 @@ func (s *Session) getProxyConn(conn *Conn, host string) (err error) {
 		return errors.New("proxy connection timeout")
 
 	case c := <-connChan:
+		if c == nil {
+			cancel()
+			return <-errChan
+		}
 		conn.Conn = c
 		conn.cancel = cancel
-
-	case err = <-errChan:
-		cancel()
-		return err
 	}
 
 	return nil
@@ -282,7 +289,9 @@ func (s *Session) initConn(req *Request) (conn *Conn, err error) {
 				return nil, err
 			}
 		} else {
-			conn.Conn, err = (&net.Dialer{Timeout: conn.TimeOut}).DialContext(s.ctx, "tcp", host)
+			if conn.Conn, err = (&net.Dialer{Timeout: conn.TimeOut}).DialContext(s.ctx, "tcp", host); err != nil {
+				return nil, err
+			}
 		}
 	}
 
