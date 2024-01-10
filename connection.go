@@ -250,6 +250,10 @@ func (s *Session) getProxyConn(conn *Conn, host string) (err error) {
 	case <-timer.C:
 		return errors.New("proxy connection timeout")
 	case c := <-connChan:
+		if c == nil {
+			cancel()
+			return <-errChan
+		}
 		conn.Conn = c
 		conn.cancel = cancel
 	case err = <-errChan:
@@ -288,7 +292,9 @@ func (s *Session) initConn(req *Request) (conn *Conn, err error) {
 				return nil, err
 			}
 		} else {
-			conn.Conn, err = (&net.Dialer{Timeout: conn.TimeOut}).DialContext(s.ctx, "tcp", host)
+			if conn.Conn, err = (&net.Dialer{Timeout: conn.TimeOut}).DialContext(s.ctx, "tcp", host); err != nil {
+				return nil, err
+			}
 		}
 	}
 
