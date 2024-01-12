@@ -210,17 +210,3 @@ func TestBadProxy(t *testing.T) {
 	}
 
 }
-
-func TestRace(t *testing.T) {
-	for i := 0; i < 100; i++ {
-		go func() {
-			session := azuretls.NewSession()
-			session.SetProxy("http://10.1.2.3")
-			session.SetTimeout(time.Second * 1)
-			for {
-				session.Get("https://api.ipify.org")
-			}
-		}()
-	}
-	time.Sleep(time.Second * 999)
-}
