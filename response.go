@@ -6,9 +6,10 @@ import (
 	http "github.com/Noooste/fhttp"
 	"io"
 	"net/url"
+	"time"
 )
 
-func (s *Session) buildResponse(response *Response, httpResponse *http.Response) {
+func (s *Session) buildResponse(response *Response, httpResponse *http.Response) (err error) {
 	response.RawBody = httpResponse.Body
 	response.HttpResponse = httpResponse
 
@@ -25,8 +26,30 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 				recover()
 			}()
 
-			response.Body, _ = response.ReadBody()
-			done <- true
+			timer := time.NewTimer(response.Request.TimeOut)
+			defer timer.Stop()
+
+			go func() {
+				defer func() {
+					recover()
+				}()
+
+				response.Body, err = response.ReadBody()
+				done <- true
+			}()
+
+			for {
+				select {
+				case <-timer.C:
+					response.Body = nil
+					done <- true
+					err = fmt.Errorf("read body: timeout")
+					break
+
+				case <-done:
+					break
+				}
+			}
 		}()
 	} else {
 		done <- true
@@ -54,6 +77,8 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 	response.TLS = httpResponse.TLS
 
 	<-done
+
+	return
 }
 
 func (r *Response) ReadBody() ([]byte, error) {
