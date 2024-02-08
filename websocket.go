@@ -49,6 +49,10 @@ func (s *Session) NewWebsocketWithContext(ctx context.Context, req *Request, arg
 	req.HttpRequest = &http.Request{}
 	req.parsedUrl, err = url.Parse(req.Url)
 
+	if err != nil {
+		return nil, err
+	}
+
 	req.formatHeader()
 
 	if !req.NoCookie {

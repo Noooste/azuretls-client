@@ -46,6 +46,10 @@ func (s *Session) EnableVerbose(path string, ignoreHost []string) error {
 }
 
 func (s *Session) saveVerbose(request *Request, response *Response, err error) {
+	if !s.Verbose {
+		return
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			return
