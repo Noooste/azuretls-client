@@ -430,6 +430,11 @@ func TestSession_Connect(t *testing.T) {
 
 	resp, err := session.Get("https://httpbin.org/get")
 
+	if err != nil {
+		t.Fatal("TestSession_Options failed, expected: nil, got: ", err)
+		return
+	}
+
 	if resp.StatusCode != 200 {
 		t.Fatal("TestSession_Options failed, expected: 200, got: ", resp.StatusCode)
 		return

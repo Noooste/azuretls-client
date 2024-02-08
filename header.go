@@ -95,6 +95,7 @@ func (oh *OrderedHeaders) Del(field string) OrderedHeaders {
 	return *oh
 }
 
+//gocyclo:ignore
 func (r *Request) formatHeader() {
 	var setUserAgent = true
 

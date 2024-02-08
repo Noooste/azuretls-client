@@ -153,9 +153,9 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 		return
 	}
 
-	s.buildResponse(response, httpResponse)
+	err = s.buildResponse(response, httpResponse)
 	s.saveVerbose(request, response, err)
-	return response, nil
+	return response, err
 }
 
 /*
@@ -370,6 +370,10 @@ func (s *Session) Connect(u string) error {
 	var err error
 
 	request.parsedUrl, err = url.Parse(u)
+
+	if err != nil {
+		return err
+	}
 
 	if err = s.initTransport(s.Browser); err != nil {
 		return err
