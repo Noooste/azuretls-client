@@ -2,7 +2,6 @@ package azuretls_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/Noooste/azuretls-client"
 	"strings"
 	"testing"
@@ -12,7 +11,6 @@ func TestDefaultConfig(t *testing.T) {
 	session := azuretls.NewSession()
 
 	response, err := session.Get("https://tls.peet.ws/api/all")
-	fmt.Println(string(response.Body))
 
 	if err != nil {
 		t.Fatal(err)
