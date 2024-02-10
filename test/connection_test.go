@@ -9,6 +9,8 @@ import (
 )
 
 func TestSessionConn(t *testing.T) {
+	t.Parallel()
+
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	session := azuretls.NewSession()
@@ -54,6 +56,8 @@ func TestSessionConn(t *testing.T) {
 }
 
 func TestHTTP1Conn(t *testing.T) {
+	t.Parallel()
+
 	session := azuretls.NewSession()
 
 	_, err := session.Get("https://api.ipify.org/")
@@ -78,11 +82,13 @@ func TestCloudflareRequest(t *testing.T) {
 }
 
 func TestHighConcurrency(t *testing.T) {
+	t.Parallel()
+
 	session := azuretls.NewSession()
 
 	wait := &sync.WaitGroup{}
 
-	count := 50
+	count := 100
 
 	wait.Add(count)
 
@@ -92,7 +98,7 @@ func TestHighConcurrency(t *testing.T) {
 	for i := 0; i < count; i++ {
 		go func() {
 			defer wait.Done()
-			_, err2 := session.Get("https://example.com")
+			_, err2 := session.Get("https://github.com/")
 
 			if err2 != nil {
 				err = err2

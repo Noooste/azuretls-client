@@ -15,29 +15,46 @@ const (
 	Android = "android" //deprecated
 )
 
-func defaultHeaderSettings(navigator string) []http2.Setting {
+func defaultHeaderSettings(navigator string) (map[http2.SettingID]uint32, []http2.SettingID) {
 	switch navigator {
 	case Firefox:
-		return []http2.Setting{
-			{ID: http2.SettingHeaderTableSize, Val: 65536},
-			{ID: http2.SettingInitialWindowSize, Val: 131072},
-			{ID: http2.SettingMaxFrameSize, Val: 16384},
-		}
+		return map[http2.SettingID]uint32{
+				http2.SettingMaxFrameSize:      16384,
+				http2.SettingInitialWindowSize: 131072,
+				http2.SettingHeaderTableSize:   65536,
+			}, []http2.SettingID{
+				http2.SettingMaxFrameSize,
+				http2.SettingInitialWindowSize,
+				http2.SettingHeaderTableSize,
+			}
+
 	case Ios:
-		return []http2.Setting{
-			{ID: http2.SettingHeaderTableSize, Val: 4096},
-			{ID: http2.SettingMaxConcurrentStreams, Val: 100},
-			{ID: http2.SettingInitialWindowSize, Val: 2097152},
-			{ID: http2.SettingMaxFrameSize, Val: 16384},
-			{ID: http2.SettingMaxHeaderListSize, Val: math.MaxUint32},
-		}
+		return map[http2.SettingID]uint32{
+				http2.SettingHeaderTableSize:      4096,
+				http2.SettingMaxConcurrentStreams: 100,
+				http2.SettingInitialWindowSize:    2097152,
+				http2.SettingMaxFrameSize:         16384,
+				http2.SettingMaxHeaderListSize:    math.MaxUint32,
+			}, []http2.SettingID{
+				http2.SettingHeaderTableSize,
+				http2.SettingMaxConcurrentStreams,
+				http2.SettingInitialWindowSize,
+				http2.SettingMaxFrameSize,
+				http2.SettingMaxHeaderListSize,
+			}
+
 	default: //chrome
-		return []http2.Setting{
-			{ID: http2.SettingHeaderTableSize, Val: 65536},
-			{ID: http2.SettingEnablePush, Val: 0},
-			{ID: http2.SettingInitialWindowSize, Val: 6291456},
-			{ID: http2.SettingMaxHeaderListSize, Val: 262144},
-		}
+		return map[http2.SettingID]uint32{
+				http2.SettingMaxConcurrentStreams: 1000,
+				http2.SettingMaxFrameSize:         16384,
+				http2.SettingInitialWindowSize:    6291456,
+				http2.SettingHeaderTableSize:      65536,
+			}, []http2.SettingID{
+				http2.SettingMaxConcurrentStreams,
+				http2.SettingMaxFrameSize,
+				http2.SettingInitialWindowSize,
+				http2.SettingHeaderTableSize,
+			}
 	}
 }
 
@@ -52,44 +69,44 @@ func defaultWindowsUpdate(navigator string) uint32 {
 	}
 }
 
-func defaultStreamPriorities(navigator string) []http2.StreamPriority {
+func defaultStreamPriorities(navigator string) []http2.Priority {
 	switch navigator {
 	case Firefox:
-		return []http2.StreamPriority{
+		return []http2.Priority{
 			{
-				StreamId: 3,
+				StreamID: 3,
 				PriorityParam: http2.PriorityParam{
 					Weight: 200,
 				},
 			},
 			{
-				StreamId: 5,
+				StreamID: 5,
 				PriorityParam: http2.PriorityParam{
 					Weight: 100,
 				},
 			},
 			{
-				StreamId: 7,
+				StreamID: 7,
 				PriorityParam: http2.PriorityParam{
 					Weight: 0,
 				},
 			},
 			{
-				StreamId: 9,
+				StreamID: 9,
 				PriorityParam: http2.PriorityParam{
 					Weight:    0,
 					StreamDep: 7,
 				},
 			},
 			{
-				StreamId: 11,
+				StreamID: 11,
 				PriorityParam: http2.PriorityParam{
 					Weight:    0,
 					StreamDep: 3,
 				},
 			},
 			{
-				StreamId: 13,
+				StreamID: 13,
 				PriorityParam: http2.PriorityParam{
 					Weight: 240,
 				},
@@ -97,21 +114,21 @@ func defaultStreamPriorities(navigator string) []http2.StreamPriority {
 		}
 
 	default:
-		return []http2.StreamPriority{}
+		return []http2.Priority{}
 	}
 }
 
-func defaultHeaderPriorities(navigator string) http2.PriorityParam {
+func defaultHeaderPriorities(navigator string) *http2.PriorityParam {
 	switch navigator {
 	case Firefox:
-		return http2.PriorityParam{
+		return &http2.PriorityParam{
 			Weight:    41,
 			StreamDep: 13,
 			Exclusive: false,
 		}
 
 	default:
-		return http2.PriorityParam{
+		return &http2.PriorityParam{
 			Weight:    255,
 			StreamDep: 0,
 			Exclusive: true,

@@ -46,6 +46,8 @@ func TestProxyDialer(t *testing.T) {
 }
 
 func TestProxy(t *testing.T) {
+	t.Parallel()
+
 	session := azuretls.NewSession()
 
 	if err := session.SetProxy(""); err == nil {
@@ -195,6 +197,8 @@ func TestProxy4(t *testing.T) {
 }
 
 func TestBadProxy(t *testing.T) {
+	t.Parallel()
+
 	session := azuretls.NewSession()
 	session.SetTimeout(1 * time.Second)
 	defer session.Close()

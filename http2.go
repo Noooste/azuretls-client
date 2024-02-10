@@ -77,7 +77,7 @@ func applySettings(settings string, tr *http2.Transport) error {
 	if settings != "0" {
 		values := strings.Split(settings, ",")
 
-		settingsFrame := make([]http2.Setting, 0, len(values))
+		settingsFrame := make(map[http2.SettingID]uint32, len(values))
 
 		var (
 			id, val uint64
@@ -100,15 +100,13 @@ func applySettings(settings string, tr *http2.Transport) error {
 				return fmt.Errorf(invalidSettingsIndex, i, "value")
 			}
 
-			settingsFrame = append(settingsFrame, http2.Setting{
-				ID:  http2.SettingID(id),
-				Val: uint32(val),
-			})
+			settingsFrame[http2.SettingID(id)] = uint32(val)
 
 			tr.Settings = settingsFrame
+			tr.SettingsOrder = append(tr.SettingsOrder, http2.SettingID(id))
 		}
 	} else {
-		tr.Settings = make([]http2.Setting, 0)
+		tr.Settings = make(map[http2.SettingID]uint32)
 	}
 
 	return nil
@@ -116,12 +114,12 @@ func applySettings(settings string, tr *http2.Transport) error {
 
 func applyWindowUpdate(windowUpdate string, tr *http2.Transport) error {
 	if windowUpdate == "0" {
-		tr.WindowsUpdateSize = (2 << 15) - 1
+		tr.ConnectionFlow = (2 << 15) - 1
 	} else {
 		if ws, err := strconv.Atoi(windowUpdate); err != nil {
 			return fmt.Errorf(invalidWindow, windowUpdate)
 		} else {
-			tr.WindowsUpdateSize = uint32(ws)
+			tr.ConnectionFlow = uint32(ws)
 		}
 	}
 
@@ -131,7 +129,7 @@ func applyWindowUpdate(windowUpdate string, tr *http2.Transport) error {
 func applyPriorities(priorities string, tr *http2.Transport) error {
 	if priorities != "0" {
 		rawPriorities := strings.Split(priorities, ",")
-		streamPriorities := make([]http2.StreamPriority, 0, len(rawPriorities))
+		streamPriorities := make([]http2.Priority, 0, len(rawPriorities))
 
 		var (
 			id, deps, weight int
@@ -165,8 +163,8 @@ func applyPriorities(priorities string, tr *http2.Transport) error {
 				return fmt.Errorf(invalidPriority, priority)
 			}
 
-			streamPriorities = append(streamPriorities, http2.StreamPriority{
-				StreamId: uint32(id),
+			streamPriorities = append(streamPriorities, http2.Priority{
+				StreamID: uint32(id),
 				PriorityParam: http2.PriorityParam{
 					Weight:    uint8(weight - 1),
 					Exclusive: exclusive,
@@ -175,10 +173,10 @@ func applyPriorities(priorities string, tr *http2.Transport) error {
 			})
 		}
 
-		tr.StreamPriorities = streamPriorities
+		tr.Priorities = streamPriorities
 
 	} else {
-		tr.StreamPriorities = make([]http2.StreamPriority, 0)
+		tr.Priorities = make([]http2.Priority, 0)
 	}
 
 	return nil
@@ -207,15 +205,15 @@ func applyPreHeader(preHeader string, h *PHeader, tr *http2.Transport) error {
 		}
 	}
 
-	tr.HeaderPriorities = defaultHeaderPriorities("")
+	tr.HeaderPriority = defaultHeaderPriorities("")
 
-	for _, setting := range tr.Settings {
-		switch setting.ID {
+	for k, v := range tr.Settings {
+		switch k {
 		case http2.SettingInitialWindowSize:
-			tr.InitialWindowSize = setting.Val
+			tr.InitialWindowSize = v
 
 		case http2.SettingHeaderTableSize:
-			tr.HeaderTableSize = setting.Val
+			tr.HeaderTableSize = v
 		}
 	}
 
