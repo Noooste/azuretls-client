@@ -1,11 +1,11 @@
 module github.com/Noooste/azuretls-client
 
-go 1.21
+go 1.20
 
 require (
 	github.com/Noooste/fhttp v0.0.1
 	github.com/Noooste/utls v1.2.5
-	github.com/Noooste/websocket v1.0.2
+	github.com/Noooste/websocket v1.0.3
 	github.com/andybalholm/brotli v1.1.0
 	golang.org/x/net v0.21.0
 )
