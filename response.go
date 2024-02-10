@@ -6,6 +6,7 @@ import (
 	http "github.com/Noooste/fhttp"
 	"io"
 	"net/url"
+	"sync"
 	"time"
 )
 
@@ -14,16 +15,20 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 	response.HttpResponse = httpResponse
 
 	var (
-		done    = make(chan bool, 1)
+		wg      = sync.WaitGroup{}
 		headers = make(http.Header, len(httpResponse.Header))
 	)
 
-	defer close(done)
+	wg.Add(1)
 
 	if !response.IgnoreBody {
 		go func() {
+			done := make(chan bool, 1)
+
 			defer func() {
 				recover()
+				wg.Done()
+				close(done)
 			}()
 
 			timer := time.NewTimer(response.Request.TimeOut)
@@ -42,18 +47,14 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 				select {
 				case <-timer.C:
 					response.Body = nil
-					done <- true
 					err = fmt.Errorf("read body: timeout")
 					return
 
 				case <-done:
-					done <- true
 					return
 				}
 			}
 		}()
-	} else {
-		done <- true
 	}
 
 	for key, value := range httpResponse.Header {
@@ -76,7 +77,7 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 	response.Cookies = GetCookiesMap(cookies)
 	response.ContentLength = httpResponse.ContentLength
 
-	<-done
+	wg.Wait()
 
 	return
 }
