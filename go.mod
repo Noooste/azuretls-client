@@ -1,16 +1,18 @@
 module github.com/Noooste/azuretls-client
 
-go 1.21
+go 1.21.1
 
 require (
-	github.com/Noooste/fhttp v1.0.6
+	github.com/Noooste/fhttp v0.0.1
 	github.com/Noooste/utls v1.2.5
-	github.com/Noooste/websocket v1.0.1
+	github.com/Noooste/websocket v1.0.2
 	github.com/andybalholm/brotli v1.1.0
+	github.com/bogdanfinn/fhttp v0.5.27
 	golang.org/x/net v0.21.0
 )
 
 require (
+	github.com/bogdanfinn/utls v1.6.1 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/klauspost/compress v1.17.6 // indirect
 	github.com/quic-go/quic-go v0.41.0 // indirect

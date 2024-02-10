@@ -135,7 +135,5 @@ type Response struct {
 
 	Request *Request // Reference to the associated request.
 
-	TLS *tls.ConnectionState // TLS connection details if the request was over HTTPS.
-
 	ContentLength int64 // Length of content in the response.
 }

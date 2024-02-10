@@ -70,11 +70,10 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 		u, _ = url.Parse(response.Url)
 	}
 
-	cookies := http.ReadSetCookies(httpResponse.Header)
+	cookies := ReadSetCookies(httpResponse.Header)
 	s.CookieJar.SetCookies(u, cookies)
 	response.Cookies = GetCookiesMap(cookies)
 	response.ContentLength = httpResponse.ContentLength
-	response.TLS = httpResponse.TLS
 
 	<-done
 
@@ -82,7 +81,9 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 }
 
 func (r *Response) ReadBody() ([]byte, error) {
-	defer r.HttpResponse.Body.Close()
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(r.HttpResponse.Body)
 
 	encoding := r.HttpResponse.Header.Get("content-encoding")
 
