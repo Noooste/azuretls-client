@@ -35,6 +35,8 @@ func (s *Session) ApplyHTTP2(fp string) error {
 
 		var err error
 		s.HTTP2Transport, err = http2.ConfigureTransports(s.Transport)
+		s.HTTP2Transport.StrictMaxConcurrentStreams = true
+
 		if err != nil {
 			return err
 		}

@@ -54,6 +54,7 @@ func (s *Session) initHTTP2(browser string) error {
 	tr.Settings, tr.SettingsOrder = defaultHeaderSettings(browser)
 	tr.ConnectionFlow = defaultWindowsUpdate(browser)
 	tr.HeaderPriority = defaultHeaderPriorities(browser)
+	tr.StrictMaxConcurrentStreams = true
 
 	tr.PushHandler = &http2.DefaultPushHandler{}
 
