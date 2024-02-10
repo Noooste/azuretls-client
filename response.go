@@ -44,10 +44,11 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 					response.Body = nil
 					done <- true
 					err = fmt.Errorf("read body: timeout")
-					break
+					return
 
 				case <-done:
-					break
+					done <- true
+					return
 				}
 			}
 		}()
