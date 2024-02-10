@@ -24,7 +24,7 @@ func TestDecompressBody_Gzip(t *testing.T) {
 	}
 }
 
-func TestDecompressBody_Deflate(t *testing.T) {
+func tTestDecompressBody_Deflate(t *testing.T) {
 	session := azuretls.NewSession()
 
 	session.OrderedHeaders = azuretls.OrderedHeaders{

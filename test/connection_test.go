@@ -82,7 +82,7 @@ func TestHighConcurrency(t *testing.T) {
 
 	wait := &sync.WaitGroup{}
 
-	count := 50
+	count := 100
 
 	wait.Add(count)
 
@@ -92,7 +92,7 @@ func TestHighConcurrency(t *testing.T) {
 	for i := 0; i < count; i++ {
 		go func() {
 			defer wait.Done()
-			_, err2 := session.Get("https://example.com")
+			_, err2 := session.Get("https://github.com/")
 
 			if err2 != nil {
 				err = err2

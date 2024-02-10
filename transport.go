@@ -21,8 +21,6 @@ func (s *Session) initTransport(browser string) (err error) {
 		}
 	}
 
-	s.HTTP2Transport.PushHandler = &http2.DefaultPushHandler{}
-
 	return
 }
 
@@ -52,18 +50,21 @@ func (s *Session) initHTTP2(browser string) error {
 		return err
 	}
 
-	tr.StreamPriorities = defaultStreamPriorities(browser)
-	tr.Settings = defaultHeaderSettings(browser)
-	tr.WindowsUpdateSize = defaultWindowsUpdate(browser)
-	tr.HeaderPriorities = defaultHeaderPriorities(browser)
+	tr.Priorities = defaultStreamPriorities(browser)
+	tr.Settings, tr.SettingsOrder = defaultHeaderSettings(browser)
+	tr.ConnectionFlow = defaultWindowsUpdate(browser)
+	tr.HeaderPriority = defaultHeaderPriorities(browser)
+	tr.StrictMaxConcurrentStreams = true
 
-	for _, setting := range tr.Settings {
-		switch setting.ID {
+	tr.PushHandler = &http2.DefaultPushHandler{}
+
+	for k, v := range tr.Settings {
+		switch k {
 		case http2.SettingInitialWindowSize:
-			tr.InitialWindowSize = setting.Val
+			tr.InitialWindowSize = v
 
 		case http2.SettingHeaderTableSize:
-			tr.HeaderTableSize = setting.Val
+			tr.HeaderTableSize = v
 		}
 	}
 

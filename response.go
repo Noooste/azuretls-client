@@ -6,6 +6,7 @@ import (
 	http "github.com/Noooste/fhttp"
 	"io"
 	"net/url"
+	"sync"
 	"time"
 )
 
@@ -14,16 +15,20 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 	response.HttpResponse = httpResponse
 
 	var (
-		done    = make(chan bool, 1)
+		wg      = sync.WaitGroup{}
 		headers = make(http.Header, len(httpResponse.Header))
 	)
 
-	defer close(done)
-
 	if !response.IgnoreBody {
+		wg.Add(1)
+
 		go func() {
+			done := make(chan bool, 1)
+
 			defer func() {
 				recover()
+				wg.Done()
+				close(done)
 			}()
 
 			timer := time.NewTimer(response.Request.TimeOut)
@@ -42,17 +47,14 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 				select {
 				case <-timer.C:
 					response.Body = nil
-					done <- true
 					err = fmt.Errorf("read body: timeout")
-					break
+					return
 
 				case <-done:
-					break
+					return
 				}
 			}
 		}()
-	} else {
-		done <- true
 	}
 
 	for key, value := range httpResponse.Header {
@@ -70,19 +72,20 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 		u, _ = url.Parse(response.Url)
 	}
 
-	cookies := http.ReadSetCookies(httpResponse.Header)
+	cookies := ReadSetCookies(httpResponse.Header)
 	s.CookieJar.SetCookies(u, cookies)
 	response.Cookies = GetCookiesMap(cookies)
 	response.ContentLength = httpResponse.ContentLength
-	response.TLS = httpResponse.TLS
 
-	<-done
+	wg.Wait()
 
 	return
 }
 
 func (r *Response) ReadBody() ([]byte, error) {
-	defer r.HttpResponse.Body.Close()
+	defer func(Body io.ReadCloser) {
+		_ = Body.Close()
+	}(r.HttpResponse.Body)
 
 	encoding := r.HttpResponse.Header.Get("content-encoding")
 
