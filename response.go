@@ -19,9 +19,9 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 		headers = make(http.Header, len(httpResponse.Header))
 	)
 
-	wg.Add(1)
-
 	if !response.IgnoreBody {
+		wg.Add(1)
+
 		go func() {
 			done := make(chan bool, 1)
 

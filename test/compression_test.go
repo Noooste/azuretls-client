@@ -7,8 +7,6 @@ import (
 )
 
 func TestDecompressBody_Gzip(t *testing.T) {
-	t.Parallel()
-
 	session := azuretls.NewSession()
 
 	session.OrderedHeaders = azuretls.OrderedHeaders{
@@ -45,8 +43,6 @@ func tTestDecompressBody_Deflate(t *testing.T) {
 }
 
 func TestDecompressBody_Brotli(t *testing.T) {
-	t.Parallel()
-
 	session := azuretls.NewSession()
 
 	session.OrderedHeaders = azuretls.OrderedHeaders{
