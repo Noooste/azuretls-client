@@ -92,12 +92,15 @@ func TestHighConcurrency(t *testing.T) {
 	for i := 0; i < count; i++ {
 		go func() {
 			defer wait.Done()
-			_, err2 := session.Get("https://github.com/")
 
-			if err2 != nil {
-				err = err2
-				t.Error(err2)
-				return
+			for i := 0; i < 10; i++ {
+				_, err2 := session.Get("https://api.ipify.org/")
+
+				if err2 != nil {
+					err = err2
+					t.Error(err2)
+					return
+				}
 			}
 
 			ok++

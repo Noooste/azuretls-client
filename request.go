@@ -3,11 +3,9 @@ package azuretls
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	http "github.com/Noooste/fhttp"
 	"io"
-	"reflect"
 	"strings"
 	"time"
 )
@@ -32,6 +30,12 @@ func (s *Session) prepareRequest(request *Request, args ...any) error {
 			request.HeaderOrder = arg.(HeaderOrder)
 		case time.Duration:
 			request.TimeOut = arg.(time.Duration)
+		default:
+			if request.Body != nil {
+				return errors.New("ambiguous argument, multiple body detected")
+			}
+
+			request.Body = arg
 		}
 	}
 
@@ -84,7 +88,7 @@ func (s *Session) buildRequest(ctx context.Context, req *Request) (err error) {
 		return
 	}
 
-	if req.PHeader[0] == "" {
+	if req.PHeader == nil {
 		req.PHeader = s.PHeader
 	}
 
@@ -109,35 +113,10 @@ func newRequest(ctx context.Context, verbose bool, req *Request) (newReq *http.R
 			req.body = ToBytes(req.Body)
 			newReq, err = http.NewRequestWithContext(ctx, strings.ToUpper(req.Method), req.Url, bytes.NewReader(req.body))
 		} else {
-			//prepare new request
 			var reader io.Reader
-			if req.Body != nil {
-				switch req.Body.(type) {
-				case string:
-					reader = strings.NewReader(req.Body.(string))
-				case []byte:
-					reader = bytes.NewReader(req.Body.([]byte))
-				case io.Reader:
-					reader = req.Body.(io.Reader)
-				default:
-					value := reflect.ValueOf(req.Body)
 
-					if value.Kind() == reflect.Ptr {
-						value = value.Elem()
-					}
-
-					switch value.Kind() {
-					case reflect.Struct, reflect.Map, reflect.Slice, reflect.Array:
-						var dumped []byte
-						dumped, err = json.Marshal(req.Body)
-						if err != nil {
-							return nil, err
-						}
-						reader = bytes.NewReader(dumped)
-					default:
-						return nil, errors.New("unsupported body type : " + value.Kind().String())
-					}
-				}
+			if reader, err = toReader(req.Body); err != nil {
+				return nil, err
 			}
 
 			newReq, err = http.NewRequestWithContext(ctx, strings.ToUpper(req.Method), req.Url, reader)

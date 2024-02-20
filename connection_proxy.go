@@ -95,6 +95,63 @@ func (c *proxyDialer) Dial(network, address string) (net.Conn, error) {
 	return c.DialContext(context.Background(), network, address)
 }
 
+func (c *proxyDialer) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
+	if c.ProxyURL == nil {
+		return nil, errors.New("proxy is not set")
+	}
+
+	if strings.HasPrefix(c.ProxyURL.Scheme, "socks") {
+		dial, err := proxy.FromURL(c.ProxyURL, proxy.Direct)
+		if err != nil {
+			return nil, err
+		}
+		return dial.(proxy.ContextDialer).DialContext(ctx, network, address)
+	}
+
+	req := (&http.Request{
+		Method: http.MethodConnect,
+		URL:    &url.URL{Host: address},
+		Header: make(http.Header),
+		Host:   address,
+	}).WithContext(ctx)
+
+	for k, v := range c.DefaultHeader {
+		req.Header[k] = v
+	}
+
+	if ctxHeader, ctxHasHeader := ctx.Value(ContextKeyHeader{}).(http.Header); ctxHasHeader {
+		for k, v := range ctxHeader {
+			req.Header[k] = v
+		}
+	}
+
+	c.h2Mu.Lock()
+	unlocked := false
+	if c.H2Conn != nil && c.conn != nil {
+		if c.H2Conn.CanTakeNewRequest() {
+			rc := c.conn
+			cc := c.H2Conn
+			c.h2Mu.Unlock()
+			unlocked = true
+			if proxyConn, err := c.connectHTTP2(req, rc, cc); err == nil {
+				return proxyConn, nil
+			}
+		}
+	}
+
+	if !unlocked {
+		c.h2Mu.Unlock()
+	}
+
+	rawConn, negotiatedProtocol, err := c.InitProxyConn(ctx, network)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return c.connect(req, rawConn, negotiatedProtocol)
+}
+
 type ContextKeyHeader struct{}
 
 func (c *proxyDialer) connectHTTP1(req *http.Request, conn net.Conn) error {
@@ -141,70 +198,6 @@ func (c *proxyDialer) connectHTTP2(req *http.Request, conn net.Conn, h2clientCon
 	}
 
 	return newHTTP2Conn(conn, pw, resp.Body), nil
-}
-
-func (c *proxyDialer) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
-	if c.ProxyURL == nil {
-		return nil, errors.New("proxy is not set")
-	}
-
-	if strings.HasPrefix(c.ProxyURL.Scheme, "socks") {
-		dial, err := proxy.FromURL(c.ProxyURL, proxy.Direct)
-		if err != nil {
-			return nil, err
-		}
-		return dial.(proxy.ContextDialer).DialContext(ctx, network, address)
-	}
-
-	req := (&http.Request{
-		Method: http.MethodConnect,
-		URL:    &url.URL{Host: address},
-		Header: make(http.Header),
-		Host:   address,
-	}).WithContext(ctx)
-
-	for k, v := range c.DefaultHeader {
-		req.Header[k] = v
-	}
-
-	if ctxHeader, ctxHasHeader := ctx.Value(ContextKeyHeader{}).(http.Header); ctxHasHeader {
-		for k, v := range ctxHeader {
-			req.Header[k] = v
-		}
-	}
-
-	c.h2Mu.Lock()
-	unlocked := false
-	if c.H2Conn != nil && c.conn != nil {
-		if c.H2Conn.CanTakeNewRequest() {
-			rc := c.conn
-			cc := c.H2Conn
-			c.h2Mu.Unlock()
-			unlocked = true
-			proxyConn, err := c.connectHTTP2(req, rc, cc)
-			if err == nil {
-				return proxyConn, nil
-			}
-		}
-	}
-
-	if !unlocked {
-		c.h2Mu.Unlock()
-	}
-
-	rawConn, negotiatedProtocol, err := c.InitProxyConn(ctx, network)
-
-	if err != nil {
-		return nil, err
-	}
-
-	proxyConn, err := c.connect(req, rawConn, negotiatedProtocol)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return proxyConn, nil
 }
 
 func (c *proxyDialer) InitProxyConn(ctx context.Context, network string) (rawConn net.Conn, negotiatedProtocol string, err error) {

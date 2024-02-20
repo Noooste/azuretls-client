@@ -89,6 +89,12 @@ func TestProxy(t *testing.T) {
 	if oldIP == newIP {
 		t.Fatal("TestProxy failed, IP is not changed")
 	}
+
+	session.ClearProxy()
+
+	if session.Proxy != "" {
+		t.Fatal("TestProxy failed, Proxy is not cleared")
+	}
 }
 
 func TestProxy2(t *testing.T) {

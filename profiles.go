@@ -82,7 +82,7 @@ func GetLastChromeVersion() *tls.ClientHelloSpec {
 
 	// since version 110, Chrome TLS Client Hello extensions are shuffled
 	// https://www.fastly.com/blog/a-first-look-at-chromes-tls-clienthello-permutation-in-the-wild
-	random.Shuffle(extensionsLength, func(i, j int) {
+	rdn.Shuffle(extensionsLength, func(i, j int) {
 		if i >= lastTwo || j >= lastTwo || i == 0 || j == 0 {
 			// ignore GREASE extensions and padding extension
 			return

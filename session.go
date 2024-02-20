@@ -61,11 +61,13 @@ func (s *Session) SetTimeout(timeout time.Duration) {
 	}
 }
 
+// SetContext sets the given context for the session
 func (s *Session) SetContext(ctx context.Context) {
 	s.ctx = ctx
 	s.Connections.SetContext(ctx)
 }
 
+// Ip returns the public IP address of the session
 func (s *Session) Ip() (ip string, err error) {
 	r, err := s.Get("https://api.ipify.org")
 	if err != nil {
@@ -74,6 +76,7 @@ func (s *Session) Ip() (ip string, err error) {
 	return string(r.Body), nil
 }
 
+// SetProxy sets the proxy for the session
 func (s *Session) SetProxy(proxy string) error {
 	defer s.Close()
 
@@ -97,9 +100,11 @@ func (s *Session) SetProxy(proxy string) error {
 	return nil
 }
 
+// ClearProxy removes the proxy from the session
 func (s *Session) ClearProxy() {
 	s.Proxy = ""
 	s.ProxyDialer = nil
+	s.Connections.Close()
 }
 
 func (s *Session) send(request *Request) (response *Response, err error) {
@@ -116,22 +121,25 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 	request.parsedUrl = request.HttpRequest.URL
 
 	if err = s.initTransport(s.Browser); err != nil {
-		s.saveVerbose(request, nil, err)
+		s.dumpRequest(request, nil, err)
 		return nil, err
 	}
 
 	if rConn, err = s.initConn(request); err != nil {
-		s.saveVerbose(request, nil, err)
+		s.dumpRequest(request, nil, err)
 		return nil, err
 	}
 
 	request.conn = rConn
+	request.Proto = rConn.Proto
 
 	if rConn.HTTP2 != nil {
 		roundTripper = rConn.HTTP2
 	} else {
 		roundTripper = s.Transport
 	}
+
+	s.logRequest(request)
 
 	httpResponse, err = roundTripper.RoundTrip(request.HttpRequest)
 
@@ -148,19 +156,23 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 
 	if err != nil {
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			rConn.Close()
+			s.logResponse(response, err)
 			return nil, fmt.Errorf("timeout")
 		}
+		s.logResponse(response, err)
 		return
 	}
 
 	err = s.buildResponse(response, httpResponse)
-	s.saveVerbose(request, response, err)
+
+	s.dumpRequest(request, response, err)
+	s.logResponse(response, err)
+
 	return response, err
 }
 
-/*
-Do sends a request and returns a response
-*/
+// Do sends a request and returns a response
 func (s *Session) Do(request *Request, args ...any) (*Response, error) {
 	return s.do(request, args...)
 }
@@ -242,6 +254,7 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 
 		reqs = append(reqs, req)
 
+		req.startTime = time.Now()
 		if resp, err = s.send(req); err != nil {
 			return nil, err
 		}
@@ -272,9 +285,7 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 	return nil, errors.New("too many Redirects")
 }
 
-/*
-Get provides shortcut for sending GET request
-*/
+// Get provides shortcut for sending GET request
 func (s *Session) Get(url string, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodGet,
@@ -284,9 +295,7 @@ func (s *Session) Get(url string, args ...any) (*Response, error) {
 	return s.do(request, args...)
 }
 
-/*
-Head provides shortcut for sending HEAD request
-*/
+// Head provides shortcut for sending HEAD request
 func (s *Session) Head(url string, args ...any) (*Response, error) {
 	request := &Request{
 		Method:     http.MethodHead,
@@ -297,9 +306,7 @@ func (s *Session) Head(url string, args ...any) (*Response, error) {
 	return s.do(request, args...)
 }
 
-/*
-Post provides shortcut for sending POST request
-*/
+// Post provides shortcut for sending POST request
 func (s *Session) Post(url string, data any, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodPost,
@@ -310,9 +317,7 @@ func (s *Session) Post(url string, data any, args ...any) (*Response, error) {
 	return s.do(request, args...)
 }
 
-/*
-Put provides shortcut for sending PUT request
-*/
+// Put provides shortcut for sending PUT request
 func (s *Session) Put(url string, data any, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodPut,
@@ -323,35 +328,27 @@ func (s *Session) Put(url string, data any, args ...any) (*Response, error) {
 	return s.do(request, args...)
 }
 
-/*
-Delete provides shortcut for sending DELETE request
-*/
-func (s *Session) Delete(url string, data any, args ...any) (*Response, error) {
+// Delete provides shortcut for sending DELETE request
+func (s *Session) Delete(url string, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodDelete,
 		Url:    url,
-		Body:   data,
 	}
 
 	return s.do(request, args...)
 }
 
-/*
-Options provides shortcut for sending OPTIONS request
-*/
-func (s *Session) Options(url string, data any, args ...any) (*Response, error) {
+// Options provides shortcut for sending OPTIONS request
+func (s *Session) Options(url string, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodOptions,
 		Url:    url,
-		Body:   data,
 	}
 
 	return s.do(request, args...)
 }
 
-/*
-Patch provides shortcut for sending PATCH request
-*/
+// Patch provides shortcut for sending PATCH request
 func (s *Session) Patch(url string, data any, args ...any) (*Response, error) {
 	request := &Request{
 		Method: http.MethodPatch,
@@ -362,18 +359,20 @@ func (s *Session) Patch(url string, data any, args ...any) (*Response, error) {
 	return s.do(request, args...)
 }
 
-/*
-Connect initiates a connection to the specified URL
-*/
+// Connect initiates a connection to the specified URL
 func (s *Session) Connect(u string) error {
 	var request = &Request{}
 	var err error
 
 	request.parsedUrl, err = url.Parse(u)
+	request.Method = http.MethodConnect
+	request.startTime = time.Now()
 
 	if err != nil {
 		return err
 	}
+
+	s.logRequest(request)
 
 	if err = s.initTransport(s.Browser); err != nil {
 		return err
@@ -383,9 +382,14 @@ func (s *Session) Connect(u string) error {
 		return err
 	}
 
+	s.logResponse(&Response{
+		Request: request,
+	}, err)
+
 	return nil
 }
 
+// Close closes the session and all its connections
 func (s *Session) Close() {
 	s.Connections.Close()
 	s.Connections = NewRequestConnPool(s.ctx)
