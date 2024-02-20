@@ -3,15 +3,15 @@ module github.com/Noooste/azuretls-client
 go 1.20
 
 require (
-	github.com/Noooste/fhttp v1.0.7
+	github.com/Noooste/fhttp v1.0.8
 	github.com/Noooste/utls v1.2.5
 	github.com/Noooste/websocket v1.0.3
-	github.com/andybalholm/brotli v1.1.0
 	github.com/fatih/color v1.16.0
 	golang.org/x/net v0.21.0
 )
 
 require (
+	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/klauspost/compress v1.17.6 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
