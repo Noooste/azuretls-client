@@ -88,7 +88,7 @@ func (s *Session) buildRequest(ctx context.Context, req *Request) (err error) {
 		return
 	}
 
-	if req.PHeader[0] == "" {
+	if req.PHeader == nil {
 		req.PHeader = s.PHeader
 	}
 

@@ -132,18 +132,12 @@ func (cp *ConnPool) Get(u *url.URL) (c *Conn) {
 }
 
 func (cp *ConnPool) Set(u *url.URL, c *Conn) {
-	var (
-		ok       bool
-		hostName = getHost(u)
-	)
+	var hostName = getHost(u)
 
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
 
-	_, ok = cp.hosts[hostName]
-	if !ok {
-		cp.hosts[hostName] = c
-	}
+	cp.hosts[hostName] = c
 }
 
 func (cp *ConnPool) Remove(u *url.URL) {

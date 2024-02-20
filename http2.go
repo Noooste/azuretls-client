@@ -68,7 +68,8 @@ func (s *Session) ApplyHTTP2(fp string) error {
 		return err
 	}
 
-	if err := applyPseudoHeaders(pseudoHeaders, &s.PHeader, s.HTTP2Transport); err != nil {
+	s.PHeader = make(PHeader, 4)
+	if err := applyPseudoHeaders(pseudoHeaders, s.PHeader, s.HTTP2Transport); err != nil {
 		return err
 	}
 
@@ -184,7 +185,7 @@ func applyPriorities(priorities string, tr *http2.Transport) error {
 	return nil
 }
 
-func applyPseudoHeaders(pseudoHeaders string, h *PHeader, tr *http2.Transport) error {
+func applyPseudoHeaders(pseudoHeaders string, h PHeader, tr *http2.Transport) error {
 	if pseudoHeaders != "0" {
 		headers := strings.Split(pseudoHeaders, ",")
 		if len(headers) != 4 {

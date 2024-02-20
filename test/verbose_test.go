@@ -56,6 +56,8 @@ func TestSession_EnableVerbose2(t *testing.T) {
 	if err := session.Dump("./tmp", "/get"); err != nil {
 		t.Fatal(err)
 	}
+	session.DisableDump()
+	session.EnableDump()
 
 	_, err := session.Get("https://httpbin.org/get")
 
@@ -77,7 +79,7 @@ func TestSession_EnableVerbose2(t *testing.T) {
 		return
 	}
 
-	if err := session.Dump("./tmp"); err != nil {
+	if err := session.EnableVerbose("./tmp", nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -115,5 +117,44 @@ func TestSession_EnableVerbose2(t *testing.T) {
 		t.Error("No files created")
 		return
 	}
+}
 
+func TestSession_Log(t *testing.T) {
+	session := azuretls.NewSession()
+
+	session.Log()
+
+	session.DisableLog()
+	session.EnableLog()
+
+	session.Get("https://httpbin.org/get")
+	session.Get("https://httpbin.org/redirect")
+	session.Get("https://httpbin.org/unkown")
+}
+
+func TestSession_DumpAndLog(t *testing.T) {
+	defer func() {
+		_ = os.RemoveAll("./tmp")
+	}()
+
+	session := azuretls.NewSession()
+
+	session.DumpAndLog("./tmp")
+
+	session.Get("https://httpbin.org/get")
+	session.Get("https://httpbin.org/redirect")
+	session.Get("https://httpbin.org/unkown")
+
+	time.Sleep(50 * time.Millisecond)
+	f, err := os.ReadDir("./tmp")
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if len(f) == 0 {
+		t.Error("No files created")
+		return
+	}
 }

@@ -119,7 +119,7 @@ func (s *Session) AddPins(u *url.URL, pins []string) error {
 	}
 
 	for _, pin := range pins {
-		conn.PinManager.m[pin] = true
+		conn.PinManager.AddPin(pin)
 	}
 
 	return nil

@@ -28,7 +28,7 @@ func tTestDecompressBody_Deflate(t *testing.T) {
 	session := azuretls.NewSession()
 
 	session.OrderedHeaders = azuretls.OrderedHeaders{
-		{"Accept-Encoding", "deflate"},
+		{"Accept-Encoding", "gzip, deflate, br"},
 	}
 
 	response, err := session.Get("https://httpbin.org/deflate")

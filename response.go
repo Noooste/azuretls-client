@@ -82,25 +82,9 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 	return
 }
 
-func (r *Response) ReadBody() ([]byte, error) {
-	defer func(Body io.ReadCloser) {
-		_ = Body.Close()
-	}(r.HttpResponse.Body)
-
-	encoding := r.HttpResponse.Header.Get("content-encoding")
-
-	bodyBytes, err := io.ReadAll(r.HttpResponse.Body)
-
-	if err != nil {
-		return nil, err
-	}
-
-	result := DecompressBody(bodyBytes, encoding)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
+func (r *Response) ReadBody() (body []byte, err error) {
+	defer r.HttpResponse.Body.Close()
+	return io.ReadAll(r.HttpResponse.Body)
 }
 
 func (r *Response) CloseBody() error {

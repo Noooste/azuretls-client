@@ -160,6 +160,7 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 			s.logResponse(response, err)
 			return nil, fmt.Errorf("timeout")
 		}
+		s.logResponse(response, err)
 		return
 	}
 

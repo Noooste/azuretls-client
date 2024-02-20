@@ -11,17 +11,14 @@ import (
 type OrderedHeaders [][]string
 
 // PHeader is a slice of pseudo headers.
-type PHeader [4]string
+type PHeader []string
 
 // HeaderOrder is a slice of header names.
 type HeaderOrder []string
 
-// GetDefault sets the default values for the PHeader.
-func (ph PHeader) GetDefault() {
-	ph[0] = Method
-	ph[1] = Authority
-	ph[2] = Scheme
-	ph[3] = Path
+// GetDefaultPseudoHeaders returns the default pseudo headers.
+func GetDefaultPseudoHeaders() PHeader {
+	return []string{Method, Authority, Scheme, Path}
 }
 
 // Clone returns a copy of the header.
@@ -156,7 +153,7 @@ func (r *Request) formatHeader() {
 		r.HttpRequest.Header.Set("User-Agent", r.ua)
 	}
 
-	if r.PHeader[0] != "" {
+	if r.PHeader != nil {
 		for i, el := range r.PHeader {
 			if el[0] != ':' {
 				r.PHeader[i] = ":" + el
@@ -170,7 +167,7 @@ func (r *Request) formatHeader() {
 		case Ios:
 			r.HttpRequest.Header[http.PHeaderOrderKey] = []string{Method, Scheme, Path, Authority}
 		default: //chrome sub products
-			r.HttpRequest.Header[http.PHeaderOrderKey] = []string{Method, Authority, Scheme, Path}
+			r.HttpRequest.Header[http.PHeaderOrderKey] = GetDefaultPseudoHeaders()
 		}
 	}
 
