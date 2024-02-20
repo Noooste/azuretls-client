@@ -63,6 +63,8 @@ Whether you're a seasoned developer looking for a feature-rich HTTP client or yo
    * [Utils](#utils)
       * [Response to JSON](#response-to-json)
       * [Url encode](#url-encode)
+   * [Dump](#dump)
+   * [Log](#log)
 
 
 ## Dependencies
@@ -543,3 +545,37 @@ if err != nil {
 
 fmt.Println(response.StatusCode, string(response.Body))
 ```
+
+### Dump
+
+You can dump the request and response with the `session.Dump` method.
+```go
+session := azuretls.NewSession()
+
+session.Log("./my_dump_dir", 
+    "/any/path/to/ignore", 
+    "can.ignore.this", 
+    "*.all.subdomains",
+)
+
+session.Get("https://www.google.com")
+// the request and response dump will be in the "my_dump_dir" directory.
+```
+
+### Log
+
+You can log the request and response with the `session.Log` method.
+This will display the request and response in the console.
+
+```go
+session := azuretls.NewSession()
+
+session.Log( 
+    "/any/path/to/ignore", 
+    "can.ignore.this", 
+    "*.all.subdomains",
+)
+
+session.Get("https://www.google.com")
+```
+
