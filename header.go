@@ -10,10 +10,13 @@ import (
 // OrderedHeaders is a slice of headers.
 type OrderedHeaders [][]string
 
+// PHeader is a slice of pseudo headers.
 type PHeader [4]string
 
+// HeaderOrder is a slice of header names.
 type HeaderOrder []string
 
+// GetDefault sets the default values for the PHeader.
 func (ph PHeader) GetDefault() {
 	ph[0] = Method
 	ph[1] = Authority

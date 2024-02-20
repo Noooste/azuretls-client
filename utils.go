@@ -3,6 +3,7 @@ package azuretls
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"golang.org/x/net/idna"
 	"io"
@@ -23,11 +24,11 @@ const (
 	Socks5      = "socks5"
 	Socks5H     = "socks5h"
 
-	defaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.3"
+	defaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.3"
 )
 
 var (
-	random    = rand.New(rand.NewSource(time.Now().UnixNano()))
+	rdn       = rand.New(rand.NewSource(time.Now().UnixNano()))
 	numberReg = regexp.MustCompile(`\d+`)
 )
 
@@ -54,6 +55,8 @@ func formatProxy(proxy string) string {
 	return ""
 }
 
+// ToBytes converts any type to []byte, it supports string, []byte, io.Reader,
+// strings.Builder and any other type that can be marshaled to json
 func ToBytes(b any) []byte {
 	switch b.(type) {
 	case string:
@@ -86,12 +89,62 @@ func ToBytes(b any) []byte {
 	}
 }
 
+func toReader(b any) (io.Reader, error) {
+	switch b.(type) {
+	case string:
+		return strings.NewReader(b.(string)), nil
+
+	case []byte:
+		return bytes.NewReader(b.([]byte)), nil
+
+	case io.Reader:
+		return b.(io.Reader), nil
+
+	case bytes.Buffer:
+		buf := b.(bytes.Buffer)
+		return bytes.NewReader(buf.Bytes()), nil
+
+	case strings.Builder:
+		buf := b.(strings.Builder)
+		return strings.NewReader(buf.String()), nil
+
+	case *strings.Builder:
+		buf := b.(*strings.Builder)
+		return strings.NewReader(buf.String()), nil
+
+	default:
+		value := reflect.ValueOf(b)
+
+		if value.Kind() == reflect.Ptr {
+			value = value.Elem()
+		}
+
+		switch value.Kind() {
+		case reflect.Struct, reflect.Map, reflect.Slice, reflect.Array:
+			var (
+				dumped []byte
+				err    error
+			)
+
+			if dumped, err = json.Marshal(b); err != nil {
+				return nil, err
+			}
+
+			return bytes.NewReader(dumped), nil
+
+		default:
+			return nil, errors.New("unsupported body type : " + value.Kind().String())
+		}
+	}
+}
+
 var portMap = map[string]string{
 	SchemeHttp:  "80",
 	SchemeHttps: "443",
 	SchemeWs:    "80",
 	SchemeWss:   "443",
-	"socks5":    "1080",
+	Socks5:      "1080",
+	Socks5H:     "1080",
 }
 
 func idnaASCII(v string) (string, error) {
@@ -123,24 +176,7 @@ func isDomainOrSubdomain(sub, parent string) bool {
 }
 
 // UrlEncode encodes a map[string]string to url encoded string
-// Example:
-//
-//	UrlEncodeMap(map[string]string{"bar": "foo", "foo": "bar"})
-//	returns "bar=foo&foo=bar"
-//
-// If you want to encode a struct, you can use the `url` tag
-// Example:
-//
-//	type Foo struct {
-//		Bar string `url:"bar"`
-//		Baz string `url:"baz"`
-//	}
-//
-//	UrlEncode(Foo{
-//		Bar: "bar",
-//		Baz: "baz baz baz",
-//	})
-//	returns "bar=bar&baz=baz+baz+baz"
+// If you want to encode a struct, you will use the `url` tag
 func UrlEncode(obj any) string {
 	r := reflect.ValueOf(obj)
 
@@ -151,16 +187,19 @@ func UrlEncode(obj any) string {
 	switch r.Kind() {
 	case reflect.Map:
 		keys := r.MapKeys()
-		var result []string
+		var result = make([]string, 0, len(keys))
 		for _, key := range keys {
-			result = append(result, fmt.Sprintf("%s=%v", key, r.MapIndex(key)))
+			result = append(result, fmt.Sprintf("%s=%v", key, url.QueryEscape(fmt.Sprintf("%v", r.MapIndex(key)))))
 		}
 		return strings.Join(result, "&")
 
 	case reflect.Struct:
-		var result []string
+		var result = make([]string, 0, r.NumField())
 		for i := 0; i < r.NumField(); i++ {
 			if name, ok := r.Type().Field(i).Tag.Lookup("url"); ok {
+				if name == "-" {
+					continue
+				}
 				//detect if omitempty is set
 				split := strings.Split(name, ",")
 				if len(split) > 1 && split[1] == "omitempty" {
@@ -180,4 +219,18 @@ func UrlEncode(obj any) string {
 	default:
 		return ""
 	}
+}
+
+func (s *Session) urlMatch(host *url.URL, urls []*regexp.Regexp) bool {
+	if urls == nil {
+		return false
+	}
+
+	for _, h := range urls {
+		if h.MatchString(host.String()) {
+			return true
+		}
+	}
+
+	return false
 }

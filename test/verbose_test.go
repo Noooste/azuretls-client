@@ -2,47 +2,17 @@ package azuretls_test
 
 import (
 	"github.com/Noooste/azuretls-client"
-	http "github.com/Noooste/fhttp"
 	"os"
-	"strings"
 	"testing"
 	"time"
 )
 
 func TestSession_EnableVerbose(t *testing.T) {
-	defer os.RemoveAll("./tmp")
+	defer func() {
+		_ = os.RemoveAll("./tmp")
+	}()
 
 	session := azuretls.NewSession()
-
-	session.EnableVerbose("./tmp", []string{"*.httpbin.org"})
-
-	if !session.Verbose {
-		t.Fatal("Verbose not enabled")
-	}
-
-	if session.VerbosePath != "./tmp" {
-		t.Fatal("VerbosePath not set")
-	}
-
-	if len(session.VerboseIgnoreHost) != 1 {
-		t.Fatal("VerboseIgnoreHost not set")
-	}
-
-	if session.VerboseIgnoreHost[0] != "*.httpbin.org" {
-		t.Fatal("VerboseIgnoreHost not set")
-	}
-
-	if !session.IsVerboseIgnored("test.httpbin.org") {
-		t.Fatal("test.httpbin.org is not ignored")
-	}
-
-	if !session.IsVerboseIgnored("httpbin.org") {
-		t.Fatal("test.httpbin.org is not ignored")
-	}
-
-	if err := session.EnableVerbose("", nil); err == nil {
-		t.Fatal(err)
-	}
 
 	_, err := session.Post("https://httpbin.org/post", "ahhhhhh")
 
@@ -51,7 +21,7 @@ func TestSession_EnableVerbose(t *testing.T) {
 		return
 	}
 
-	if err = session.EnableVerbose("./tmp", nil); err != nil {
+	if err = session.Dump("./tmp"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -77,57 +47,39 @@ func TestSession_EnableVerbose(t *testing.T) {
 }
 
 func TestSession_EnableVerbose2(t *testing.T) {
-	req := (&azuretls.Request{
-		HttpRequest: &http.Request{
-			Header: http.Header{
-				"cookie":     {"c1=v1; c2=v2"},
-				"set-cookie": {"c1=v1", "c2=v2"},
-			},
-		},
-		Proxy: "test",
-		Body:  "aa",
-	}).String()
-
-	if !strings.Contains(req, "Proxy : test") {
-		t.Fatal("no proxy in req.String()")
-	} else if !strings.Contains(req, "\naa") {
-		t.Fatal("no body in req.String()")
-	} else if !strings.Contains(req, "cookie: c1=v1\ncookie: c2=v2") {
-		t.Fatal("no cookies in req.String()")
-	} else if !strings.Contains(req, "set-cookie: c1=v1\nset-cookie: c2=v2") {
-		t.Fatal("no set-cookie in req.String()")
-	}
-
-	defer os.RemoveAll("./tmp")
+	defer func() {
+		_ = os.RemoveAll("./tmp")
+	}()
 
 	session := azuretls.NewSession()
 
-	session.EnableVerbose("./tmp", []string{"*.httpbin.org"})
-
-	if !session.Verbose {
-		t.Fatal("Verbose not enabled")
-	}
-
-	if session.VerbosePath != "./tmp" {
-		t.Fatal("VerbosePath not set")
-	}
-
-	if len(session.VerboseIgnoreHost) != 1 {
-		t.Fatal("VerboseIgnoreHost not set")
-	}
-
-	if session.VerboseIgnoreHost[0] != "*.httpbin.org" {
-		t.Fatal("VerboseIgnoreHost not set")
+	if err := session.Dump("./tmp", "/get"); err != nil {
+		t.Fatal(err)
 	}
 
 	_, err := session.Get("https://httpbin.org/get")
+
+	time.Sleep(50 * time.Millisecond)
+	f, err := os.ReadDir("./tmp")
 
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	session.EnableVerbose("./tmp", nil)
+	if len(f) != 0 {
+		t.Error("files created")
+		return
+	}
+
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if err := session.Dump("./tmp"); err != nil {
+		t.Fatal(err)
+	}
 
 	var headers = azuretls.OrderedHeaders{
 		{"sec-ch-ua-mobile", "?0"},
@@ -152,7 +104,7 @@ func TestSession_EnableVerbose2(t *testing.T) {
 	}
 
 	time.Sleep(50 * time.Millisecond)
-	f, err := os.ReadDir("./tmp")
+	f, err = os.ReadDir("./tmp")
 
 	if err != nil {
 		t.Error(err)
