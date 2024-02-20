@@ -1,5 +1,9 @@
+github.com/Noooste/azuretls-client v1.2.8 h1:kQnmnq7BKz7vrNKXcFKSNMrfGfOK7hVSIqCnL9ss8rc=
+github.com/Noooste/azuretls-client v1.2.8/go.mod h1:zLU44qFnLuilFiaWDj4xERSLj1gNCHXirnAqQeGcPzA=
 github.com/Noooste/fhttp v0.0.1 h1:OOLbtYm1FrWnOSMgBnzEwbLK69oRkbiSRxerUgDprsA=
 github.com/Noooste/fhttp v0.0.1/go.mod h1:CMVxKOhNheqJN5HYE4Rlvz2SRdV8Uv7YWmi6OwmB/Bk=
+github.com/Noooste/fhttp v1.0.7 h1:8TBhyQZPd3+WKTx+Wa/ms/QFxL3WjQuVeETRzjwiJmM=
+github.com/Noooste/fhttp v1.0.7/go.mod h1:CMVxKOhNheqJN5HYE4Rlvz2SRdV8Uv7YWmi6OwmB/Bk=
 github.com/Noooste/utls v1.2.5 h1:x7ye66hXXeeMju2redAUSQ5IZBVpTMqX0/C5dHPLpUA=
 github.com/Noooste/utls v1.2.5/go.mod h1:MRUEmRiDO6ORKziZ2ObNwMjxy0vRviJ91JF1qVa0loM=
 github.com/Noooste/websocket v1.0.3 h1:drW7tvZ3YqzqI9wApnaH1Q0syFMXO7gbLlsBWjZvMNA=

@@ -2,7 +2,7 @@ package azuretls_test
 
 import (
 	"context"
-	"github.com/Noooste/azuretls-client"
+	"github.com/Noooste/azuretls"
 	"os"
 	"testing"
 	"time"
