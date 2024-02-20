@@ -12,13 +12,13 @@ const (
 	invalidSettingsIndex = invalidSettings + "index %d (invalid %s)"
 	invalidWindow        = "invalid WINDOW_UPDATE : %s"
 	invalidPriority      = "invalid PRIORITY : %s"
-	invalidPre           = "invalid PRE_HEADER : %s"
+	invalidPseudo        = "invalid PSEUDO_HEADER : %s"
 )
 
 // ApplyHTTP2 applies HTTP2 settings to the session from a fingerprint.
 // The fingerprint is in the format:
 //
-//	<SETTINGS>|<WINDOW_UPDATE>|<PRIORITY>|<PRE_HEADER>
+//	<SETTINGS>|<WINDOW_UPDATE>|<PRIORITY>|<PSEUDO_HEADER>
 //
 // egs :
 //
@@ -50,10 +50,10 @@ func (s *Session) ApplyHTTP2(fp string) error {
 	}
 
 	var (
-		settings     = split[0]
-		windowUpdate = split[1]
-		priorities   = split[2]
-		preHeader    = split[3]
+		settings      = split[0]
+		windowUpdate  = split[1]
+		priorities    = split[2]
+		pseudoHeaders = split[3]
 	)
 
 	if err := applySettings(settings, s.HTTP2Transport); err != nil {
@@ -68,7 +68,8 @@ func (s *Session) ApplyHTTP2(fp string) error {
 		return err
 	}
 
-	if err := applyPreHeader(preHeader, &s.PHeader, s.HTTP2Transport); err != nil {
+	s.PHeader = make(PHeader, 4)
+	if err := applyPseudoHeaders(pseudoHeaders, s.PHeader, s.HTTP2Transport); err != nil {
 		return err
 	}
 
@@ -184,11 +185,11 @@ func applyPriorities(priorities string, tr *http2.Transport) error {
 	return nil
 }
 
-func applyPreHeader(preHeader string, h *PHeader, tr *http2.Transport) error {
-	if preHeader != "0" {
-		headers := strings.Split(preHeader, ",")
+func applyPseudoHeaders(pseudoHeaders string, h PHeader, tr *http2.Transport) error {
+	if pseudoHeaders != "0" {
+		headers := strings.Split(pseudoHeaders, ",")
 		if len(headers) != 4 {
-			return fmt.Errorf(invalidPre, preHeader)
+			return fmt.Errorf(invalidPseudo, pseudoHeaders)
 		}
 
 		for i, header := range headers {
@@ -202,7 +203,7 @@ func applyPreHeader(preHeader string, h *PHeader, tr *http2.Transport) error {
 			case "a":
 				h[i] = Authority
 			default:
-				return fmt.Errorf(invalidPre, header)
+				return fmt.Errorf(invalidPseudo, header)
 			}
 		}
 	}

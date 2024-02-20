@@ -487,3 +487,60 @@ func TestSession_TooManyRedirects(t *testing.T) {
 		return
 	}
 }
+
+func TestSession_SetContext(t *testing.T) {
+	session := azuretls.NewSession()
+	session.Get("https://httpbin.org/get")
+
+	conn := session.Connections.Get(&url.URL{
+		Scheme: "https",
+		Host:   "httpbin.org",
+	})
+
+	if conn == nil {
+		t.Fatal("TestSession_SetContext failed, expected: not nil, got: ", conn)
+		return
+	}
+
+	ctx := context.Background()
+
+	conn.SetContext(ctx)
+
+	if conn.GetContext() != ctx {
+		t.Fatal("TestSession_SetContext failed, expected: ", ctx, ", got: ", conn.GetContext())
+		return
+	}
+
+	session.Connections.Remove(&url.URL{
+		Scheme: "https",
+		Host:   "httpbin.org",
+	})
+
+	if session.Connections.Get(&url.URL{
+		Scheme: "https",
+		Host:   "httpbin.org",
+	}) == conn {
+		t.Fatal("TestSession_SetContext failed, expected: nil, got: not nil")
+		return
+	}
+
+	session.Connections.Set(&url.URL{
+		Scheme: "https",
+		Host:   "httpbin.org",
+	}, conn)
+
+	if getConn := session.Connections.Get(&url.URL{
+		Scheme: "https",
+		Host:   "httpbin.org",
+	}); getConn != conn {
+		t.Fatal("TestSession_SetContext failed, expected: ", conn, ", got: ", getConn)
+		return
+	}
+
+	session.Get("https://httpbin.org/get")
+
+	if conn.GetContext() != ctx {
+		t.Fatal("TestSession_SetContext failed, expected: ", ctx, ", got: ", conn.GetContext())
+		return
+	}
+}

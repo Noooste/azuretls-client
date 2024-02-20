@@ -43,11 +43,7 @@ func TestChrome(t *testing.T) {
 
 	var loaded map[string]any
 
-	err = json.Unmarshal(response.Body, &loaded)
-
-	if err != nil {
-		t.Fatal(err)
-	}
+	response.MustJSON(&loaded)
 
 	ja3 := loaded["tls"].(map[string]any)["ja3"].(string)
 	split := strings.Split(ja3, ",")

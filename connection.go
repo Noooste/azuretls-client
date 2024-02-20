@@ -13,12 +13,19 @@ import (
 	"time"
 )
 
+const (
+	protoHTTP1 = "HTTP/1.1"
+	protoHTTP2 = "HTTP/2.0"
+)
+
 type Conn struct {
 	TLS   *tls.UConn        // tls connection
 	HTTP2 *http2.ClientConn // http2 connection
 	h2tr  *http2.Transport
 
 	Conn net.Conn // Tcp connection
+
+	Proto string // http protocol
 
 	PinManager *PinManager // pin manager
 
@@ -62,6 +69,7 @@ type ConnPool struct {
 	ctx context.Context
 }
 
+// NewRequestConnPool creates a new connection pool
 func NewRequestConnPool(ctx context.Context) *ConnPool {
 	return &ConnPool{
 		hosts: make(map[string]*Conn),
@@ -70,10 +78,12 @@ func NewRequestConnPool(ctx context.Context) *ConnPool {
 	}
 }
 
+// SetContext sets the given context for the pool
 func (cp *ConnPool) SetContext(ctx context.Context) {
 	cp.ctx = ctx
 }
 
+// Close closes all connections in the pool
 func (cp *ConnPool) Close() {
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
@@ -97,6 +107,7 @@ func getHost(u *url.URL) string {
 	return net.JoinHostPort(addr, port)
 }
 
+// Get returns a connection from the pool for the given url
 func (cp *ConnPool) Get(u *url.URL) (c *Conn) {
 	var (
 		ok       bool
@@ -109,7 +120,7 @@ func (cp *ConnPool) Get(u *url.URL) (c *Conn) {
 
 	if !ok {
 		cp.mu.Lock()
-		c, ok = cp.hosts[hostName]
+		c, ok = cp.hosts[hostName] // double check after lock
 		if !ok {
 			c = NewConn()
 			c.SetContext(cp.ctx)
@@ -121,18 +132,12 @@ func (cp *ConnPool) Get(u *url.URL) (c *Conn) {
 }
 
 func (cp *ConnPool) Set(u *url.URL, c *Conn) {
-	var (
-		ok       bool
-		hostName = getHost(u)
-	)
+	var hostName = getHost(u)
 
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
 
-	_, ok = cp.hosts[hostName]
-	if !ok {
-		cp.hosts[hostName] = c
-	}
+	cp.hosts[hostName] = c
 }
 
 func (cp *ConnPool) Remove(u *url.URL) {
@@ -180,15 +185,18 @@ func (c *Conn) checkTLS() bool {
 
 func (c *Conn) tryUpgradeHTTP2(tr *http2.Transport) bool {
 	if c.HTTP2 != nil && c.HTTP2.CanTakeNewRequest() {
+		c.Proto = protoHTTP2
 		return true
 	}
 
 	if c.TLS.ConnectionState().NegotiatedProtocol == http2.NextProtoTLS {
 		var err error
 		c.HTTP2, err = tr.NewClientConn(c.TLS)
+		c.Proto = protoHTTP2
 		return err == nil
 	}
 
+	c.Proto = protoHTTP1
 	return false
 }
 
@@ -311,14 +319,15 @@ func (s *Session) initConn(req *Request) (conn *Conn, err error) {
 			conn.tryUpgradeHTTP2(s.HTTP2Transport)
 		}
 
+		return
+
 	case SchemeHttp, SchemeWs:
+		conn.Proto = protoHTTP1
 		return
 
 	default:
 		return nil, errors.New("unsupported scheme")
 	}
-
-	return
 }
 
 func (c *Conn) NewTLS(addr string) (err error) {
