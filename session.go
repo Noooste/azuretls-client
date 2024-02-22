@@ -7,6 +7,7 @@ import (
 	http "github.com/Noooste/fhttp"
 	"github.com/Noooste/fhttp/cookiejar"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -237,6 +238,11 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 			if includeBody && oldRequest.Body != nil {
 				req.Body = oldRequest.Body
 				req.ContentLength = oldRequest.ContentLength
+				req.OrderedHeaders.Set("content-length", strconv.Itoa(int(req.ContentLength)))
+			} else {
+				req.ContentLength = 0
+				req.OrderedHeaders.Del("content-length")
+				req.OrderedHeaders.Del("content-type")
 			}
 
 			// Add the Referer header from the most recent
@@ -264,6 +270,13 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 		if !shouldRedirect {
 			req.CloseBody()
 			return resp, nil
+		}
+
+		if redirectMethod == http.MethodGet {
+			req.Body = nil
+			req.ContentLength = 0
+			req.OrderedHeaders.Del("content-length")
+			req.OrderedHeaders.Del("content-type")
 		}
 
 		req.CloseBody()

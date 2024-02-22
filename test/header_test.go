@@ -161,3 +161,19 @@ func TestOrderedHeaders_Set2(t *testing.T) {
 		t.Fatal("TestOrderedHeaders_Set failed, expected: application/xml, got: ", headers.Get("accept2"))
 	}
 }
+
+func TestContentTypeInGetRequest(t *testing.T) {
+	session := azuretls.NewSession()
+
+	response, err := session.Get("https://tls.peet.ws/api/all", azuretls.OrderedHeaders{
+		{"content-type", "application/json"},
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if contentTypeReg.FindIndex(response.Body) == nil {
+		t.Fatal("TestContentTypeInGetRequest failed, Content-Type should be present")
+	}
+}
