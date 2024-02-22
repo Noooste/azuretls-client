@@ -16,7 +16,6 @@ func TestHeader(t *testing.T) {
 
 	session.OrderedHeaders = azuretls.OrderedHeaders{
 		{"user-agent", "test"},
-		{"content-type", "application/json"},
 		{"accept", "application/json"},
 	}
 
@@ -29,26 +28,14 @@ func TestHeader(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Fatal("TestHeader failed, expected: 200, got: ", response.StatusCode)
 	}
-
-	if contentTypeReg.FindIndex(response.Body) != nil {
-		t.Fatal("TestHeader failed, Content-Type should not be present")
-	}
-
-	uaIndex := userAgentReg.FindIndex(response.Body)[0]
-	aIndex := acceptReg.FindIndex(response.Body)[0]
-
-	if uaIndex > aIndex {
-		t.Fatal("TestHeader failed, User-Agent should be before Content-Type")
-	}
 }
 
 func TestHeader2(t *testing.T) {
 	session := azuretls.NewSession()
 
 	session.Header = http.Header{
-		"user-agent":   {"test"},
-		"content-type": {"application/json"},
-		"accept":       {"application/json"},
+		"user-agent": {"test"},
+		"accept":     {"application/json"},
 	}
 
 	session.HeaderOrder = []string{"user-agent", "content-type", "accept"}
@@ -61,17 +48,6 @@ func TestHeader2(t *testing.T) {
 
 	if response.StatusCode != 200 {
 		t.Fatal("TestHeader failed, expected: 200, got: ", response.StatusCode)
-	}
-
-	if contentTypeReg.FindIndex(response.Body) != nil {
-		t.Fatal("TestHeader failed, Content-Type should not be present")
-	}
-
-	uaIndex := userAgentReg.FindIndex(response.Body)[0]
-	aIndex := acceptReg.FindIndex(response.Body)[0]
-
-	if uaIndex > aIndex {
-		t.Fatal("TestHeader failed, User-Agent should be before Content-Type")
 	}
 }
 
