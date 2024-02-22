@@ -552,7 +552,7 @@ You can dump the request and response with the `session.Dump` method.
 ```go
 session := azuretls.NewSession()
 
-session.Log("./my_dump_dir", 
+session.Dump("./my_dump_dir", 
     "/any/path/to/ignore", 
     "can.ignore.this", 
     "*.all.subdomains",
