@@ -170,13 +170,6 @@ func (r *Request) formatHeader() {
 			r.HttpRequest.Header[http.PHeaderOrderKey] = GetDefaultPseudoHeaders()
 		}
 	}
-
-	if r.Body == nil && (r.Method == http.MethodGet || r.Method == http.MethodHead) {
-		r.HttpRequest.Header.Del("Content-Length")
-		r.HttpRequest.Header.Del("Content-Type")
-		delete(r.HttpRequest.Header, "content-length")
-		delete(r.HttpRequest.Header, "content-type")
-	}
 }
 
 // makeHeadersCopier makes a function that copies headers from the
