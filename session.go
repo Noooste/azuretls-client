@@ -122,56 +122,105 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 
 	request.parsedUrl = request.HttpRequest.URL
 
-	if err = s.initTransport(s.Browser); err != nil {
-		s.dumpRequest(request, nil, err)
-		return nil, err
-	}
-
-	if rConn, err = s.initConn(request); err != nil {
-		s.dumpRequest(request, nil, err)
-		return nil, err
-	}
-
-	request.conn = rConn
-	request.Proto = rConn.Proto
-
-	if rConn.HTTP2 != nil {
-		roundTripper = rConn.HTTP2
-	} else {
-		roundTripper = s.Transport
-	}
-
-	s.logRequest(request)
-
-	httpResponse, err = roundTripper.RoundTrip(request.HttpRequest)
-
-	response = &Response{
-		IgnoreBody: request.IgnoreBody,
-		Request:    request,
-	}
+	transportOK := make(chan bool, 1)
+	connOK := make(chan bool, 1)
+	timer := time.NewTimer(request.TimeOut)
 
 	defer func() {
-		if s.Callback != nil {
-			s.Callback(request, response, err)
-		}
+		close(transportOK)
+		close(connOK)
+		timer.Stop()
 	}()
 
-	if err != nil {
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			rConn.Close()
-			s.logResponse(response, err)
+	for {
+		select {
+		case <-timer.C:
 			return nil, fmt.Errorf("timeout")
+
+		case <-transportOK:
+			if rConn, err = s.initConn(request); err != nil {
+				s.dumpRequest(request, nil, err)
+				return nil, err
+			}
+			connOK <- true
+			break
+
+		case <-connOK:
+			request.conn = rConn
+			request.Proto = rConn.Proto
+
+			if rConn.HTTP2 != nil {
+				roundTripper = rConn.HTTP2
+			} else {
+				roundTripper = s.Transport
+			}
+
+			s.logRequest(request)
+
+			responseOK := make(chan bool, 1)
+
+			go func() {
+				resp, respErr := roundTripper.RoundTrip(request.HttpRequest)
+
+				if !timer.Stop() {
+					close(responseOK)
+					return
+				}
+
+				err = respErr
+				httpResponse = resp
+				responseOK <- true
+			}()
+
+			select {
+			case <-timer.C:
+				err = fmt.Errorf("timeout")
+			case <-responseOK:
+				timer.Stop()
+				close(responseOK)
+			}
+
+			response = &Response{
+				IgnoreBody: request.IgnoreBody,
+				Request:    request,
+			}
+
+			if err != nil {
+				if err.Error() == "timeout" || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+					rConn.Close()
+					err = fmt.Errorf("timeout")
+				}
+
+				s.logResponse(response, err)
+
+				if s.Callback != nil {
+					s.Callback(request, response, err)
+				}
+
+				return nil, err
+			}
+
+			err = s.buildResponse(response, httpResponse)
+
+			s.dumpRequest(request, response, err)
+			s.logResponse(response, err)
+
+			if s.Callback != nil {
+				s.Callback(request, response, err)
+			}
+
+			return response, err
+
+		default:
+			if err = s.initTransport(s.Browser); err != nil {
+				s.dumpRequest(request, nil, err)
+				return nil, err
+			}
+			transportOK <- true
+			break
 		}
-		s.logResponse(response, err)
-		return
 	}
 
-	err = s.buildResponse(response, httpResponse)
-
-	s.dumpRequest(request, response, err)
-	s.logResponse(response, err)
-
-	return response, err
 }
 
 // Do sends a request and returns a response

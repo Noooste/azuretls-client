@@ -99,7 +99,9 @@ func TestSession_SetTimeout(t *testing.T) {
 
 	session.SetTimeout(500 * time.Millisecond)
 
+	now := time.Now()
 	_, err := session.Get("https://httpbin.org/delay/5")
+	fmt.Println(time.Since(now))
 
 	if err == nil || (err.Error() != "timeout" && !strings.Contains(err.Error(), "timeout")) {
 		t.Fatal("TestSession_SetTimeout failed, expected: timeout, got: ", err)
