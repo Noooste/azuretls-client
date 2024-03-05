@@ -202,8 +202,9 @@ func TestProxy4(t *testing.T) {
 
 func TestBadProxy(t *testing.T) {
 	session := azuretls.NewSession()
-	session.SetTimeout(1 * time.Second)
 	defer session.Close()
+
+	session.SetTimeout(1 * time.Second)
 
 	if err := session.SetProxy("https://test.com"); err != nil {
 		t.Fatal(err)

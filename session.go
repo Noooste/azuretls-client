@@ -78,8 +78,6 @@ func (s *Session) Ip() (ip string, err error) {
 
 // SetProxy sets the proxy for the session
 func (s *Session) SetProxy(proxy string) error {
-	defer s.Close()
-
 	if proxy == "" {
 		return fmt.Errorf("proxy is empty")
 	}
@@ -97,6 +95,9 @@ func (s *Session) SetProxy(proxy string) error {
 		return err
 	}
 
+	s.Connections.Close()
+	s.Connections = NewRequestConnPool(s.ctx)
+
 	return nil
 }
 
@@ -105,6 +106,7 @@ func (s *Session) ClearProxy() {
 	s.Proxy = ""
 	s.ProxyDialer = nil
 	s.Connections.Close()
+	s.Connections = NewRequestConnPool(s.ctx)
 }
 
 func (s *Session) send(request *Request) (response *Response, err error) {

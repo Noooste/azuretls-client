@@ -85,12 +85,21 @@ func (cp *ConnPool) SetContext(ctx context.Context) {
 
 // Close closes all connections in the pool
 func (cp *ConnPool) Close() {
+	if cp == nil || cp.hosts == nil || cp.mu == nil {
+		return
+	}
+
 	cp.mu.Lock()
-	defer cp.mu.Unlock()
 
 	for _, c := range cp.hosts {
+		if c == nil {
+			continue
+		}
 		c.Close()
 	}
+
+	cp.mu.Unlock()
+
 	cp.hosts = nil
 	cp.mu = nil
 }
@@ -201,7 +210,7 @@ func (c *Conn) tryUpgradeHTTP2(tr *http2.Transport) bool {
 }
 
 func (c *Conn) Close() {
-	if c.TLS != nil || c.TLS.NetConn() != nil {
+	if c.TLS != nil && c.TLS.NetConn() != nil {
 		_ = c.TLS.Close()
 		c.TLS = nil
 	}

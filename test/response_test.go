@@ -31,6 +31,7 @@ func TestResponse_CloseBody(t *testing.T) {
 
 func TestResponse_Load(t *testing.T) {
 	session := azuretls.NewSession()
+	defer session.Close()
 
 	var response, err = session.Do(&azuretls.Request{
 		Method:     http.MethodGet,
@@ -42,13 +43,14 @@ func TestResponse_Load(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var loaded map[string]interface{}
+	var loaded map[string]any
+
+	session = azuretls.NewSession()
+	defer session.Close()
 
 	if err = response.JSON(&loaded); err == nil {
 		t.Fatal("TestResponse_Load failed, expected: err, got: ", nil)
 	}
-
-	session.Close()
 
 	response, err = session.Get("https://tls.peet.ws/api/all")
 
