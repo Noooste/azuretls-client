@@ -178,6 +178,10 @@ func (s *Session) Do(request *Request, args ...any) (*Response, error) {
 }
 
 func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
+	if s.closed {
+		return nil, errors.New("session is closed")
+	}
+
 	if err = s.prepareRequest(req, args...); err != nil {
 		return
 	}
@@ -389,8 +393,19 @@ func (s *Session) Connect(u string) error {
 	return nil
 }
 
-// Close closes the session and all its connections
+// Close closes the session and all its connections.
+// It is recommended to call this function when the session is no longer needed.
+//
+// After calling this function, the session is no longer usable.
 func (s *Session) Close() {
 	s.Connections.Close()
-	s.Connections = NewRequestConnPool(s.ctx)
+	s.Connections = nil
+	s.closed = true
+	s.mu = nil
+	s.dumpIgnore = nil
+	s.loggingIgnore = nil
+	s.CookieJar = nil
+	s.HTTP2Transport = nil
+	s.Transport = nil
+	s.ctx = nil
 }

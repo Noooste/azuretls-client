@@ -576,7 +576,6 @@ func TestSession_Context(t *testing.T) {
 		}()
 	}
 
-	fmt.Println("press any key to cancel")
 	time.Sleep(500 * time.Millisecond)
 	stop <- true
 	time.Sleep(1 * time.Second)

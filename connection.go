@@ -201,14 +201,16 @@ func (c *Conn) tryUpgradeHTTP2(tr *http2.Transport) bool {
 }
 
 func (c *Conn) Close() {
-	if c.TLS != nil {
+	if c.TLS != nil || c.TLS.NetConn() != nil {
 		_ = c.TLS.Close()
 		c.TLS = nil
 	}
+
 	if c.Conn != nil {
 		_ = c.Conn.Close()
 		c.Conn = nil
 	}
+
 	if c.HTTP2 != nil {
 		_ = c.HTTP2.Close()
 		c.HTTP2 = nil

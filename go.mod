@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/Noooste/fhttp v1.0.8
-	github.com/Noooste/utls v1.2.6
+	github.com/Noooste/utls v1.2.7
 	github.com/Noooste/websocket v1.0.3
 	github.com/fatih/color v1.16.0
 	golang.org/x/net v0.22.0
