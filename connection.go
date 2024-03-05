@@ -85,12 +85,21 @@ func (cp *ConnPool) SetContext(ctx context.Context) {
 
 // Close closes all connections in the pool
 func (cp *ConnPool) Close() {
+	if cp == nil || cp.hosts == nil || cp.mu == nil {
+		return
+	}
+
 	cp.mu.Lock()
-	defer cp.mu.Unlock()
 
 	for _, c := range cp.hosts {
+		if c == nil {
+			continue
+		}
 		c.Close()
 	}
+
+	cp.mu.Unlock()
+
 	cp.hosts = nil
 	cp.mu = nil
 }
@@ -161,9 +170,11 @@ func (c *Conn) makeTLS(addr string) error {
 	if c.checkTLS() {
 		return nil
 	}
+
 	if c.TLS == nil {
 		return c.NewTLS(addr)
 	}
+
 	return nil
 }
 
@@ -201,14 +212,16 @@ func (c *Conn) tryUpgradeHTTP2(tr *http2.Transport) bool {
 }
 
 func (c *Conn) Close() {
-	if c.TLS != nil {
+	if c.TLS != nil && c.TLS.NetConn() != nil {
 		_ = c.TLS.Close()
 		c.TLS = nil
 	}
+
 	if c.Conn != nil {
 		_ = c.Conn.Close()
 		c.Conn = nil
 	}
+
 	if c.HTTP2 != nil {
 		_ = c.HTTP2.Close()
 		c.HTTP2 = nil
@@ -354,10 +367,27 @@ func (c *Conn) NewTLS(addr string) (err error) {
 				return nil
 			}
 
+			now := time.Now()
 			for _, chain := range verifiedChains {
 				for _, cert := range chain {
 					if c.PinManager.Verify(cert) {
 						return nil
+					}
+
+					if now.Before(cert.NotBefore) {
+						return errors.New("certificate is not valid yet")
+					}
+
+					if now.After(cert.NotAfter) {
+						return errors.New("certificate is expired")
+					}
+
+					if cert.IsCA {
+						continue
+					}
+
+					if pinErr := cert.VerifyHostname(hostname); pinErr != nil {
+						return pinErr
 					}
 				}
 			}
@@ -366,9 +396,15 @@ func (c *Conn) NewTLS(addr string) (err error) {
 		},
 	}
 
-	c.TLS = tls.UClient(c.Conn, &config, tls.HelloCustom)
-	if err = c.TLS.ApplyPreset(c.ClientHelloSpec()); err != nil {
-		return
+	if c.Conn == nil {
+		return errors.New("tcp connection is nil")
 	}
+
+	c.TLS = tls.UClient(c.Conn, &config, tls.HelloCustom)
+
+	if err = c.TLS.ApplyPreset(c.ClientHelloSpec()); err != nil {
+		return errors.New("failed to apply preset: " + err.Error())
+	}
+
 	return c.TLS.HandshakeContext(c.ctx)
 }
