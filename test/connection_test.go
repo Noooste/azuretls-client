@@ -65,6 +65,7 @@ func TestHTTP1Conn(t *testing.T) {
 
 func TestCloudflareRequest(t *testing.T) {
 	session := azuretls.NewSession()
+	defer session.Close()
 
 	response, err := session.Get("https://www.cloudflare.com/cdn-cgi/trace")
 
@@ -79,6 +80,7 @@ func TestCloudflareRequest(t *testing.T) {
 
 func TestHighConcurrency(t *testing.T) {
 	session := azuretls.NewSession()
+	defer session.Close()
 
 	wait := &sync.WaitGroup{}
 
@@ -94,7 +96,7 @@ func TestHighConcurrency(t *testing.T) {
 			defer wait.Done()
 
 			for i := 0; i < 10; i++ {
-				_, err2 := session.Get("https://api.ipify.org/")
+				_, err2 := session.Get("https://example.com/")
 
 				if err2 != nil {
 					err = err2

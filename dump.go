@@ -214,7 +214,7 @@ func writeHeaders(headers http.Header, buf *bytes.Buffer) {
 		for _, vv := range headerOrder {
 			header := headers.Values(vv)
 
-			if len(header) <= 1 {
+			if len(header) == 0 {
 				continue
 			}
 

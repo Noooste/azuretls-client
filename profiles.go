@@ -3,7 +3,6 @@ package azuretls
 import (
 	"github.com/Noooste/fhttp/http2"
 	tls "github.com/Noooste/utls"
-	"github.com/Noooste/utls/dicttls"
 )
 
 // GetLastChromeVersion apply the latest Chrome version
@@ -56,23 +55,7 @@ func GetLastChromeVersion() *tls.ClientHelloSpec {
 		&tls.SupportedPointsExtension{SupportedPoints: []byte{
 			0x00, // pointFormatUncompressed
 		}},
-		&tls.GREASEEncryptedClientHelloExtension{
-			CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
-				{
-					KdfId:  dicttls.HKDF_SHA256,
-					AeadId: dicttls.AEAD_AES_128_GCM,
-				},
-				{
-					KdfId:  dicttls.HKDF_SHA256,
-					AeadId: dicttls.AEAD_AES_256_GCM,
-				},
-				{
-					KdfId:  dicttls.HKDF_SHA256,
-					AeadId: dicttls.AEAD_CHACHA20_POLY1305,
-				},
-			},
-			CandidatePayloadLens: []uint16{128, 160},
-		},
+		tls.BoringGREASEECH(),
 		&tls.UtlsGREASEExtension{},
 		&tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle},
 	}
