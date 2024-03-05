@@ -354,10 +354,27 @@ func (c *Conn) NewTLS(addr string) (err error) {
 				return nil
 			}
 
+			now := time.Now()
 			for _, chain := range verifiedChains {
 				for _, cert := range chain {
 					if c.PinManager.Verify(cert) {
 						return nil
+					}
+
+					if now.Before(cert.NotBefore) {
+						return errors.New("certificate is not valid yet")
+					}
+
+					if now.After(cert.NotAfter) {
+						return errors.New("certificate is expired")
+					}
+
+					if cert.IsCA {
+						continue
+					}
+
+					if pinErr := cert.VerifyHostname(hostname); pinErr != nil {
+						return pinErr
 					}
 				}
 			}
@@ -367,8 +384,10 @@ func (c *Conn) NewTLS(addr string) (err error) {
 	}
 
 	c.TLS = tls.UClient(c.Conn, &config, tls.HelloCustom)
+
 	if err = c.TLS.ApplyPreset(c.ClientHelloSpec()); err != nil {
-		return
+		return errors.New("failed to apply preset: " + err.Error())
 	}
+
 	return c.TLS.HandshakeContext(c.ctx)
 }
