@@ -114,7 +114,11 @@ func ExampleSession_Dump() {
 
 	session.Dump("./logs", "*.httpbin.org")
 
-	session.Get("https://www.google.com")
+	session.Get("https://www.google.com", azuretls.OrderedHeaders{
+		{"User-Agent", "Mozilla/5.0"},
+		{"Accept", "text/html"},
+	})
+
 	session.Get("https://httpbin.org/get")
 
 	time.Sleep(1 * time.Second)
