@@ -158,9 +158,12 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 			s.logRequest(request)
 
 			responseOK := make(chan bool, 1)
+
 			ctx, cancel := context.WithCancel(request.HttpRequest.Context())
 
-			request.HttpRequest = request.HttpRequest.WithContext(ctx)
+			if !request.IgnoreBody {
+				request.HttpRequest = request.HttpRequest.WithContext(ctx)
+			}
 
 			go func() {
 				resp, respErr := roundTripper.RoundTrip(request.HttpRequest)
