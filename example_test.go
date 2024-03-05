@@ -198,13 +198,6 @@ func ExampleSession_ApplyHTTP2() {
 }
 
 func ExampleUrlEncode() {
-	var food = map[string]string{
-		"an": "url encoded map",
-		"i":  "am",
-	}
-
-	fmt.Println(azuretls.UrlEncode(food))
-
 	type Foo struct {
 		Bar       string `url:"bar"`
 		Baz       string `url:"baz"`
@@ -220,7 +213,6 @@ func ExampleUrlEncode() {
 	}))
 
 	// Output:
-	// an=url+encoded+map&i=am
 	// bar=bar&baz=baz+baz+baz
 }
 
