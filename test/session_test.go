@@ -582,3 +582,27 @@ func TestSession_Context(t *testing.T) {
 	stop <- true
 	time.Sleep(1 * time.Second)
 }
+
+func TestSession_Timeout(t *testing.T) {
+	go func() {
+		session := azuretls.NewSession()
+		session.SetTimeout(1 * time.Second)
+
+		defer session.Close()
+
+		if err := session.SetProxy(os.Getenv("NON_SECURE_PROXY")); err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		response, err := session.Get("https://testfile.org/files-5GB")
+
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Println(response.StatusCode, string(response.Body))
+		}
+	}()
+
+	time.Sleep(2 * time.Second)
+}

@@ -158,6 +158,9 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 			s.logRequest(request)
 
 			responseOK := make(chan bool, 1)
+			ctx, cancel := context.WithCancel(request.HttpRequest.Context())
+
+			request.HttpRequest = request.HttpRequest.WithContext(ctx)
 
 			go func() {
 				resp, respErr := roundTripper.RoundTrip(request.HttpRequest)
@@ -167,14 +170,18 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 					return
 				}
 
-				err = respErr
-				httpResponse = resp
+				if err == nil {
+					err = respErr
+					httpResponse = resp
+
+				}
 				responseOK <- true
 			}()
 
 			select {
 			case <-timer.C:
 				err = fmt.Errorf("timeout")
+
 			case <-responseOK:
 				timer.Stop()
 				close(responseOK)
@@ -186,6 +193,8 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 			}
 
 			if err != nil {
+				cancel()
+
 				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 					rConn.Close()
 					err = fmt.Errorf("timeout")
@@ -209,6 +218,7 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 				s.Callback(request, response, err)
 			}
 
+			cancel()
 			return response, err
 
 		default:
