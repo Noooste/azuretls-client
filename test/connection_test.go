@@ -1,10 +1,12 @@
 package azuretls_test
 
 import (
+	"fmt"
 	"github.com/Noooste/azuretls-client"
 	url2 "net/url"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"testing"
 )
 
@@ -78,35 +80,40 @@ func TestCloudflareRequest(t *testing.T) {
 	}
 }
 
+func concurrency(session *azuretls.Session, wg *sync.WaitGroup, ok *int64) bool {
+	defer wg.Done()
+
+	for i := 0; i < 10; i++ {
+		_, err2 := session.Get("https://example.com/")
+
+		if err2 != nil {
+			fmt.Println(err2)
+			return false
+		}
+	}
+
+	atomic.AddInt64(ok, 1)
+
+	return true
+}
+
 func TestHighConcurrency(t *testing.T) {
 	session := azuretls.NewSession()
 	defer session.Close()
 
 	wait := &sync.WaitGroup{}
 
-	count := 100
+	var count int64 = 100
 
-	wait.Add(count)
+	wait.Add(int(count))
 
 	var err error
-	var ok int
+	var ok = new(int64)
 
-	for i := 0; i < count; i++ {
-		go func() {
-			defer wait.Done()
+	var i int64
 
-			for i := 0; i < 10; i++ {
-				_, err2 := session.Get("https://example.com/")
-
-				if err2 != nil {
-					err = err2
-					t.Error(err2)
-					return
-				}
-			}
-
-			ok++
-		}()
+	for i = 0; i < count; i++ {
+		go concurrency(session, wait, ok)
 	}
 
 	wait.Wait()
@@ -116,7 +123,7 @@ func TestHighConcurrency(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if ok < count-1 { //~1 request can fail
+	if atomic.LoadInt64(ok) < count-1 { //~1 request can fail
 		t.Fatal("TestHighConcurrency failed, expected: ", count, ", got: ", ok)
 	}
 }
