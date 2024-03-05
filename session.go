@@ -186,7 +186,7 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 			}
 
 			if err != nil {
-				if err.Error() == "timeout" || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 					rConn.Close()
 					err = fmt.Errorf("timeout")
 				}
