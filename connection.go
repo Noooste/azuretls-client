@@ -170,9 +170,11 @@ func (c *Conn) makeTLS(addr string) error {
 	if c.checkTLS() {
 		return nil
 	}
+
 	if c.TLS == nil {
 		return c.NewTLS(addr)
 	}
+
 	return nil
 }
 
@@ -392,6 +394,10 @@ func (c *Conn) NewTLS(addr string) (err error) {
 
 			return errors.New("pin verification failed")
 		},
+	}
+
+	if c.Conn == nil {
+		return errors.New("tcp connection is nil")
 	}
 
 	c.TLS = tls.UClient(c.Conn, &config, tls.HelloCustom)
