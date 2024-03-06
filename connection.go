@@ -234,7 +234,7 @@ func (c *Conn) Close() {
 	c.PinManager = nil
 }
 
-func (s *Session) getProxyConn(conn *Conn, host string) (err error) {
+func (s *Session) getProxyConn(req *Request, conn *Conn, host string) (err error) {
 	ctx, cancel := context.WithCancel(s.ctx)
 
 	s.ProxyDialer.ForceHTTP2 = s.H2Proxy
@@ -251,7 +251,12 @@ func (s *Session) getProxyConn(conn *Conn, host string) (err error) {
 		defer close(connChan)
 		defer close(errChan)
 
-		proxyConn, dialErr := s.ProxyDialer.DialContext(ctx, "tcp", host)
+		userAgent := req.Header.Get("User-Agent")
+		if userAgent == "" {
+			userAgent = s.UserAgent
+		}
+
+		proxyConn, dialErr := s.ProxyDialer.DialContext(ctx, userAgent, "tcp", host)
 		select {
 		case <-ctx.Done():
 			return
@@ -304,7 +309,7 @@ func (s *Session) initConn(req *Request) (conn *Conn, err error) {
 
 	if conn.Conn == nil {
 		if s.ProxyDialer != nil {
-			if err = s.getProxyConn(conn, host); err != nil {
+			if err = s.getProxyConn(req, conn, host); err != nil {
 				return nil, err
 			}
 		} else {
