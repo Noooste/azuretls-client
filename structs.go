@@ -126,6 +126,8 @@ type Request struct {
 	ctx context.Context // Context for cancellable and timeout operations.
 
 	startTime time.Time
+
+	deadline time.Time
 }
 
 // Response encapsulates the received data and metadata from an HTTP(S)
