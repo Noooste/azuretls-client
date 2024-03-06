@@ -120,6 +120,10 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 		return nil, err
 	}
 
+	if request.deadline.IsZero() {
+		request.deadline = time.Now().Add(request.TimeOut)
+	}
+
 	request.parsedUrl = request.HttpRequest.URL
 
 	transportOK := make(chan bool, 1)
@@ -131,6 +135,11 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 		close(connOK)
 		timer.Stop()
 	}()
+
+	response = &Response{
+		IgnoreBody: request.IgnoreBody,
+		Request:    request,
+	}
 
 	for {
 		select {
@@ -157,52 +166,22 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 
 			s.logRequest(request)
 
-			responseOK := make(chan bool, 1)
-
-			ctx, cancel := context.WithCancel(request.HttpRequest.Context())
+			ctx, cancel := context.WithDeadline(request.HttpRequest.Context(), request.deadline)
 
 			if !request.IgnoreBody {
 				request.HttpRequest = request.HttpRequest.WithContext(ctx)
 			}
 
-			go func() {
-				resp, respErr := roundTripper.RoundTrip(request.HttpRequest)
-
-				if !timer.Stop() {
-					close(responseOK)
-					return
-				}
-
-				if err == nil {
-					err = respErr
-					httpResponse = resp
-
-				}
-				responseOK <- true
-			}()
-
-			select {
-			case <-timer.C:
-				err = fmt.Errorf("timeout")
-
-			case <-responseOK:
-				timer.Stop()
-				close(responseOK)
-			}
-
-			response = &Response{
-				IgnoreBody: request.IgnoreBody,
-				Request:    request,
-			}
+			httpResponse, err = roundTripper.RoundTrip(request.HttpRequest)
 
 			if err != nil {
 				cancel()
 
 				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-					rConn.Close()
 					err = fmt.Errorf("timeout")
 				}
 
+				s.dumpRequest(request, response, err)
 				s.logResponse(response, err)
 
 				if s.Callback != nil {
@@ -212,7 +191,16 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 				return nil, err
 			}
 
-			err = s.buildResponse(response, httpResponse)
+			if err = s.buildResponse(response, httpResponse); err != nil {
+				_ = httpResponse.Body.Close()
+				cancel()
+
+				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+					err = fmt.Errorf("read body: timeout")
+				}
+
+				return nil, err
+			}
 
 			s.dumpRequest(request, response, err)
 			s.logResponse(response, err)
@@ -222,6 +210,11 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 			}
 
 			cancel()
+
+			if err != nil {
+				return nil, err
+			}
+
 			return response, err
 
 		default:
@@ -292,6 +285,7 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 				InsecureSkipVerify: oldReq.InsecureSkipVerify,
 				PHeader:            oldReq.PHeader,
 				ctx:                oldReq.ctx,
+				deadline:           oldReq.deadline,
 			}
 
 			copyHeaders(req)
@@ -323,6 +317,7 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 		reqs = append(reqs, req)
 
 		req.startTime = time.Now()
+
 		if resp, err = s.send(req); err != nil {
 			return nil, err
 		}
