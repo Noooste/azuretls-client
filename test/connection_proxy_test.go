@@ -132,7 +132,7 @@ func TestProxy3(t *testing.T) {
 
 	oldConn := session.ProxyDialer.H2Conn
 
-	_, err = session.ProxyDialer.Dial("tcp", "www.nike.com:443")
+	_, err = session.ProxyDialer.Dial("test", "tcp", "www.nike.com:443")
 
 	if err != nil {
 		t.Fatal(err)

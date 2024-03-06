@@ -91,11 +91,11 @@ func (s *Session) assignProxy(proxy string) error {
 	return nil
 }
 
-func (c *proxyDialer) Dial(network, address string) (net.Conn, error) {
-	return c.DialContext(context.Background(), network, address)
+func (c *proxyDialer) Dial(userAgent, network, address string) (net.Conn, error) {
+	return c.DialContext(context.Background(), userAgent, network, address)
 }
 
-func (c *proxyDialer) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
+func (c *proxyDialer) DialContext(ctx context.Context, userAgent, network, address string) (net.Conn, error) {
 	if c.ProxyURL == nil {
 		return nil, errors.New("proxy is not set")
 	}
@@ -114,6 +114,9 @@ func (c *proxyDialer) DialContext(ctx context.Context, network, address string) 
 		Header: make(http.Header),
 		Host:   address,
 	}).WithContext(ctx)
+
+	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("Connection", "keep-alive")
 
 	for k, v := range c.DefaultHeader {
 		req.Header[k] = v
