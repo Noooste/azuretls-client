@@ -41,12 +41,16 @@ func DefaultTlsSpecifications() TlsSpecifications {
 			tls.VersionTLS12,
 			tls.VersionTLS11,
 		},
-		CertCompressionAlgos:                    []tls.CertCompressionAlgo{tls.CertCompressionBrotli},
-		DelegatedCredentialsAlgorithmSignatures: signatureAlg,
-		PSKKeyExchangeModes:                     []uint8{tls.PskModeDHE},
-		SignatureAlgorithmsCert:                 signatureAlg,
-		ApplicationSettingsProtocols:            []string{"h2"},
-		RenegotiationSupport:                    tls.RenegotiateOnceAsClient,
+		CertCompressionAlgos: []tls.CertCompressionAlgo{tls.CertCompressionBrotli},
+		DelegatedCredentialsAlgorithmSignatures: []tls.SignatureScheme{
+			tls.ECDSAWithP256AndSHA256,
+			tls.ECDSAWithP384AndSHA384,
+			tls.ECDSAWithP521AndSHA512,
+		},
+		PSKKeyExchangeModes:          []uint8{tls.PskModeDHE},
+		SignatureAlgorithmsCert:      signatureAlg,
+		ApplicationSettingsProtocols: []string{"h2"},
+		RenegotiationSupport:         tls.RenegotiateOnceAsClient,
 	}
 }
 
@@ -329,7 +333,9 @@ func getExtensions(extensions []string, specifications *TlsSpecifications, defau
 			break
 
 		case "34":
-			builtExtensions = append(builtExtensions, &tls.DelegatedCredentialsExtension{})
+			builtExtensions = append(builtExtensions, &tls.FakeDelegatedCredentialsExtension{
+				SupportedSignatureAlgorithms: specifications.DelegatedCredentialsAlgorithmSignatures,
+			})
 			break
 
 		case "41":
