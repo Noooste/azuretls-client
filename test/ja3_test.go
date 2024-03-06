@@ -2,7 +2,9 @@ package azuretls_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/Noooste/azuretls-client"
+	"log"
 	"strings"
 	"testing"
 )
@@ -244,5 +246,30 @@ func TestECH(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Fatal("Expected 200")
 		return
+	}
+}
+
+func TestJa3(t *testing.T) {
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	err := session.ApplyJa3("771,4865-4867-4866-49195-49199-52393-52392-49196-49200-49162-49161-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-34-51-43-13-45-28-65037,29-23-24-25-256-257,0", azuretls.Firefox)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	err = session.ApplyHTTP2("1:65536,4:131072,5:16384|12517377|3:0:0:201,5:0:0:101,7:0:0:1,9:0:7:1,11:0:3:1,13:0:0:241|m,p,a,s")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	response, err := session.Get("https://www.cloudflare.com/cdn-cgi/trace")
+
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(response.StatusCode, string(response.Body))
 	}
 }

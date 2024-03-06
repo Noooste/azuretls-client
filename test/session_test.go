@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"github.com/Noooste/azuretls-client"
 	http "github.com/Noooste/fhttp"
+	"log"
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -584,25 +586,56 @@ func TestSession_Context(t *testing.T) {
 }
 
 func TestSession_Timeout(t *testing.T) {
-	go func() {
-		session := azuretls.NewSession()
-		session.SetTimeout(1 * time.Second)
+	session := azuretls.NewSession()
+	defer session.Close()
 
+	err := session.ApplyJa3("771,4865-4867-4866-49195-49199-52393-52392-49196-49200-49162-49161-49171-49172-156-157-47-53,0-23-65281-10-11-16-5-34-51-43-13-45-28-65037,29-23-24-25-256-257,0", azuretls.Firefox)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	err = session.ApplyHTTP2("1:65536,4:131072,5:16384|12517377|3:0:0:201,5:0:0:101,7:0:0:1,9:0:7:1,11:0:3:1,13:0:0:241|m,p,a,s")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	response, err := session.Get("https://www.cloudflare.com/cdn-cgi/trace")
+
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println(response.StatusCode, string(response.Body))
+	}
+}
+
+func TestSession_Timeout2(t *testing.T) {
+	var err error
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		session := azuretls.NewSession()
+		session.Log()
 		defer session.Close()
 
-		if err := session.SetProxy(os.Getenv("NON_SECURE_PROXY")); err != nil {
-			fmt.Println(err)
-			return
-		}
+		session.SetTimeout(3 * time.Second)
 
-		response, err := session.Get("https://testfile.org/files-5GB")
-
-		if err != nil {
-			fmt.Println(err)
-		} else {
-			fmt.Println(response.StatusCode, string(response.Body))
-		}
+		_, err = session.Get("https://testfile.org/files-5GB")
 	}()
 
-	time.Sleep(2 * time.Second)
+	wg.Wait()
+
+	if err == nil {
+		t.Fatal("TestSession_Timeout2 failed, expected: error, got: nil")
+		return
+	}
+
+	if err.Error() != "read body: timeout" {
+		t.Fatal("TestSession_Timeout2 failed, expected: timeout, got: ", err)
+		return
+	}
 }

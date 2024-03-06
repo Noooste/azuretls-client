@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/url"
 	"sync"
-	"time"
 )
 
 func (s *Session) buildResponse(response *Response, httpResponse *http.Response) (err error) {
@@ -23,36 +22,12 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 		wg.Add(1)
 
 		go func() {
-			done := make(chan bool, 1)
+			defer wg.Done()
 
-			defer func() {
-				recover()
-				wg.Done()
-				close(done)
-			}()
-
-			timer := time.NewTimer(response.Request.TimeOut)
-			defer timer.Stop()
-
-			go func() {
-				defer func() {
-					recover()
-				}()
-
-				response.Body, err = response.ReadBody()
-				done <- true
-			}()
-
-			for {
-				select {
-				case <-timer.C:
-					response.Body = nil
-					err = fmt.Errorf("read body: timeout")
-					return
-
-				case <-done:
-					return
-				}
+			if readBody, readErr := response.ReadBody(); readErr == nil {
+				response.Body = readBody
+			} else {
+				err = readErr
 			}
 		}()
 	}
