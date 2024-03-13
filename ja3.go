@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	tls "github.com/Noooste/utls"
-	"github.com/Noooste/utls/dicttls"
 	"strconv"
 	"strings"
 )
@@ -22,7 +21,7 @@ type TlsSpecifications struct {
 	RenegotiationSupport                    tls.RenegotiationSupport
 }
 
-func DefaultTlsSpecifications() TlsSpecifications {
+func DefaultTlsSpecifications(navigator string) TlsSpecifications {
 	signatureAlg := []tls.SignatureScheme{
 		tls.ECDSAWithP256AndSHA256,
 		tls.PSSWithSHA256,
@@ -34,13 +33,26 @@ func DefaultTlsSpecifications() TlsSpecifications {
 		tls.PKCS1WithSHA512,
 	}
 
-	return TlsSpecifications{
-		AlpnProtocols:       []string{"h2", "http/1.1"},
-		SignatureAlgorithms: signatureAlg,
-		SupportedVersions: []uint16{tls.VersionTLS13,
+	var supportedVersions []uint16
+
+	switch navigator {
+	case Chrome:
+		supportedVersions = []uint16{
+			tls.GREASE_PLACEHOLDER,
+			tls.VersionTLS13,
 			tls.VersionTLS12,
-			tls.VersionTLS11,
-		},
+		}
+	default:
+		supportedVersions = []uint16{
+			tls.VersionTLS13,
+			tls.VersionTLS12,
+		}
+	}
+
+	return TlsSpecifications{
+		AlpnProtocols:        []string{"h2", "http/1.1"},
+		SignatureAlgorithms:  signatureAlg,
+		SupportedVersions:    supportedVersions,
 		CertCompressionAlgos: []tls.CertCompressionAlgo{tls.CertCompressionBrotli},
 		DelegatedCredentialsAlgorithmSignatures: []tls.SignatureScheme{
 			tls.ECDSAWithP256AndSHA256,
@@ -70,7 +82,7 @@ func DefaultTlsSpecifications() TlsSpecifications {
 //
 // Any absent field in the client hello will raise an error.
 func (s *Session) ApplyJa3(ja3, navigator string) error {
-	return s.ApplyJa3WithSpecifications(ja3, DefaultTlsSpecifications(), navigator)
+	return s.ApplyJa3WithSpecifications(ja3, DefaultTlsSpecifications(navigator), navigator)
 }
 
 // ApplyJa3WithSpecifications applies JA3 settings to the session from a fingerprint.
@@ -89,10 +101,11 @@ func (s *Session) ApplyJa3(ja3, navigator string) error {
 //
 // Any absent field in the client hello will raise an error.
 func (s *Session) ApplyJa3WithSpecifications(ja3 string, specifications TlsSpecifications, navigator string) error {
-	_, err := stringToSpec(ja3, DefaultTlsSpecifications(), navigator)
+	_, err := stringToSpec(ja3, DefaultTlsSpecifications(navigator), navigator)
 	if err != nil {
 		return err
 	}
+
 	s.GetClientHelloSpec = func() *tls.ClientHelloSpec {
 		specs, _ := stringToSpec(ja3, specifications, navigator)
 		return specs
@@ -147,6 +160,13 @@ func stringToSpec(ja3 string, specifications TlsSpecifications, navigator string
 	//extensions
 	if information[2] != "" {
 		extensions, _, maxVers, err = getExtensions(rawExtensions, &specifications, pointFormats, curves, navigator)
+
+		if navigator == Chrome {
+			last := extensions[len(extensions)-1]
+			extensions[len(extensions)-1] = &tls.UtlsGREASEExtension{}
+			extensions = append(extensions, last)
+		}
+
 	} else {
 		extensions, _, maxVers, err = []tls.TLSExtension{}, 0, tls.VersionTLS13, nil
 		if information[3] != "" {
@@ -180,9 +200,11 @@ func stringToSpec(ja3 string, specifications TlsSpecifications, navigator string
 			}
 
 			extensions = append(extensions, &tls.SupportedPointsExtension{SupportedPoints: pf})
+
 			specs.CompressionMethods = pf
 		}
 	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -422,23 +444,7 @@ func getExtensions(extensions []string, specifications *TlsSpecifications, defau
 			break
 
 		case "65037":
-			builtExtensions = append(builtExtensions, &tls.GREASEEncryptedClientHelloExtension{
-				CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
-					{
-						KdfId:  dicttls.HKDF_SHA256,
-						AeadId: dicttls.AEAD_AES_128_GCM,
-					},
-					{
-						KdfId:  dicttls.HKDF_SHA256,
-						AeadId: dicttls.AEAD_AES_256_GCM,
-					},
-					{
-						KdfId:  dicttls.HKDF_SHA256,
-						AeadId: dicttls.AEAD_CHACHA20_POLY1305,
-					},
-				},
-				CandidatePayloadLens: []uint16{128, 160},
-			})
+			builtExtensions = append(builtExtensions, tls.BoringGREASEECH())
 
 		case "65281":
 			builtExtensions = append(builtExtensions, &tls.RenegotiationInfoExtension{Renegotiation: specifications.RenegotiationSupport})
