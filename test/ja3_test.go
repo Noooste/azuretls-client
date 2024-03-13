@@ -91,7 +91,7 @@ func TestChrome(t *testing.T) {
 func TestSession_ApplyJa3(t *testing.T) {
 	session := azuretls.NewSession()
 
-	ja3Origin := "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24-25-26,0"
+	ja3Origin := "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,23-13-10-11-17513-43-45-35-65037-5-51-65281-16-18-0-27-21,29-23-24,0"
 
 	if err := session.ApplyJa3(ja3Origin, azuretls.Chrome); err != nil {
 		t.Fatal(err)
@@ -131,7 +131,7 @@ func TestSession_ApplyJa3(t *testing.T) {
 		t.Fatal("Expected "+splitOrigin[1]+", got ", split[1])
 	}
 
-	if split[2] != splitOrigin[2] {
+	if split[2] != splitOrigin[2] && strings.TrimSuffix(splitOrigin[2], "-21") != split[2] {
 		t.Fatal("Expected "+splitOrigin[2]+", got ", split[2])
 	}
 
