@@ -258,7 +258,7 @@ fmt.Println(response.StatusCode, string(response.Body))
 #
 ### Headers
 
-Use `session.OrderedHeaders` method (`[][]string` type)
+You can define headers for the session with the `session.Header` attribute, or use the `session.OrderedHeaders` attribute to maintain header order.
 
 ```go
 session := azuretls.NewSession()
@@ -280,13 +280,33 @@ if err != nil {
 fmt.Println(response.StatusCode, string(response.Body))
 ```
 
-You can also pass `azuretls.OrderedHeaders` or `http.Header` in the arguments of the request methods.
+This also works if you pass `azuretls.Header` (or `azuretls.OrderedHeaders`) as arguments to the request methods.
 
 ```go
 session := azuretls.NewSession()
 defer session.Close()
 
 headers := azuretls.OrderedHeaders{
+    {"user-agent", "test"},
+    {"content-type", "application/json"},
+    {"accept", "application/json"},
+}
+
+response, err = session.Get("https://tls.peet.ws/api/all", headers)
+
+if err != nil {
+    panic(err)
+}
+```
+
+**NOTE**: For `azuretls.OrderedHeaders`, if you specify only the key, the order will be applied.
+
+```go
+session := azuretls.NewSession()
+defer session.Close()
+
+headers := azuretls.OrderedHeaders{
+    {"Host"}, // it will only apply the order of the Host header
     {"user-agent", "test"},
     {"content-type", "application/json"},
     {"accept", "application/json"},

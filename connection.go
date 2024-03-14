@@ -34,6 +34,8 @@ type Conn struct {
 
 	ClientHelloSpec func() *tls.ClientHelloSpec
 
+	ForceHTTP1 bool
+
 	mu *sync.RWMutex
 
 	ctx    context.Context
@@ -287,6 +289,7 @@ func (s *Session) getProxyConn(req *Request, conn *Conn, host string) (err error
 func (s *Session) initConn(req *Request) (conn *Conn, err error) {
 	// get connection from pool
 	conn = s.Connections.Get(req.parsedUrl)
+	conn.ForceHTTP1 = req.ForceHTTP1
 
 	host := getHost(req.parsedUrl)
 
@@ -407,7 +410,18 @@ func (c *Conn) NewTLS(addr string) (err error) {
 
 	c.TLS = tls.UClient(c.Conn, &config, tls.HelloCustom)
 
-	if err = c.TLS.ApplyPreset(c.ClientHelloSpec()); err != nil {
+	specs := c.ClientHelloSpec()
+
+	if c.ForceHTTP1 {
+		for i, ext := range specs.Extensions {
+			switch ext.(type) {
+			case *tls.ALPNExtension:
+				specs.Extensions[i] = &tls.ALPNExtension{AlpnProtocols: []string{"http/1.1"}}
+			}
+		}
+	}
+
+	if err = c.TLS.ApplyPreset(specs); err != nil {
 		return errors.New("failed to apply preset: " + err.Error())
 	}
 

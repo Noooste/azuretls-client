@@ -121,6 +121,8 @@ type Request struct {
 
 	Proto string
 
+	ForceHTTP1 bool
+
 	ContentLength int64 // Length of content in the request.
 
 	ctx context.Context // Context for cancellable and timeout operations.

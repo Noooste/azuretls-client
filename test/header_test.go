@@ -13,6 +13,7 @@ var acceptReg = regexp.MustCompile(`accept`)
 
 func TestHeader(t *testing.T) {
 	session := azuretls.NewSession()
+	defer session.Close()
 
 	session.OrderedHeaders = azuretls.OrderedHeaders{
 		{"user-agent", "test"},
@@ -28,14 +29,59 @@ func TestHeader(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Fatal("TestHeader failed, expected: 200, got: ", response.StatusCode)
 	}
+
+	uaIndex := userAgentReg.FindIndex(response.Body)
+	if uaIndex == nil {
+		t.Fatal("TestHeader failed, User-Agent should be present")
+	}
+
+	acceptIndex := acceptReg.FindIndex(response.Body)
+	if acceptIndex == nil {
+		t.Fatal("TestHeader failed, Accept should be present")
+	}
+
+	if uaIndex[0] > acceptIndex[0] {
+		t.Fatal("TestHeader failed, User-Agent should be before Accept")
+	}
+
+	session = azuretls.NewSession()
+
+	session.OrderedHeaders = azuretls.OrderedHeaders{
+		{"accept", "application/json"},
+		{"user-agent", "test"},
+	}
+
+	response, err = session.Get("https://tls.peet.ws/api/all")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Fatal("TestHeader failed, expected: 200, got: ", response.StatusCode)
+	}
+
+	uaIndex = userAgentReg.FindIndex(response.Body)
+	if uaIndex == nil {
+		t.Fatal("TestHeader failed, User-Agent should be present")
+	}
+
+	acceptIndex = acceptReg.FindIndex(response.Body)
+	if acceptIndex == nil {
+		t.Fatal("TestHeader failed, Accept should be present")
+	}
+
+	if uaIndex[0] < acceptIndex[0] {
+		t.Fatal("TestHeader failed, User-Agent should be before Accept")
+	}
 }
 
 func TestHeader2(t *testing.T) {
 	session := azuretls.NewSession()
 
 	session.Header = http.Header{
-		"user-agent": {"test"},
 		"accept":     {"application/json"},
+		"user-agent": {"test"},
 	}
 
 	session.HeaderOrder = []string{"user-agent", "content-type", "accept"}
