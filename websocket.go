@@ -3,10 +3,11 @@ package azuretls
 import (
 	"context"
 	"errors"
+	"fmt"
 	http "github.com/Noooste/fhttp"
 	"github.com/Noooste/websocket"
 	"net"
-	"net/url"
+	url2 "net/url"
 )
 
 var (
@@ -25,11 +26,28 @@ type Websocket struct {
 	*websocket.Conn
 }
 
-func (s *Session) NewWebsocket(req *Request, args ...any) (*Websocket, error) {
-	return s.NewWebsocketWithContext(context.Background(), req, args...)
+// NewWebsocket returns a new websocket connection.
+func (s *Session) NewWebsocket(url string, readBufferSize, writeBufferSize int, args ...any) (*Websocket, error) {
+	return s.NewWebsocketWithContext(s.ctx, url, readBufferSize, writeBufferSize, args...)
 }
 
-func (s *Session) NewWebsocketWithContext(ctx context.Context, req *Request, args ...any) (*Websocket, error) {
+// NewWebsocketWithContext returns a new websocket connection with a context.
+func (s *Session) NewWebsocketWithContext(ctx context.Context, url string, readBufferSize, writeBufferSize int, args ...any) (*Websocket, error) {
+	if url == "" {
+		return nil, errors.New("url is empty")
+	}
+
+	if readBufferSize <= 0 {
+		readBufferSize = 1024
+	}
+
+	if writeBufferSize <= 0 {
+		writeBufferSize = 1024
+	}
+
+	req := new(Request)
+	req.Url = url
+
 	if req == nil {
 		return nil, ErrNilRequest
 	}
@@ -39,21 +57,21 @@ func (s *Session) NewWebsocketWithContext(ctx context.Context, req *Request, arg
 	}
 
 	var (
-		ws = new(Websocket)
-		h  = make(http.Header)
-
-		conn *Conn
-		err  error
+		ws  = new(Websocket)
+		h   = make(http.Header)
+		err error
 	)
 
 	req.HttpRequest = &http.Request{}
-	req.parsedUrl, err = url.Parse(req.Url)
+	req.parsedUrl, err = url2.Parse(req.Url)
 
 	if err != nil {
 		return nil, err
 	}
 
-	req.formatHeader()
+	if err = s.buildRequest(ctx, req); err != nil {
+		return nil, err
+	}
 
 	if !req.NoCookie {
 		cookies := s.CookieJar.Cookies(req.parsedUrl)
@@ -66,32 +84,39 @@ func (s *Session) NewWebsocketWithContext(ctx context.Context, req *Request, arg
 		}
 	}
 
-	ws.dialer = &websocket.Dialer{}
-	ws.dialer.Jar = s.CookieJar
-
-	if conn, err = s.initConn(req); err != nil {
+	req.ForceHTTP1 = true
+	if _, err = s.initConn(req); err != nil {
 		return nil, err
 	}
 
-	ws.dialer.NetDialContext = func(c context.Context, network, addr string) (net.Conn, error) {
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		default:
-			return conn.Conn, nil
-		}
+	ws.dialer = &websocket.Dialer{
+		HandshakeTimeout: s.TimeOut,
+		ReadBufferSize:   readBufferSize,
+		WriteBufferSize:  writeBufferSize,
 	}
 
-	ws.dialer.NetDialTLSContext = func(c context.Context, network, addr string) (net.Conn, error) {
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		default:
-			return conn.TLS.Conn, nil
+	ws.dialer.Jar = s.CookieJar
+
+	ws.dialer.NetDialTLSContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		s.Connections.mu.RLock()
+		defer s.Connections.mu.RUnlock()
+		if rc, ok := s.Connections.hosts[addr]; ok {
+			return rc.TLS, nil
 		}
+		return nil, fmt.Errorf("no connection for %s", addr)
 	}
 
-	c, resp, err := ws.dialer.DialContext(ctx, req.parsedUrl.String(), h, h[http.HeaderOrderKey])
+	ws.dialer.NetDialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		s.Connections.mu.RLock()
+		defer s.Connections.mu.RUnlock()
+		if rc, ok := s.Connections.hosts[addr]; ok {
+			return rc.Conn, nil
+		}
+
+		return nil, fmt.Errorf("no connection for %s", addr)
+	}
+
+	c, resp, err := ws.dialer.DialContext(ctx, req.Url, req.HttpRequest.Header, req.HttpRequest.Header[http.HeaderOrderKey])
 
 	if err != nil {
 		return nil, err

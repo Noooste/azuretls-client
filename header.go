@@ -108,22 +108,25 @@ func (r *Request) formatHeader() {
 				continue
 			}
 
-			r.HttpRequest.Header[http.HeaderOrderKey] = append(r.HttpRequest.Header[http.HeaderOrderKey], el[0])
+			var key = strings.ToLower(el[0])
+
+			r.HttpRequest.Header[http.HeaderOrderKey] = append(r.HttpRequest.Header[http.HeaderOrderKey], key)
+
 			if len(el) == 1 {
 				// skip empty header value, the key indicates the order
 				continue
 			}
 
-			if _, ok := r.HttpRequest.Header[el[0]]; !ok {
-				if setUserAgent && strings.ToLower(el[0]) == "user-agent" {
+			if _, ok := r.HttpRequest.Header[key]; !ok {
+				if setUserAgent && strings.ToLower(key) == "user-agent" {
 					setUserAgent = false
 				}
 
-				r.HttpRequest.Header.Set(el[0], el[1])
+				r.HttpRequest.Header.Set(key, el[1])
 			}
 
 			for _, v := range el[2:] {
-				r.HttpRequest.Header.Add(el[0], v)
+				r.HttpRequest.Header.Add(key, v)
 			}
 		}
 
@@ -143,6 +146,8 @@ func (r *Request) formatHeader() {
 				break
 			}
 		}
+	} else {
+		r.HttpRequest.Header = make(http.Header, 4)
 	}
 
 	if setUserAgent {
