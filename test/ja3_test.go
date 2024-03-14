@@ -24,8 +24,6 @@ func TestDefaultConfig(t *testing.T) {
 }
 
 func TestChrome(t *testing.T) {
-	// Chrome 80
-
 	session := azuretls.NewSession()
 
 	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", azuretls.Chrome); err != nil {
@@ -84,6 +82,64 @@ func TestChrome(t *testing.T) {
 
 	if split[4] != "0" {
 		t.Fatal("Expected 0, got ", split[4])
+		return
+	}
+}
+
+func TestFirefox(t *testing.T) {
+	session := azuretls.NewSession()
+
+	var ja3 = "771,4865-4867-4866-49195-49199-52393-52392-49196-49200-49162-49161-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-34-51-43-13-45-28-65037,29-23-24-25-256-257,0"
+	if err := session.ApplyJa3(ja3, azuretls.Firefox); err != nil {
+		t.Fatal(err)
+	}
+
+	response, err := session.Get("https://tls.peet.ws/api/all")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Fatal("Expected 200")
+		return
+	}
+
+	var loaded map[string]any
+
+	response.MustJSON(&loaded)
+
+	ref := strings.Split(ja3, ",")
+
+	actual := strings.Split(loaded["tls"].(map[string]any)["ja3"].(string), ",")
+
+	if len(actual) != 5 {
+		t.Fatal("Expected 4 parts, got ", len(actual))
+		return
+	}
+
+	if actual[0] != ref[0] {
+		t.Fatal("Expected "+ref[0]+", got ", actual[0])
+		return
+	}
+
+	if actual[1] != ref[1] {
+		t.Fatal("Expected "+ref[1]+", got ", actual[1])
+		return
+	}
+
+	if actual[2] != ref[2] {
+		t.Fatal("Expected "+ref[2]+", got ", actual[2])
+		return
+	}
+
+	if actual[3] != ref[3] {
+		t.Fatal("Expected "+ref[3]+", got ", actual[3])
+		return
+	}
+
+	if actual[4] != ref[4] {
+		t.Fatal("Expected "+ref[4]+", got ", actual[4])
 		return
 	}
 }
