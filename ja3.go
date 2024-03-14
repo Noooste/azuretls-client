@@ -19,50 +19,63 @@ type TlsSpecifications struct {
 	SignatureAlgorithmsCert                 []tls.SignatureScheme
 	ApplicationSettingsProtocols            []string
 	RenegotiationSupport                    tls.RenegotiationSupport
+	RecordSizeLimit                         uint16
 }
 
-func DefaultTlsSpecifications(navigator string) TlsSpecifications {
-	signatureAlg := []tls.SignatureScheme{
-		tls.ECDSAWithP256AndSHA256,
-		tls.PSSWithSHA256,
-		tls.PKCS1WithSHA256,
-		tls.ECDSAWithP384AndSHA384,
-		tls.PSSWithSHA384,
-		tls.PKCS1WithSHA384,
-		tls.PSSWithSHA512,
-		tls.PKCS1WithSHA512,
-	}
-
-	var supportedVersions []uint16
+func DefaultTlsSpecifications(navigator string) *TlsSpecifications {
+	var signatureAlg []tls.SignatureScheme
+	var recordSizeLimit uint16
 
 	switch navigator {
-	case Chrome:
-		supportedVersions = []uint16{
-			tls.GREASE_PLACEHOLDER,
-			tls.VersionTLS13,
-			tls.VersionTLS12,
-		}
-	default:
-		supportedVersions = []uint16{
-			tls.VersionTLS13,
-			tls.VersionTLS12,
-		}
-	}
-
-	return TlsSpecifications{
-		AlpnProtocols:        []string{"h2", "http/1.1"},
-		SignatureAlgorithms:  signatureAlg,
-		SupportedVersions:    supportedVersions,
-		CertCompressionAlgos: []tls.CertCompressionAlgo{tls.CertCompressionBrotli},
-		DelegatedCredentialsAlgorithmSignatures: []tls.SignatureScheme{
+	case Firefox:
+		signatureAlg = []tls.SignatureScheme{
 			tls.ECDSAWithP256AndSHA256,
 			tls.ECDSAWithP384AndSHA384,
 			tls.ECDSAWithP521AndSHA512,
+			tls.PSSWithSHA256,
+			tls.PSSWithSHA384,
+			tls.PSSWithSHA512,
+			tls.PKCS1WithSHA256,
+			tls.PKCS1WithSHA384,
+			tls.PKCS1WithSHA512,
+			tls.ECDSAWithSHA1,
+			tls.PKCS1WithSHA1,
+		}
+		recordSizeLimit = 0x4001
+	default:
+		signatureAlg = []tls.SignatureScheme{
+			tls.ECDSAWithP256AndSHA256,
+			tls.PSSWithSHA256,
+			tls.PKCS1WithSHA256,
+			tls.ECDSAWithP384AndSHA384,
+			tls.PSSWithSHA384,
+			tls.PKCS1WithSHA384,
+			tls.PSSWithSHA512,
+			tls.PKCS1WithSHA512,
+		}
+	}
+
+	return &TlsSpecifications{
+		AlpnProtocols:       []string{"h2", "http/1.1"},
+		SignatureAlgorithms: signatureAlg,
+		SupportedVersions: []uint16{
+			tls.VersionTLS13,
+			tls.VersionTLS12,
 		},
-		PSKKeyExchangeModes:          []uint8{tls.PskModeDHE},
+		CertCompressionAlgos: []tls.CertCompressionAlgo{tls.CertCompressionBrotli},
+		DelegatedCredentialsAlgorithmSignatures: []tls.SignatureScheme{ // only for firefox
+			tls.ECDSAWithP256AndSHA256,
+			tls.ECDSAWithP384AndSHA384,
+			tls.ECDSAWithP521AndSHA512,
+			tls.ECDSAWithSHA1,
+		},
+		PSKKeyExchangeModes: []uint8{
+			tls.PskModeDHE,
+		},
 		SignatureAlgorithmsCert:      signatureAlg,
 		ApplicationSettingsProtocols: []string{"h2"},
 		RenegotiationSupport:         tls.RenegotiateOnceAsClient,
+		RecordSizeLimit:              recordSizeLimit,
 	}
 }
 
@@ -100,7 +113,7 @@ func (s *Session) ApplyJa3(ja3, navigator string) error {
 // This string is then MD5-hashed to produce a 32-character representation, which is the JA3 fingerprint.
 //
 // Any absent field in the client hello will raise an error.
-func (s *Session) ApplyJa3WithSpecifications(ja3 string, specifications TlsSpecifications, navigator string) error {
+func (s *Session) ApplyJa3WithSpecifications(ja3 string, specifications *TlsSpecifications, navigator string) error {
 	_, err := stringToSpec(ja3, DefaultTlsSpecifications(navigator), navigator)
 	if err != nil {
 		return err
@@ -119,7 +132,7 @@ const (
 
 // stringToSpec converts a JA3 string to a tls.ClientHelloSpec
 // Use DefaultTlsSpecifications() to get the default specifications
-func stringToSpec(ja3 string, specifications TlsSpecifications, navigator string) (*tls.ClientHelloSpec, error) {
+func stringToSpec(ja3 string, specifications *TlsSpecifications, navigator string) (*tls.ClientHelloSpec, error) {
 	specs := &tls.ClientHelloSpec{}
 
 	information := strings.Split(ja3, ",")
@@ -159,14 +172,7 @@ func stringToSpec(ja3 string, specifications TlsSpecifications, navigator string
 	)
 	//extensions
 	if information[2] != "" {
-		extensions, _, maxVers, err = getExtensions(rawExtensions, &specifications, pointFormats, curves, navigator)
-
-		if navigator == Chrome {
-			last := extensions[len(extensions)-1]
-			extensions[len(extensions)-1] = &tls.UtlsGREASEExtension{}
-			extensions = append(extensions, last)
-		}
-
+		extensions, _, maxVers, err = getExtensions(rawExtensions, specifications, pointFormats, curves, navigator)
 	} else {
 		extensions, _, maxVers, err = []tls.TLSExtension{}, 0, tls.VersionTLS13, nil
 		if information[3] != "" {
@@ -347,7 +353,9 @@ func getExtensions(extensions []string, specifications *TlsSpecifications, defau
 			break
 
 		case "28":
-			builtExtensions = append(builtExtensions, &tls.FakeRecordSizeLimitExtension{})
+			builtExtensions = append(builtExtensions, &tls.FakeRecordSizeLimitExtension{
+				Limit: specifications.RecordSizeLimit,
+			})
 			break
 
 		case "35":
