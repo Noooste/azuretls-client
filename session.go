@@ -126,6 +126,11 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 
 	request.parsedUrl = request.HttpRequest.URL
 
+	response = &Response{
+		IgnoreBody: request.IgnoreBody,
+		Request:    request,
+	}
+
 	transportOK := make(chan bool, 1)
 	connOK := make(chan bool, 1)
 	timer := time.NewTimer(request.TimeOut)
@@ -134,12 +139,21 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 		close(transportOK)
 		close(connOK)
 		timer.Stop()
-	}()
 
-	response = &Response{
-		IgnoreBody: request.IgnoreBody,
-		Request:    request,
-	}
+		if s.Callback != nil {
+			s.Callback(request, response, err)
+		}
+
+		if s.CallbackWithContext != nil {
+			s.CallbackWithContext(&Context{
+				Session:          s,
+				Request:          request,
+				Response:         response,
+				Err:              err,
+				RequestStartTime: request.startTime,
+			})
+		}
+	}()
 
 	for {
 		select {
@@ -184,10 +198,6 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 				s.dumpRequest(request, response, err)
 				s.logResponse(response, err)
 
-				if s.Callback != nil {
-					s.Callback(request, response, err)
-				}
-
 				return nil, err
 			}
 
@@ -204,11 +214,6 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 
 			s.dumpRequest(request, response, err)
 			s.logResponse(response, err)
-
-			if s.Callback != nil {
-				s.Callback(request, response, err)
-			}
-
 			cancel()
 
 			if err != nil {
