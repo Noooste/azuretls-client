@@ -28,23 +28,32 @@ type Session struct {
 	PHeader        PHeader
 	OrderedHeaders OrderedHeaders
 
-	Header      http.Header // Default headers for all requests. Deprecated: Use OrderedHeaders instead.
-	HeaderOrder HeaderOrder // Order of headers for all requests.
+	// Default headers for all requests. Deprecated: Use OrderedHeaders instead.
+	Header http.Header
+	// Order of headers for all requests.
+	HeaderOrder HeaderOrder
 
-	CookieJar *cookiejar.Jar // Stores cookies across session requests.
-	Browser   string         // Name or identifier of the browser used in the session.
+	// Stores cookies across session requests.
+	CookieJar *cookiejar.Jar
 
-	Connections *ConnPool // Pool of persistent connections to manage concurrent requests.
+	// Name or identifier of the browser used in the session.
+	Browser string
+
+	// Pool of persistent connections to manage concurrent requests.
+	Connections *ConnPool
 
 	HTTP2Transport *http2.Transport
 	Transport      *http.Transport
 
-	GetClientHelloSpec func() *tls.ClientHelloSpec // Function to provide custom TLS handshake details.
+	// Function to provide custom TLS handshake details.
+	GetClientHelloSpec func() *tls.ClientHelloSpec
 
 	mu *sync.Mutex
 
-	Proxy          string // Proxy address.
-	H2Proxy        bool   // If true, use HTTP2 for proxy connections.
+	// Proxy address.
+	Proxy string
+	// If true, use HTTP2 for proxy connections.
+	H2Proxy        bool
 	ProxyDialer    *proxyDialer
 	proxyConnected bool
 
@@ -55,25 +64,39 @@ type Session struct {
 	logging       bool
 	loggingIgnore []string
 
-	Verbose           bool                                                  // If true, print detailed logs or debugging information. Deprecated: Use Dump instead.
-	VerbosePath       string                                                // Path for logging verbose information. Deprecated: Use Log instead.
-	VerboseIgnoreHost []string                                              // List of hosts to ignore when logging verbose info. Deprecated: Use Log instead.
-	VerboseFunc       func(request *Request, response *Response, err error) // Custom function to handle verbose logging. Deprecated: Use Log instead.
+	// If true, print detailed logs or debugging information. Deprecated: Use Dump instead.
+	Verbose bool
+	// Path for logging verbose information. Deprecated: Use Log instead.
+	VerbosePath string
+	// List of hosts to ignore when logging verbose info. Deprecated: Use Log instead.
+	VerboseIgnoreHost []string
+	// Custom function to handle verbose logging. Deprecated: Use Log instead.
+	VerboseFunc func(request *Request, response *Response, err error)
 
-	MaxRedirects uint          // Maximum number of redirects to follow.
-	TimeOut      time.Duration // Maximum time to wait for request to complete.
+	// Maximum number of redirects to follow.
+	MaxRedirects uint
+	// Maximum time to wait for request to complete.
+	TimeOut time.Duration
 
-	PreHook  func(request *Request) error                          // Function called before sending request.
-	Callback func(request *Request, response *Response, err error) // Function called after receiving a response.
+	// Deprecated, use PreHookWithContext instead.
+	PreHook func(request *Request) error
+	// Function called before sending a request.
+	PreHookWithContext func(ctx *Context) error
+
+	// Deprecated, use CallbackWithContext instead.
+	Callback func(request *Request, response *Response, err error)
+	// Function called after receiving a response.
+	CallbackWithContext func(ctx *Context)
 
 	// Deprecated: This field is ignored as pin verification is always true.
 	// To disable pin verification, use InsecureSkipVerify.
-	VerifyPins         bool
-	InsecureSkipVerify bool // If true, server's certificate is not verified (insecure: this may facilitate attack from middleman).
-
-	ctx context.Context // Context for cancellable and timeout operations.
-
-	UserAgent string // Headers for User-Agent and Sec-Ch-Ua, respectively.
+	VerifyPins bool
+	// If true, server's certificate is not verified (insecure: this may facilitate attack from middleman).
+	InsecureSkipVerify bool
+	// Context for cancellable and timeout operations.
+	ctx context.Context
+	// Headers for User-Agent and Sec-Ch-Ua, respectively.
+	UserAgent string
 
 	closed bool
 }
@@ -150,4 +173,14 @@ type Response struct {
 	Request *Request // Reference to the associated request.
 
 	ContentLength int64 // Length of content in the response.
+}
+
+type Context struct {
+	Session  *Session
+	Request  *Request
+	Response *Response
+
+	Err error
+
+	RequestStartTime time.Time
 }
