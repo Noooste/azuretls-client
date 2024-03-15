@@ -262,6 +262,17 @@ func TestSessionPrehookError(t *testing.T) {
 		t.Fatal("TestSessionPrehookError failed, expected: error, got: nil")
 		return
 	}
+
+	session.PreHook = nil
+	session.PreHookWithContext = func(ctx *azuretls.Context) error {
+		return errors.New("test")
+	}
+
+	_, err = session.Do(req)
+	if err == nil {
+		t.Fatal("TestSessionPrehookError failed, expected: error, got: nil")
+		return
+	}
 }
 
 func TestSessionCallback(t *testing.T) {
@@ -275,9 +286,14 @@ func TestSessionCallback(t *testing.T) {
 	}
 
 	var called bool
+	var withContextCalled bool
 
 	session.Callback = func(req *azuretls.Request, resp *azuretls.Response, err error) {
 		called = true
+	}
+
+	session.CallbackWithContext = func(ctx *azuretls.Context) {
+		withContextCalled = ctx.Session == session && ctx.Request == req
 	}
 
 	_, err := session.Do(req)
@@ -288,6 +304,11 @@ func TestSessionCallback(t *testing.T) {
 
 	if !called {
 		t.Fatal("TestSessionCallback failed, expected: called, got: ", called)
+		return
+	}
+
+	if !withContextCalled {
+		t.Fatal("TestSessionCallback failed, expected: called, got: ", withContextCalled)
 		return
 	}
 }

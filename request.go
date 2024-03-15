@@ -45,6 +45,13 @@ func (s *Session) prepareRequest(request *Request, args ...any) error {
 		return s.PreHook(request)
 	}
 
+	if s.PreHookWithContext != nil {
+		return s.PreHookWithContext(&Context{
+			Session: s,
+			Request: request,
+		})
+	}
+
 	return nil
 }
 
