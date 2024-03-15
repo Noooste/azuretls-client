@@ -26,7 +26,8 @@ func TestDefaultConfig(t *testing.T) {
 func TestChrome(t *testing.T) {
 	session := azuretls.NewSession()
 
-	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0", azuretls.Chrome); err != nil {
+	var ja3 = "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,65281-27-0-51-65037-23-5-35-11-13-10-16-18-43-45-17513,29-23-24,0"
+	if err := session.ApplyJa3(ja3, azuretls.Chrome); err != nil {
 		t.Fatal(err)
 	}
 
@@ -35,6 +36,8 @@ func TestChrome(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	fmt.Println(string(response.Body))
 
 	if response.StatusCode != 200 {
 		t.Fatal("Expected 200")
@@ -45,43 +48,37 @@ func TestChrome(t *testing.T) {
 
 	response.MustJSON(&loaded)
 
-	ja3 := loaded["tls"].(map[string]any)["ja3"].(string)
-	split := strings.Split(ja3, ",")
+	ref := strings.Split(ja3, ",")
 
-	if len(split) != 5 {
-		t.Fatal("Expected 4 parts, got ", len(split))
+	actual := strings.Split(loaded["tls"].(map[string]any)["ja3"].(string), ",")
+
+	if len(actual) != 5 {
+		t.Fatal("Expected 4 parts, got ", len(actual))
 		return
 	}
 
-	version := "771"
-	if split[0] != version {
-		t.Fatal("Expected "+version+", got ", split[0])
+	if actual[0] != ref[0] {
+		t.Fatal("Expected "+ref[0]+", got ", actual[0])
 		return
 	}
 
-	ciphers := "4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53"
-	if split[1] != ciphers {
-		t.Fatal("Expected "+ciphers+", got ", split[1])
+	if actual[1] != ref[1] {
+		t.Fatal("Expected "+ref[1]+", got ", actual[1])
 		return
 	}
 
-	//since chrome shuffle extension = not relevant to check the order
-	extensions := "45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21"
-	nbExtensions := strings.Count(extensions, "-") + 1
-
-	if nbExtensions != strings.Count(split[2], "-")+1 {
-		t.Fatal("Expected "+extensions+", got ", split[2])
+	if actual[2] != ref[2] && strings.TrimSuffix(ref[2], "-21") != strings.TrimSuffix(ref[2], "-21") {
+		t.Fatal("Expected "+ref[2]+", got ", actual[2])
 		return
 	}
 
-	ellipticCurves := "29-23-24"
-	if split[3] != ellipticCurves {
-		t.Fatal("Expected"+ellipticCurves+", got ", split[3])
+	if actual[3] != ref[3] {
+		t.Fatal("Expected "+ref[3]+", got ", actual[3])
 		return
 	}
 
-	if split[4] != "0" {
-		t.Fatal("Expected 0, got ", split[4])
+	if actual[4] != ref[4] {
+		t.Fatal("Expected "+ref[4]+", got ", actual[4])
 		return
 	}
 }

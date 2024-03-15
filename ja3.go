@@ -26,6 +26,8 @@ func DefaultTlsSpecifications(navigator string) *TlsSpecifications {
 	var signatureAlg []tls.SignatureScheme
 	var recordSizeLimit uint16
 
+	var supportedVersions []uint16
+
 	switch navigator {
 	case Firefox:
 		signatureAlg = []tls.SignatureScheme{
@@ -41,6 +43,11 @@ func DefaultTlsSpecifications(navigator string) *TlsSpecifications {
 			tls.ECDSAWithSHA1,
 			tls.PKCS1WithSHA1,
 		}
+		supportedVersions = []uint16{
+			tls.VersionTLS13,
+			tls.VersionTLS12,
+		}
+
 		recordSizeLimit = 0x4001
 	default:
 		signatureAlg = []tls.SignatureScheme{
@@ -53,15 +60,18 @@ func DefaultTlsSpecifications(navigator string) *TlsSpecifications {
 			tls.PSSWithSHA512,
 			tls.PKCS1WithSHA512,
 		}
+
+		supportedVersions = []uint16{
+			tls.GREASE_PLACEHOLDER,
+			tls.VersionTLS13,
+			tls.VersionTLS12,
+		}
 	}
 
 	return &TlsSpecifications{
-		AlpnProtocols:       []string{"h2", "http/1.1"},
-		SignatureAlgorithms: signatureAlg,
-		SupportedVersions: []uint16{
-			tls.VersionTLS13,
-			tls.VersionTLS12,
-		},
+		AlpnProtocols:        []string{"h2", "http/1.1"},
+		SignatureAlgorithms:  signatureAlg,
+		SupportedVersions:    supportedVersions,
 		CertCompressionAlgos: []tls.CertCompressionAlgo{tls.CertCompressionBrotli},
 		DelegatedCredentialsAlgorithmSignatures: []tls.SignatureScheme{ // only for firefox
 			tls.ECDSAWithP256AndSHA256,
@@ -173,6 +183,18 @@ func stringToSpec(ja3 string, specifications *TlsSpecifications, navigator strin
 	//extensions
 	if information[2] != "" {
 		extensions, _, maxVers, err = getExtensions(rawExtensions, specifications, pointFormats, curves, navigator)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if navigator == Chrome {
+			lastIndex := len(extensions) - 1
+			last := extensions[lastIndex]
+			extensions[lastIndex] = &tls.UtlsGREASEExtension{}
+			extensions = append(extensions, last)
+		}
+
 	} else {
 		extensions, _, maxVers, err = []tls.TLSExtension{}, 0, tls.VersionTLS13, nil
 		if information[3] != "" {
