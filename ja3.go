@@ -187,14 +187,6 @@ func stringToSpec(ja3 string, specifications *TlsSpecifications, navigator strin
 		if err != nil {
 			return nil, err
 		}
-
-		if navigator == Chrome {
-			lastIndex := len(extensions) - 1
-			last := extensions[lastIndex]
-			extensions[lastIndex] = &tls.UtlsGREASEExtension{}
-			extensions = append(extensions, last)
-		}
-
 	} else {
 		extensions, _, maxVers, err = []tls.TLSExtension{}, 0, tls.VersionTLS13, nil
 		if information[3] != "" {
@@ -482,6 +474,21 @@ func getExtensions(extensions []string, specifications *TlsSpecifications, defau
 
 		default:
 			return nil, 0, 0, errors.New("invalid extension : " + extension)
+		}
+	}
+
+	if navigator == Chrome {
+		lastIndex := len(extensions) - 1
+		last := extensions[lastIndex]
+
+		switch last {
+		case "21":
+			lastIndex := len(builtExtensions) - 1
+			last := builtExtensions[lastIndex]
+			builtExtensions[lastIndex] = &tls.UtlsGREASEExtension{}
+			builtExtensions = append(builtExtensions, last)
+		default:
+			builtExtensions = append(builtExtensions, &tls.UtlsGREASEExtension{})
 		}
 	}
 
