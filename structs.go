@@ -109,10 +109,12 @@ type Request struct {
 	HttpRequest *http.Request
 	Response    *Response
 
-	Method string // HTTP method, e.g., GET, POST.
+	// HTTP method, e.g., GET, POST.
+	Method string
 
-	Url       string
-	parsedUrl *url.URL // Parsed version of Url.
+	Url string
+	// Parsed version of Url.
+	parsedUrl *url.URL
 
 	Body any
 	body []byte
@@ -120,35 +122,40 @@ type Request struct {
 	PHeader        PHeader
 	OrderedHeaders OrderedHeaders
 
-	Header      http.Header // Headers for the request. Deprecated: Use OrderedHeaders instead.
-	HeaderOrder HeaderOrder // Order of headers for the request.
+	// Headers for the request. Deprecated: Use OrderedHeaders instead.
+	Header http.Header
+	// Order of headers for the request.
+	HeaderOrder HeaderOrder
 
-	conn *Conn // Connection associated with the request.
+	// Connection associated with the request.
+	conn *Conn
 
 	proxy   string
 	ua      string
 	browser string
 
-	DisableRedirects bool // If true, redirects won't be followed.
-	MaxRedirects     uint // Maximum number of redirects to follow.
+	// If true, redirects won't be followed.
+	DisableRedirects bool
+	// Maximum number of redirects to follow.
+	MaxRedirects uint
+	// If true, cookies won't be included in the request.
+	NoCookie bool
+	// Maximum time to wait for request to complete.
+	TimeOut time.Duration
+	// Indicates if the current request is a result of a redirection.
+	IsRedirected bool
+	// If true, server's certificate is not verified.
+	InsecureSkipVerify bool
 
-	NoCookie bool // If true, cookies won't be included in the request.
-
-	TimeOut time.Duration // Maximum time to wait for request to complete.
-
-	IsRedirected bool // Indicates if the current request is a result of a redirection.
-
-	InsecureSkipVerify bool // If true, server's certificate is not verified.
-
-	IgnoreBody bool // If true, the body of the response is not read.
-
-	Proto string
-
+	// If true, the body of the response is not read.
+	IgnoreBody bool
+	Proto      string
 	ForceHTTP1 bool
 
-	ContentLength int64 // Length of content in the request.
-
-	ctx context.Context // Context for cancellable and timeout operations.
+	// Length of content in the request.
+	ContentLength int64
+	// Context for cancellable and timeout operations.
+	ctx context.Context
 
 	startTime time.Time
 
@@ -159,28 +166,53 @@ type Request struct {
 // request. This includes status code, body, headers, cookies, associated
 // request details, TLS connection state, etc.
 type Response struct {
-	StatusCode int // HTTP status code, e.g., 200, 404.
+	// HTTP status code, e.g., 200, 404.
+	StatusCode int
 
-	Body       []byte            // Byte representation of the response body.
-	RawBody    io.ReadCloser     // Raw body stream.
-	Header     http.Header       // Response headers.
-	Cookies    map[string]string // Parsed cookies from the response.
-	Url        string            // URL from which the response was received.
-	IgnoreBody bool              // Indicates if the body of the response was ignored.
+	// HTTP status message, e.g., "OK", "Not Found".
+	Status string
 
-	HttpResponse *http.Response // The underlying HTTP response.
+	// Byte representation of the response body.
+	Body []byte
+	// Raw body stream.
+	RawBody io.ReadCloser
+	// Response headers.
+	Header http.Header
+	// Parsed cookies from the response.
+	Cookies map[string]string
+	// URL from which the response was received.
+	Url string
+	// Indicates if the body of the response was ignored.
+	IgnoreBody bool
 
-	Request *Request // Reference to the associated request.
-
-	ContentLength int64 // Length of content in the response.
+	// The underlying HTTP response.
+	HttpResponse *http.Response
+	// Reference to the associated request.
+	Request *Request
+	// Length of content in the response.
+	ContentLength int64
 }
 
+// Context represents the context of a request. It holds the session, request,
+// response, error, and other details associated with the request.
 type Context struct {
-	Session  *Session
-	Request  *Request
+	// Session is the session associated with the request.
+	Session *Session
+
+	// Request is the request being made.
+	Request *Request
+
+	// Response is the response received.
+	// It can be modified to change the response returned by the request.
 	Response *Response
 
+	// Err is the error, if any, that occurred during the request.
+	// It can be modified to change the error returned by the request.
 	Err error
 
+	// Ctx is the context associated with the request.
+	ctx context.Context
+
+	// RequestStartTime is the time when the request was started.
 	RequestStartTime time.Time
 }
