@@ -37,6 +37,8 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 	}
 
 	response.StatusCode = httpResponse.StatusCode
+	response.Status = httpResponse.Status
+
 	response.Header = headers
 
 	var u *url.URL

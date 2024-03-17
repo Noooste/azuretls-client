@@ -41,15 +41,15 @@ func (s *Session) prepareRequest(request *Request, args ...any) error {
 
 	s.fillEmptyValues(request)
 
-	if s.PreHook != nil {
-		return s.PreHook(request)
-	}
-
 	if s.PreHookWithContext != nil {
 		return s.PreHookWithContext(&Context{
 			Session: s,
 			Request: request,
 		})
+	}
+
+	if s.PreHook != nil {
+		return s.PreHook(request)
 	}
 
 	return nil
@@ -135,6 +135,12 @@ func newRequest(ctx context.Context, verbose bool, req *Request) (newReq *http.R
 	return
 }
 
+// SetContext sets the context for the request.
 func (r *Request) SetContext(ctx context.Context) {
 	r.ctx = ctx
+}
+
+// Context returns the context for the request.
+func (r *Request) Context() context.Context {
+	return r.ctx
 }

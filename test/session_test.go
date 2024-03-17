@@ -293,12 +293,21 @@ func TestSessionCallback(t *testing.T) {
 	}
 
 	session.CallbackWithContext = func(ctx *azuretls.Context) {
-		withContextCalled = ctx.Session == session && ctx.Request == req
+		withContextCalled = true
+		if ctx.Response.Url == "https://www.google.com" {
+			response, _ := session.Get("https://httpbin.org/get")
+			ctx.Response = response
+		}
 	}
 
-	_, err := session.Do(req)
+	response, err := session.Do(req)
 	if err != nil {
 		t.Fatal("TestSessionCallback failed, expected: nil, got: ", err)
+		return
+	}
+
+	if response.Url != "https://httpbin.org/get" {
+		t.Fatal("TestSessionCallback failed, expected: https://httpbin.org/get, got: ", response.Url)
 		return
 	}
 
@@ -309,6 +318,17 @@ func TestSessionCallback(t *testing.T) {
 
 	if !withContextCalled {
 		t.Fatal("TestSessionCallback failed, expected: called, got: ", withContextCalled)
+		return
+	}
+
+	session.CallbackWithContext = func(ctx *azuretls.Context) {
+		ctx.Err = errors.New("test")
+	}
+
+	_, err = session.Do(req)
+
+	if err == nil {
+		t.Fatal("TestSessionCallback failed, expected: error, got: nil")
 		return
 	}
 }
