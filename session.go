@@ -67,6 +67,10 @@ func (s *Session) SetContext(ctx context.Context) {
 	s.Connections.SetContext(ctx)
 }
 
+func (s *Session) Context() context.Context {
+	return s.ctx
+}
+
 // Ip returns the public IP address of the session
 func (s *Session) Ip() (ip string, err error) {
 	r, err := s.Get("https://api.ipify.org")
@@ -145,13 +149,21 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 		}
 
 		if s.CallbackWithContext != nil {
-			s.CallbackWithContext(&Context{
+			ctx := &Context{
 				Session:          s,
 				Request:          request,
 				Response:         response,
 				Err:              err,
 				RequestStartTime: request.startTime,
-			})
+			}
+
+			s.CallbackWithContext(ctx)
+
+			if ctx.Err != nil {
+				err = ctx.Err
+			}
+
+			response = ctx.Response
 		}
 	}()
 
@@ -455,6 +467,10 @@ func (s *Session) Connect(u string) error {
 	}, err)
 
 	return nil
+}
+
+func (c *Context) Context() context.Context {
+	return c.ctx
 }
 
 // Close closes the session and all its connections.
