@@ -159,10 +159,7 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 
 			s.CallbackWithContext(ctx)
 
-			if ctx.Err != nil {
-				err = ctx.Err
-			}
-
+			err = ctx.Err
 			response = ctx.Response
 		}
 	}()
