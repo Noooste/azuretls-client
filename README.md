@@ -503,9 +503,8 @@ You can use websocket with `session.NewWebsocket` method.
 session := azuretls.NewSession()
 defer session.Close()
 
-ws, err := session.NewWebsocket(&azuretls.Request{
-		Url: "wss://demo.piesocket.com/v3/channel_123?api_key=VCXCEuvhGcBDP7XhiJJUDvR1e1D3eiVjgZ9VRiaV&notify_self",
-		OrderedHeaders: azuretls.OrderedHeaders{
+ws, err := session.NewWebsocket("wss://demo.piesocket.com/v3/channel_123?api_key=VCXCEuvhGcBDP7XhiJJUDvR1e1D3eiVjgZ9VRiaV&notify_self", 1024, 1024,
+		azuretls.OrderedHeaders{
 			{"User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36"},
 		},
 })
