@@ -118,13 +118,16 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 		httpResponse *http.Response
 		roundTripper http.RoundTripper
 		rConn        *Conn
-		ctx          = request.HttpRequest.Context()
 		cancel       context.CancelFunc
 	)
 
 	if err = s.buildRequest(request.ctx, request); err != nil {
 		return nil, err
 	}
+
+	var (
+		ctx = request.HttpRequest.Context()
+	)
 
 	if request.deadline.IsZero() {
 		request.deadline = time.Now().Add(request.TimeOut)
