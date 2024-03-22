@@ -118,11 +118,16 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 		httpResponse *http.Response
 		roundTripper http.RoundTripper
 		rConn        *Conn
+		cancel       context.CancelFunc
 	)
 
 	if err = s.buildRequest(request.ctx, request); err != nil {
 		return nil, err
 	}
+
+	var (
+		ctx = request.HttpRequest.Context()
+	)
 
 	if request.deadline.IsZero() {
 		request.deadline = time.Now().Add(request.TimeOut)
@@ -149,18 +154,19 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 		}
 
 		if s.CallbackWithContext != nil {
-			ctx := &Context{
+			c := &Context{
 				Session:          s,
 				Request:          request,
 				Response:         response,
 				Err:              err,
+				ctx:              request.HttpRequest.Context(),
 				RequestStartTime: request.startTime,
 			}
 
-			s.CallbackWithContext(ctx)
+			s.CallbackWithContext(c)
 
-			err = ctx.Err
-			response = ctx.Response
+			err = c.Err
+			response = c.Response
 		}
 	}()
 
@@ -189,7 +195,7 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 
 			s.logRequest(request)
 
-			ctx, cancel := context.WithDeadline(request.HttpRequest.Context(), request.deadline)
+			ctx, cancel = context.WithDeadline(request.HttpRequest.Context(), request.deadline)
 
 			if !request.IgnoreBody {
 				request.HttpRequest = request.HttpRequest.WithContext(ctx)
