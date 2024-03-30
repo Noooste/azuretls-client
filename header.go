@@ -23,6 +23,10 @@ func GetDefaultPseudoHeaders() PHeader {
 
 // Clone returns a copy of the header.
 func (oh *OrderedHeaders) Clone() OrderedHeaders {
+	if oh == nil {
+		return nil
+	}
+
 	var clone = make(OrderedHeaders, 0, len(*oh))
 
 	for _, header := range *oh {
