@@ -55,17 +55,34 @@ func (s *Session) prepareRequest(request *Request, args ...any) error {
 	return nil
 }
 
-func (s *Session) fillEmptyValues(request *Request) {
+func (s *Session) fillHeaders(request *Request) {
 	if request.OrderedHeaders == nil {
 		if s.OrderedHeaders != nil && len(s.OrderedHeaders) > 0 {
 			request.OrderedHeaders = s.OrderedHeaders.Clone()
-		} else if s.Header != nil && len(s.Header) > 0 {
-			request.Header = s.Header.Clone()
-			request.HeaderOrder = s.HeaderOrder
-		} else {
-			request.OrderedHeaders = make(OrderedHeaders, 0)
+			return
+		}
+
+		if request.Header == nil {
+			if s.Header != nil {
+				request.Header = s.Header.Clone()
+			} else {
+				request.Header = make(http.Header)
+			}
+		}
+
+		if request.HeaderOrder == nil {
+			if s.HeaderOrder != nil && len(s.HeaderOrder) > 0 {
+				request.HeaderOrder = make(HeaderOrder, len(s.HeaderOrder))
+				copy(request.HeaderOrder, s.HeaderOrder)
+			} else {
+				request.HeaderOrder = make(HeaderOrder, 0)
+			}
 		}
 	}
+}
+
+func (s *Session) fillEmptyValues(request *Request) {
+	s.fillHeaders(request)
 
 	if request.TimeOut == 0 {
 		request.TimeOut = s.TimeOut
