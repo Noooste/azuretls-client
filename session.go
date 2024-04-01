@@ -308,9 +308,10 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 				deadline:           oldReq.deadline,
 			}
 
+			err = s.prepareRequest(req, args...)
+
 			copyHeaders(req)
 
-			err = s.prepareRequest(req, args...)
 			if err != nil {
 				return
 			}
@@ -341,6 +342,8 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 		if resp, err = s.send(req); err != nil {
 			return nil, err
 		}
+
+		req.Response = resp
 
 		if req.DisableRedirects {
 			req.CloseBody()
