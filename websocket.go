@@ -90,9 +90,10 @@ func (s *Session) NewWebsocketWithContext(ctx context.Context, url string, readB
 	}
 
 	ws.dialer = &websocket.Dialer{
-		HandshakeTimeout: s.TimeOut,
-		ReadBufferSize:   readBufferSize,
-		WriteBufferSize:  writeBufferSize,
+		HandshakeTimeout:  s.TimeOut,
+		ReadBufferSize:    readBufferSize,
+		WriteBufferSize:   writeBufferSize,
+		EnableCompression: true,
 	}
 
 	ws.dialer.Jar = s.CookieJar
