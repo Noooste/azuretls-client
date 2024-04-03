@@ -118,19 +118,10 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 		httpResponse *http.Response
 		roundTripper http.RoundTripper
 		rConn        *Conn
-		cancel       context.CancelFunc
 	)
 
 	if err = s.buildRequest(request.ctx, request); err != nil {
 		return nil, err
-	}
-
-	var (
-		ctx = request.HttpRequest.Context()
-	)
-
-	if request.deadline.IsZero() {
-		request.deadline = time.Now().Add(request.TimeOut)
 	}
 
 	request.parsedUrl = request.HttpRequest.URL
@@ -159,7 +150,7 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 				Request:          request,
 				Response:         response,
 				Err:              err,
-				ctx:              request.HttpRequest.Context(),
+				ctx:              s.ctx,
 				RequestStartTime: request.startTime,
 			}
 
@@ -195,17 +186,13 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 
 			s.logRequest(request)
 
-			ctx, cancel = context.WithDeadline(request.HttpRequest.Context(), request.deadline)
-
 			if !request.IgnoreBody {
-				request.HttpRequest = request.HttpRequest.WithContext(ctx)
+				request.HttpRequest = request.HttpRequest.WithContext(request.ctx)
 			}
 
 			httpResponse, err = roundTripper.RoundTrip(request.HttpRequest)
 
 			if err != nil {
-				cancel()
-
 				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 					err = fmt.Errorf("timeout")
 				}
@@ -218,7 +205,6 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 
 			if err = s.buildResponse(response, httpResponse); err != nil {
 				_ = httpResponse.Body.Close()
-				cancel()
 
 				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 					err = fmt.Errorf("read body: timeout")
@@ -229,7 +215,6 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 
 			s.dumpRequest(request, response, err)
 			s.logResponse(response, err)
-			cancel()
 
 			if err != nil {
 				return nil, err
@@ -266,6 +251,15 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 	if req.ctx == nil {
 		req.ctx = s.ctx
 	}
+
+	if req.deadline.IsZero() {
+		req.deadline = time.Now().Add(req.TimeOut)
+	}
+
+	var cancel context.CancelFunc
+	req.ctx, cancel = context.WithDeadline(req.ctx, req.deadline)
+
+	defer cancel()
 
 	var reqs = make([]*Request, 0, req.MaxRedirects+1)
 

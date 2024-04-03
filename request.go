@@ -30,11 +30,13 @@ func (s *Session) prepareRequest(request *Request, args ...any) error {
 			request.HeaderOrder = arg.(HeaderOrder)
 		case time.Duration:
 			request.TimeOut = arg.(time.Duration)
+		case context.Context:
+			request.ctx = arg.(context.Context)
+
 		default:
 			if request.Body != nil {
 				return errors.New("ambiguous argument, multiple body detected")
 			}
-
 			request.Body = arg
 		}
 	}

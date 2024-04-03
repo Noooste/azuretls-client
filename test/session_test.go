@@ -626,6 +626,30 @@ func TestSession_Context(t *testing.T) {
 	time.Sleep(1 * time.Second)
 }
 
+func TestSession_ContextError(t *testing.T) {
+	exampleContext, ca := context.WithCancel(context.Background())
+	defer ca()
+
+	session := azuretls.NewSessionWithContext(exampleContext)
+
+	session.CallbackWithContext = func(ctx *azuretls.Context) {
+		exampleContextFromCtx := ctx.Context()
+		if exampleContextFromCtx == exampleContext {
+			fmt.Println("match")
+		} else {
+			fmt.Println("no match")
+			session1 := azuretls.NewSessionWithContext(exampleContextFromCtx)
+			_, err := session1.Get("https://httpbin.org/headers")
+
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
+
+	_, _ = session.Get("https://httpbin.org/headers")
+}
+
 func TestSession_Timeout(t *testing.T) {
 	session := azuretls.NewSession()
 	defer session.Close()
