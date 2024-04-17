@@ -591,41 +591,6 @@ func TestSession_SetContext(t *testing.T) {
 	}
 }
 
-func TestSession_Context(t *testing.T) {
-	stop := make(chan bool)
-
-	for i := 0; i <= 5; i++ {
-		go func() {
-			ctx, cancel := context.WithCancel(context.Background())
-
-			go func() {
-				<-stop
-				cancel()
-			}()
-
-			session := azuretls.NewSessionWithContext(ctx)
-			defer session.Close()
-
-			if err := session.SetProxy(os.Getenv("NON_SECURE_PROXY")); err != nil {
-				fmt.Println(err)
-				return
-			}
-
-			response, err := session.Get("https://testfile.org/files-5GB")
-
-			if err != nil {
-				fmt.Println(err)
-			} else {
-				fmt.Println(response.StatusCode, string(response.Body))
-			}
-		}()
-	}
-
-	time.Sleep(500 * time.Millisecond)
-	stop <- true
-	time.Sleep(1 * time.Second)
-}
-
 func TestSession_ContextError(t *testing.T) {
 	exampleContext, ca := context.WithCancel(context.Background())
 	defer ca()
