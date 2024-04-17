@@ -192,7 +192,7 @@ func (s *Session) makeHeadersCopier(ireq *Request) func(*Request) {
 		icookies map[string][]*http.Cookie
 	)
 
-	if s.CookieJar != nil && ireq.Header.Get("Cookie") != "" {
+	if s.CookieJar != nil && ireq.HttpRequest != nil && ireq.Header.Get("Cookie") != "" {
 		icookies = make(map[string][]*http.Cookie)
 		for _, c := range ireq.HttpRequest.Cookies() {
 			icookies[c.Name] = append(icookies[c.Name], c)

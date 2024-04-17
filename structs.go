@@ -148,6 +148,8 @@ type Request struct {
 	InsecureSkipVerify bool
 
 	// If true, the body of the response is not read.
+	// The response body can be read from Response.RawBody and
+	// you will have to close using Response.CloseBody manually.
 	IgnoreBody bool
 	Proto      string
 	ForceHTTP1 bool
