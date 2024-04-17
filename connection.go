@@ -371,17 +371,22 @@ func (c *Conn) NewTLS(addr string) (err error) {
 		ServerName:         hostname,
 		InsecureSkipVerify: c.InsecureSkipVerify,
 		VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
-			if c.PinManager == nil {
-				return nil
+			if c.PinManager != nil {
+				for _, chain := range verifiedChains {
+					for _, cert := range chain {
+						if c.PinManager.Verify(cert) {
+							return nil
+						}
+					}
+				}
+
+				return errors.New("pin verification failed")
 			}
 
 			now := time.Now()
+
 			for _, chain := range verifiedChains {
 				for _, cert := range chain {
-					if c.PinManager.Verify(cert) {
-						return nil
-					}
-
 					if now.Before(cert.NotBefore) {
 						return errors.New("certificate is not valid yet")
 					}
@@ -400,7 +405,7 @@ func (c *Conn) NewTLS(addr string) (err error) {
 				}
 			}
 
-			return errors.New("pin verification failed")
+			return nil
 		},
 	}
 

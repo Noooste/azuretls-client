@@ -257,9 +257,27 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 	}
 
 	var cancel context.CancelFunc
-	req.ctx, cancel = context.WithDeadline(req.ctx, req.deadline)
 
-	defer cancel()
+	if !req.IgnoreBody {
+		req.ctx, cancel = context.WithDeadline(req.ctx, req.deadline)
+	}
+
+	defer func() {
+		if cancel != nil {
+			cancel()
+		}
+	}()
+
+	if req.DisableRedirects {
+		req.startTime = time.Now()
+		resp, err = s.send(req)
+		if err != nil {
+			return
+		}
+		req.CloseBody()
+		req.Response = resp
+		return
+	}
 
 	var reqs = make([]*Request, 0, req.MaxRedirects+1)
 
@@ -274,6 +292,10 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 		// For all but the first request, create the next
 		// request hop and replace req.
 		if len(reqs) > 0 {
+			if resp == nil {
+				return nil, errors.New("internal error: nil response")
+			}
+
 			loc := resp.Header.Get("Location")
 			if loc == "" {
 				_ = resp.CloseBody()
@@ -338,11 +360,6 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 		}
 
 		req.Response = resp
-
-		if req.DisableRedirects {
-			req.CloseBody()
-			return resp, nil
-		}
 
 		var shouldRedirect bool
 

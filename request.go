@@ -101,7 +101,9 @@ func (s *Session) fillEmptyValues(request *Request) {
 		request.MaxRedirects = s.MaxRedirects
 	}
 
-	request.InsecureSkipVerify = s.InsecureSkipVerify
+	if !request.InsecureSkipVerify {
+		request.InsecureSkipVerify = s.InsecureSkipVerify
+	}
 }
 
 func (s *Session) buildRequest(ctx context.Context, req *Request) (err error) {

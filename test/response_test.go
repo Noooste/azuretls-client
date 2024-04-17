@@ -11,7 +11,7 @@ func TestResponse_CloseBody(t *testing.T) {
 	session := azuretls.NewSession()
 
 	response, err := session.Do(&azuretls.Request{
-		Method:     "GET",
+		Method:     http.MethodGet,
 		Url:        "https://tls.peet.ws/api/all",
 		IgnoreBody: true,
 	})
@@ -21,7 +21,7 @@ func TestResponse_CloseBody(t *testing.T) {
 	}
 
 	if _, err = io.ReadAll(response.RawBody); err != nil {
-		t.Fatal("TestResponse_CloseBody failed, expected: nil, got: ", err)
+		t.Fatal("TestResponse_ReadAll failed, expected: nil, got: ", err)
 	}
 
 	if err = response.CloseBody(); err != nil {
