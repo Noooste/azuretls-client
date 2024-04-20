@@ -172,12 +172,7 @@ func (c *Conn) makeTLS(addr string) error {
 	if c.checkTLS() {
 		return nil
 	}
-
-	if c.TLS == nil {
-		return c.NewTLS(addr)
-	}
-
-	return nil
+	return c.NewTLS(addr)
 }
 
 func (c *Conn) checkTLS() bool {
@@ -191,8 +186,13 @@ func (c *Conn) checkTLS() bool {
 				return false
 			}
 		}
+	} else if c.Conn == nil {
+		return false
 	}
-
+	_, ok := c.Conn.(*net.TCPConn)
+	if !ok { // if the connection is dead
+		return false
+	}
 	return true
 }
 
