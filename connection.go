@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/Noooste/fhttp/http2"
 	tls "github.com/Noooste/utls"
+	"io"
 	"net"
 	"net/url"
 	"strings"
@@ -188,9 +189,33 @@ func (c *Conn) checkTLS() bool {
 		}
 	} else if c.Conn == nil {
 		return false
+	} else if !c.isActive() {
+		return false
 	}
 	_, ok := c.Conn.(*net.TCPConn)
 	if !ok { // if the connection is dead
+		return false
+	}
+	return true
+}
+
+func (c *Conn) isActive() bool {
+	var buf [1]byte
+	err := c.Conn.SetReadDeadline(time.Now().Add(1 * time.Millisecond)) // Set immediate timeout
+	if err != nil {
+		return false
+	}
+	if _, err := c.Conn.Read(buf[:]); err != nil {
+		if err == io.EOF {
+			return false // Connection closed by the server
+		}
+		var nerr net.Error
+		if errors.As(err, &nerr) && !nerr.Timeout() { // If it's not a timeout error, the connection is not alive
+			return false // Network error or other non-timeout error
+		}
+	}
+	err = c.Conn.SetReadDeadline(time.Time{}) // Reset the deadline
+	if err != nil {
 		return false
 	}
 	return true
