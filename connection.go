@@ -169,14 +169,14 @@ func (cp *ConnPool) Remove(u *url.URL) {
 	}
 }
 
-func (c *Conn) makeTLS(addr string) error {
-	if c.checkTLS() {
+func (c *Conn) makeTLS(isHTTPorS bool, addr string) error {
+	if c.checkTLS(isHTTPorS) {
 		return nil
 	}
 	return c.NewTLS(addr)
 }
 
-func (c *Conn) checkTLS() bool {
+func (c *Conn) checkTLS(isHTTPorS bool) bool {
 	if c.TLS == nil {
 		return false
 	} else if c.TLS.ConnectionState().VerifiedChains != nil {
@@ -189,7 +189,7 @@ func (c *Conn) checkTLS() bool {
 		}
 	} else if c.Conn == nil {
 		return false
-	} else if !c.isActive() {
+	} else if isHTTPorS && !c.isActive() {
 		return false
 	}
 	_, ok := c.Conn.(*net.TCPConn)
@@ -335,7 +335,8 @@ func (s *Session) initConn(req *Request) (conn *Conn, err error) {
 	conn.mu.Lock()
 	defer conn.mu.Unlock()
 
-	if conn.Conn == nil || !conn.checkTLS() { //no "use of closed network connection" ERROR after add this
+	isHttpOrHttpsScheme := req.parsedUrl.Scheme == SchemeHttps || req.parsedUrl.Scheme == SchemeHttp
+	if conn.Conn == nil || !conn.checkTLS(isHttpOrHttpsScheme) { //no "use of closed network connection" ERROR after add this
 		if s.ProxyDialer != nil {
 			if err = s.getProxyConn(req, conn, host); err != nil {
 				return nil, err
@@ -354,7 +355,7 @@ func (s *Session) initConn(req *Request) (conn *Conn, err error) {
 
 	case SchemeHttps, SchemeWss:
 		// for secured http we need to make tls connection first
-		if err = conn.makeTLS(host); err != nil {
+		if err = conn.makeTLS(isHttpOrHttpsScheme, host); err != nil {
 			conn.Close()
 			return
 
