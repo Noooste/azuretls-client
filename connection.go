@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/Noooste/fhttp/http2"
 	tls "github.com/Noooste/utls"
+	"io"
 	"net"
 	"net/url"
 	"strings"
@@ -168,14 +169,14 @@ func (cp *ConnPool) Remove(u *url.URL) {
 	}
 }
 
-func (c *Conn) makeTLS(addr string) error {
-	if c.checkTLS() {
+func (c *Conn) makeTLS(isHTTPorS bool, addr string) error {
+	if c.checkTLS(isHTTPorS) {
 		return nil
 	}
 	return c.NewTLS(addr)
 }
 
-func (c *Conn) checkTLS() bool {
+func (c *Conn) checkTLS(isHTTPorS bool) bool {
 	if c.TLS == nil {
 		return false
 	} else if c.TLS.ConnectionState().VerifiedChains != nil {
@@ -188,9 +189,33 @@ func (c *Conn) checkTLS() bool {
 		}
 	} else if c.Conn == nil {
 		return false
+	} else if isHTTPorS && !c.isActive() {
+		return false
 	}
 	_, ok := c.Conn.(*net.TCPConn)
 	if !ok { // if the connection is dead
+		return false
+	}
+	return true
+}
+
+func (c *Conn) isActive() bool {
+	var buf [1]byte
+	err := c.Conn.SetReadDeadline(time.Now().Add(1 * time.Millisecond)) // Set immediate timeout
+	if err != nil {
+		return false
+	}
+	if _, err := c.Conn.Read(buf[:]); err != nil {
+		if err == io.EOF {
+			return false // Connection closed by the server
+		}
+		var nerr net.Error
+		if errors.As(err, &nerr) && !nerr.Timeout() { // If it's not a timeout error, the connection is not alive
+			return false // Network error or other non-timeout error
+		}
+	}
+	err = c.Conn.SetReadDeadline(time.Time{}) // Reset the deadline
+	if err != nil {
 		return false
 	}
 	return true
@@ -310,7 +335,8 @@ func (s *Session) initConn(req *Request) (conn *Conn, err error) {
 	conn.mu.Lock()
 	defer conn.mu.Unlock()
 
-	if conn.Conn == nil || !conn.checkTLS() { //no "use of closed network connection" ERROR after add this
+	isHttpOrHttpsScheme := req.parsedUrl.Scheme == SchemeHttps || req.parsedUrl.Scheme == SchemeHttp
+	if conn.Conn == nil || !conn.checkTLS(isHttpOrHttpsScheme) { //no "use of closed network connection" ERROR after add this
 		if s.ProxyDialer != nil {
 			if err = s.getProxyConn(req, conn, host); err != nil {
 				return nil, err
@@ -329,7 +355,7 @@ func (s *Session) initConn(req *Request) (conn *Conn, err error) {
 
 	case SchemeHttps, SchemeWss:
 		// for secured http we need to make tls connection first
-		if err = conn.makeTLS(host); err != nil {
+		if err = conn.makeTLS(isHttpOrHttpsScheme, host); err != nil {
 			conn.Close()
 			return
 
