@@ -4,19 +4,30 @@ import (
 	"fmt"
 	http "github.com/Noooste/fhttp"
 	"github.com/fatih/color"
+	"net/url"
+	"regexp"
 	"strings"
 	"time"
 )
 
 // Log will print the request and response to the console
 //
-// ignore (optional) is a list of uris to ignore,
+// uris (optional) is a list of uris to ignore,
 // if ignore is empty, all uris will be logged
-func (s *Session) Log(ignore ...string) {
+func (s *Session) Log(uris ...string) {
 	s.logging = true
 
-	s.loggingIgnore = make([]string, 0, len(ignore))
-	s.loggingIgnore = append(s.loggingIgnore, ignore...)
+	s.loggingIgnore = make([]*regexp.Regexp, 0, len(uris))
+
+	for _, v := range uris {
+		s.loggingIgnore = append(s.loggingIgnore, regexp.MustCompile(
+			fmt.Sprintf(".*%s.*",
+				strings.ReplaceAll(
+					replaceNonAlphaNumeric(v), "*\\.", ".*\\.?",
+				),
+			),
+		))
+	}
 }
 
 // DisableLog will disable request and response logging
@@ -27,6 +38,17 @@ func (s *Session) DisableLog() {
 // EnableLog will enable request and response logging
 func (s *Session) EnableLog() {
 	s.logging = true
+}
+
+// LogIgnore will check if the given uri is ignored from dumping
+func (s *Session) LogIgnore(uri string) bool {
+	parsed, err := url.Parse(uri)
+
+	if err != nil {
+		return false
+	}
+
+	return s.urlMatch(parsed, s.loggingIgnore)
 }
 
 var colorMethodMap = map[string]*color.Color{
@@ -49,7 +71,7 @@ func centerString(s string, width int) string {
 }
 
 func (s *Session) logRequest(request *Request) {
-	if !s.logging {
+	if !s.logging || s.urlMatch(request.parsedUrl, s.loggingIgnore) {
 		return
 	}
 
@@ -77,7 +99,7 @@ func getColorStatus(status int) *color.Color {
 }
 
 func (s *Session) logResponse(response *Response, err error) {
-	if !s.logging {
+	if !s.logging || s.urlMatch(response.Request.parsedUrl, s.loggingIgnore) {
 		return
 	}
 

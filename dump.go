@@ -94,50 +94,52 @@ func (s *Session) dumpRequest(request *Request, response *Response, err error) {
 		return
 	}
 
-	if !s.urlMatch(request.parsedUrl, s.dumpIgnore) {
-		reqUrl := request.parsedUrl.Path
-		if reqUrl == "" {
-			reqUrl = "/"
-		}
+	if s.urlMatch(request.parsedUrl, s.dumpIgnore) {
+		return
+	}
 
-		if reqUrl[len(reqUrl)-1] == '/' {
-			reqUrl += "index.html"
-		}
+	reqUrl := request.parsedUrl.Path
+	if reqUrl == "" {
+		reqUrl = "/"
+	}
 
-		pathSplit := strings.Split(reqUrl, "/")
-		length := len(pathSplit)
+	if reqUrl[len(reqUrl)-1] == '/' {
+		reqUrl += "index.html"
+	}
 
-		for i := 0; i < length; i++ {
-			pathSplit[i] = url.PathEscape(pathSplit[i])
-		}
+	pathSplit := strings.Split(reqUrl, "/")
+	length := len(pathSplit)
 
-		folderPath := path.Join(s.dumpDir, request.parsedUrl.Hostname(), strings.Join(pathSplit[:length-1], "/"))
+	for i := 0; i < length; i++ {
+		pathSplit[i] = url.PathEscape(pathSplit[i])
+	}
 
-		_ = os.MkdirAll(folderPath, 0755)
+	folderPath := path.Join(s.dumpDir, request.parsedUrl.Hostname(), strings.Join(pathSplit[:length-1], "/"))
 
-		fileName := path.Join(folderPath, pathSplit[length-1])
+	_ = os.MkdirAll(folderPath, 0755)
 
-		iter := 1
-		for _, err2 := os.ReadFile(fileName); err2 == nil; _, err2 = os.ReadFile(fileName) {
-			fileName = path.Join(folderPath, pathSplit[length-1]+fmt.Sprintf(" (%d)", iter))
-			iter++
-		}
+	fileName := path.Join(folderPath, pathSplit[length-1])
 
-		request.proxy = s.Proxy
-		requestPart := request.toString()
+	iter := 1
+	for _, err2 := os.ReadFile(fileName); err2 == nil; _, err2 = os.ReadFile(fileName) {
+		fileName = path.Join(folderPath, pathSplit[length-1]+fmt.Sprintf(" (%d)", iter))
+		iter++
+	}
 
-		var responsePart string
-		if response != nil {
-			responsePart = response.toString()
-		} else {
-			responsePart = "error : " + err.Error()
-		}
+	request.proxy = s.Proxy
+	requestPart := request.toString()
 
-		if err2 := os.WriteFile(fileName, []byte(fmt.Sprintf(
-			"%s\n\n%s\n\n\n%s", requestPart, strings.Repeat("=", 80), responsePart,
-		)), 0755); err2 != nil {
-			return
-		}
+	var responsePart string
+	if response != nil {
+		responsePart = response.toString()
+	} else {
+		responsePart = "error : " + err.Error()
+	}
+
+	if err2 := os.WriteFile(fileName, []byte(fmt.Sprintf(
+		"%s\n\n%s\n\n\n%s", requestPart, strings.Repeat("=", 80), responsePart,
+	)), 0755); err2 != nil {
+		return
 	}
 }
 
