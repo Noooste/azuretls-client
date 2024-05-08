@@ -62,7 +62,7 @@ type Session struct {
 	dumpIgnore []*regexp.Regexp
 
 	logging       bool
-	loggingIgnore []string
+	loggingIgnore []*regexp.Regexp
 
 	// If true, print detailed logs or debugging information. Deprecated: Use Dump instead.
 	Verbose bool
