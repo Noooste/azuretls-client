@@ -137,7 +137,7 @@ func ExampleSession_Log() {
 	session.Log("/any/path/to/ignore", "can.ignore.this", "*.all.subdomains")
 
 	session.Get("https://www.google.com")
-
+	session.Get("https://www.google.com/any/path/to/ignore")
 }
 
 func ExampleSession_SetProxy() {
