@@ -210,7 +210,7 @@ To modify your ClientHello, you have two options:
 - The first one is to use the `session.ApplyJA3` method, which takes a JA3 fingerprint and the target browser (chrome, firefox, safari, ...).
 - The second one is to assign a method to `session.GetClientHelloSpec` that returns TLS configuration.
 
-You can retrieve your JA3 fingerprint there : [https://tls.peet.ws/api/all](https://tls.peet.ws/api/all)
+You can retrieve your JA3 fingerprint there : [tls.peet.ws](https://tls.peet.ws/)
 
 ```go
 session := azuretls.NewSession()
@@ -238,7 +238,7 @@ fmt.Println(response.StatusCode, string(response.Body))
 ### Modify HTTP2
 
 To modify HTTP2, you have to apply the HTTP2 fingerprint to the session. 
-You can retrieve your HTTP/2 fingerprint there : [https://tls.peet.ws/api/all](https://tls.peet.ws/api/all)
+You can retrieve your HTTP/2 fingerprint there : [tls.peet.ws](https://tls.peet.ws/)
 ```go
 session := azuretls.NewSession()
 defer session.Close()
