@@ -12,6 +12,7 @@ func GetLastChromeVersion() *tls.ClientHelloSpec {
 		&tls.UtlsGREASEExtension{},
 		&tls.KeyShareExtension{KeyShares: []tls.KeyShare{
 			{Group: tls.CurveID(tls.GREASE_PLACEHOLDER), Data: []byte{0}},
+			{Group: tls.X25519Kyber768Draft00},
 			{Group: tls.X25519},
 		}},
 		&tls.ALPNExtension{AlpnProtocols: []string{
@@ -47,6 +48,7 @@ func GetLastChromeVersion() *tls.ClientHelloSpec {
 		}},
 		&tls.SupportedCurvesExtension{Curves: []tls.CurveID{
 			tls.GREASE_PLACEHOLDER,
+			tls.X25519Kyber768Draft00,
 			tls.X25519,
 			tls.CurveP256,
 			tls.CurveP384,
@@ -76,15 +78,15 @@ func GetLastChromeVersion() *tls.ClientHelloSpec {
 	return &tls.ClientHelloSpec{
 		CipherSuites: []uint16{
 			tls.GREASE_PLACEHOLDER,
+			tls.TLS_CHACHA20_POLY1305_SHA256,
 			tls.TLS_AES_128_GCM_SHA256,
 			tls.TLS_AES_256_GCM_SHA384,
-			tls.TLS_CHACHA20_POLY1305_SHA256,
+			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
 			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
 			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
 			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
 			tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
