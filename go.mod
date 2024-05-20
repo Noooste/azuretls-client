@@ -6,7 +6,7 @@ require (
 	github.com/Noooste/fhttp v1.0.12
 	github.com/Noooste/utls v1.2.9
 	github.com/Noooste/websocket v1.0.3
-	github.com/fatih/color v1.16.0
+	github.com/fatih/color v1.17.0
 	golang.org/x/net v0.25.0
 )
 
