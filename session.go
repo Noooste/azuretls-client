@@ -284,11 +284,11 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 	var (
 		redirectMethod string
 		includeBody    bool
-		copyHeaders    = s.makeHeadersCopier(req)
 	)
 
 	var i uint
-	for i = 0; i < req.MaxRedirects; i++ {
+	var ireq = req
+	for i = 0; i < ireq.MaxRedirects; i++ {
 		// For all but the first request, create the next
 		// request hop and replace req.
 		if len(reqs) > 0 {
@@ -324,31 +324,38 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 				deadline:           oldReq.deadline,
 			}
 
-			err = s.prepareRequest(req, args...)
-
-			copyHeaders(req)
-
-			if err != nil {
-				return
+			// Add the Referer header from the first
+			// request URL to the new one, if it's not https->http:
+			if ref := RefererForURL(ireq.parsedUrl, req.parsedUrl); ref != "" {
+				req.OrderedHeaders.Set("Referer", ref)
 			}
 
-			oldRequest := reqs[0]
-
-			if includeBody && oldRequest.Body != nil {
-				req.Body = oldRequest.Body
-				req.ContentLength = oldRequest.ContentLength
-				req.OrderedHeaders.Set("content-length", strconv.Itoa(int(req.ContentLength)))
+			if includeBody && ireq.Body != nil {
+				req.Body = ireq.Body
+				req.ContentLength = ireq.ContentLength
+				req.OrderedHeaders.Set("Content-Length", strconv.Itoa(int(req.ContentLength)))
 			} else {
 				req.ContentLength = 0
-				req.OrderedHeaders.Del("content-length")
-				req.OrderedHeaders.Del("content-type")
+				req.OrderedHeaders.Del("Content-Length")
+				req.OrderedHeaders.Del("Content-Type")
 			}
 
-			// Add the Referer header from the most recent
-			// request URL to the new one, if it's not https->http:
-			if ref := RefererForURL(reqs[len(reqs)-1].parsedUrl, req.parsedUrl); ref != "" {
-				req.OrderedHeaders.Set("referer", ref)
+			if s.PreHookWithContext != nil {
+				if err = s.PreHookWithContext(&Context{
+					Session: s,
+					Request: req,
+				}); err != nil {
+					return nil, err
+				}
 			}
+
+			if s.PreHook != nil {
+				if err = s.PreHook(req); err != nil {
+					return nil, err
+				}
+			}
+
+			s.fillEmptyValues(req)
 		}
 
 		reqs = append(reqs, req)
@@ -372,8 +379,8 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 		if redirectMethod == http.MethodGet {
 			req.Body = nil
 			req.ContentLength = 0
-			req.OrderedHeaders.Del("content-length")
-			req.OrderedHeaders.Del("content-type")
+			req.OrderedHeaders.Del("Content-Length")
+			req.OrderedHeaders.Del("Content-Type")
 		}
 
 		req.CloseBody()

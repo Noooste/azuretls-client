@@ -151,6 +151,8 @@ func TestHeaderAndOrderInParamWithRedirect(t *testing.T) {
 	session := azuretls.NewSession()
 	defer session.Close()
 
+	session.Log()
+
 	orders := azuretls.HeaderOrder{"cache-control", "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform", "upgrade-insecure-requests", "user-agent", "accept", "sec-fetch-site", "sec-fetch-mode", "sec-fetch-user", "sec-fetch-dest", "accept-encoding", "accept-language"}
 	headers := http.Header{
 		"accept":                    {"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"},
