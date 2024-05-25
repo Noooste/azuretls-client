@@ -205,15 +205,17 @@ func (c *Conn) isActive() bool {
 	if err != nil {
 		return false
 	}
-	if _, err := c.Conn.Read(buf[:]); err != nil {
+	if _, err = c.Conn.Read(buf[:]); err != nil {
 		if err == io.EOF {
 			return false // Connection closed by the server
 		}
+
 		var nerr net.Error
 		if errors.As(err, &nerr) && !nerr.Timeout() { // If it's not a timeout error, the connection is not alive
 			return false // Network error or other non-timeout error
 		}
 	}
+
 	err = c.Conn.SetReadDeadline(time.Time{}) // Reset the deadline
 	if err != nil {
 		return false

@@ -3,7 +3,6 @@ package azuretls
 import (
 	http "github.com/Noooste/fhttp"
 	"net/url"
-	"sort"
 	"strings"
 )
 
@@ -43,8 +42,9 @@ func (oh *OrderedHeaders) Clone() OrderedHeaders {
 // Add adds the value to the field.
 // It appends to any existing values associated with the field.
 func (oh *OrderedHeaders) Add(field string, value ...string) {
+	field = http.CanonicalHeaderKey(field)
 	for i, c := range *oh {
-		if c[0] == field {
+		if http.CanonicalHeaderKey(c[0]) == field {
 			(*oh)[i] = append((*oh)[i], value...)
 		}
 	}
@@ -53,9 +53,10 @@ func (oh *OrderedHeaders) Add(field string, value ...string) {
 // Set sets the field to the given value.
 // It replaces any existing values associated with the field.
 func (oh *OrderedHeaders) Set(field string, value ...string) {
+	field = http.CanonicalHeaderKey(field)
 	newList := append([]string{field}, value...)
 	for i, c := range *oh {
-		if c[0] == field {
+		if http.CanonicalHeaderKey(c[0]) == field {
 			(*oh)[i] = newList
 			return
 		}
@@ -66,8 +67,9 @@ func (oh *OrderedHeaders) Set(field string, value ...string) {
 // Get returns the first value associated with the given field.
 // If the field is not present, it returns an empty string.
 func (oh *OrderedHeaders) Get(field string) string {
+	field = http.CanonicalHeaderKey(field)
 	for _, c := range *oh {
-		if c[0] == field {
+		if http.CanonicalHeaderKey(c[0]) == field {
 			return strings.Join(c[1:], "; ")
 		}
 	}
@@ -79,15 +81,16 @@ func (oh *OrderedHeaders) Get(field string) string {
 // If the field is not present, it does nothing.
 // Deprecated: Use Del instead.
 func (oh *OrderedHeaders) Remove(field string) OrderedHeaders {
-	return oh.Del(field)
+	return oh.Del(http.CanonicalHeaderKey(field))
 }
 
 // Del removes the first instance of the field from the header.
 // If the field is not present, it does nothing.
 func (oh *OrderedHeaders) Del(field string) OrderedHeaders {
 	var index = -1
+	field = http.CanonicalHeaderKey(field)
 	for i := 0; i < len(*oh); i++ {
-		if (*oh)[i][0] == field {
+		if http.CanonicalHeaderKey((*oh)[i][0]) == field {
 			index = i
 		}
 	}
@@ -108,7 +111,7 @@ func (r *Request) formatHeader() {
 		r.HttpRequest.Header[http.HeaderOrderKey] = make([]string, 0, len(r.OrderedHeaders))
 
 		for _, el := range r.OrderedHeaders {
-			if len(el) == 0 {
+			if len(el) == 0 || !shouldCopyHeaderOnRedirect(el[0], r.HttpRequest.URL, r.HttpRequest.URL) {
 				continue
 			}
 
@@ -122,7 +125,7 @@ func (r *Request) formatHeader() {
 			}
 
 			if _, ok := r.HttpRequest.Header[key]; !ok {
-				if setUserAgent && strings.ToLower(key) == "user-agent" {
+				if setUserAgent && http.CanonicalHeaderKey(key) == "User-Agent" {
 					setUserAgent = false
 				}
 
@@ -137,6 +140,7 @@ func (r *Request) formatHeader() {
 	} else if r.Header != nil && len(r.Header) > 0 {
 		r.HttpRequest.Header = r.Header
 		if r.HeaderOrder != nil && len(r.HeaderOrder) > 0 {
+
 			if v, ok := r.Header[http.HeaderOrderKey]; ok {
 				r.Header[http.HeaderOrderKey] = append(v, r.HeaderOrder...)
 			} else {
@@ -145,7 +149,7 @@ func (r *Request) formatHeader() {
 		}
 
 		for k := range r.Header {
-			if strings.ToLower(k) == "user-agent" {
+			if http.CanonicalHeaderKey(k) == "User-Agent" {
 				setUserAgent = false
 				break
 			}
@@ -178,70 +182,6 @@ func (r *Request) formatHeader() {
 		default: //chrome sub products
 			r.HttpRequest.Header[http.PHeaderOrderKey] = GetDefaultPseudoHeaders()
 		}
-	}
-}
-
-// makeHeadersCopier makes a function that copies headers from the
-// initial Request, ireq. For every redirect, this function must be called
-// so that it can copy headers into the upcoming Request.
-func (s *Session) makeHeadersCopier(ireq *Request) func(*Request) {
-	// The headers to copy are from the very initial request.
-	// We use a closured callback to keep a reference to these original headers.
-	var (
-		ireqhdr  = ireq.Header.Clone()
-		icookies map[string][]*http.Cookie
-	)
-
-	if s.CookieJar != nil && ireq.HttpRequest != nil && ireq.Header.Get("Cookie") != "" {
-		icookies = make(map[string][]*http.Cookie)
-		for _, c := range ireq.HttpRequest.Cookies() {
-			icookies[c.Name] = append(icookies[c.Name], c)
-		}
-	}
-
-	preq := ireq // The previous request
-	return func(req *Request) {
-		// If Jar is present and there was some initial cookies provided
-		// via the request header, then we may need to alter the initial
-		// cookies as we follow redirects since each redirect may end up
-		// modifying a pre-existing cookie.
-		//
-		// Since cookies already set in the request header do not contain
-		// information about the original domain and path, the logic below
-		// assumes any new set cookies override the original cookie
-		// regardless of domain or path.
-		//
-		// See https://golang.org/issue/17494
-		if s.CookieJar != nil && icookies != nil {
-			var changed bool
-			for k := range req.Response.Cookies {
-				if _, ok := icookies[k]; ok {
-					delete(icookies, k)
-					changed = true
-				}
-			}
-			if changed {
-				ireqhdr.Del("Cookie")
-				var ss []string
-				for _, cs := range icookies {
-					for _, c := range cs {
-						ss = append(ss, c.Name+"="+c.Value)
-					}
-				}
-				sort.Strings(ss) // Ensure deterministic headers
-				ireqhdr.Set("Cookie", strings.Join(ss, "; "))
-			}
-		}
-
-		// Copy the initial request's Header Values
-		// (at least the safe ones).
-		for k, vv := range ireqhdr {
-			if shouldCopyHeaderOnRedirect(k, preq.parsedUrl, req.parsedUrl) {
-				req.Header[k] = vv
-			}
-		}
-
-		preq = req // Update previous Request with the current request
 	}
 }
 

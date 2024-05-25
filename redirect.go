@@ -8,23 +8,23 @@ import (
 
 // RefererForURL returns a referer without any authentication info or
 // an empty string if lastReq scheme is https and newReq scheme is http.
-func RefererForURL(lastReq, newReq *url.URL) string {
+func RefererForURL(ireq, newReq *url.URL) string {
 	// https://tools.ietf.org/html/rfc7231#section-5.5.2
 	//   "Clients SHOULD NOT include a Referer header field in a
 	//    (non-secure) HTTP request if the referring page was
 	//    transferred with a secure protocol."
-	if lastReq.Scheme == "https" && newReq.Scheme == "http" {
+	if ireq.Scheme == "https" && newReq.Scheme == "http" {
 		return ""
 	}
-	referer := lastReq.String()
-	if lastReq.User != nil {
+	referer := ireq.String()
+	if ireq.User != nil {
 		// This is not very efficient, but is the best we can
 		// do without:
 		// - introducing a new method on URL
 		// - creating a race condition
 		// - copying the URL struct manually, which would cause
 		//   maintenance problems down the line
-		auth := lastReq.User.String() + "@"
+		auth := ireq.User.String() + "@"
 		referer = strings.Replace(referer, auth, "", 1)
 	}
 	return referer
