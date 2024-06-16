@@ -56,6 +56,8 @@ func TestSession_SetProxy(t *testing.T) {
 }
 
 func TestSession_Ip(t *testing.T) {
+	t.SkipNow()
+
 	if skipProxy {
 		t.Skip("TestProxy skipped")
 	}

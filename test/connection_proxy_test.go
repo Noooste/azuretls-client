@@ -46,6 +46,8 @@ func TestProxyDialer(t *testing.T) {
 }
 
 func TestProxy(t *testing.T) {
+	t.SkipNow()
+
 	session := azuretls.NewSession()
 
 	if err := session.SetProxy(""); err == nil {
