@@ -6,6 +6,7 @@ import (
 	"fmt"
 	http "github.com/Noooste/fhttp"
 	"github.com/Noooste/fhttp/cookiejar"
+	"io"
 	"net/url"
 	"strconv"
 	"strings"
@@ -284,11 +285,12 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 	var (
 		redirectMethod string
 		includeBody    bool
+		copyHeaders    = s.makeHeadersCopier(req)
 	)
 
-	var i uint
 	var ireq = req
-	for i = 0; i < ireq.MaxRedirects; i++ {
+
+	for {
 		// For all but the first request, create the next
 		// request hop and replace req.
 		if len(reqs) > 0 {
@@ -322,12 +324,43 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 				PHeader:            oldReq.PHeader,
 				ctx:                oldReq.ctx,
 				deadline:           oldReq.deadline,
+				MaxRedirects:       oldReq.MaxRedirects,
 			}
+
+			copyHeaders(req)
 
 			// Add the Referer header from the first
 			// request URL to the new one, if it's not https->http:
 			if ref := RefererForURL(ireq.parsedUrl, req.parsedUrl); ref != "" {
-				req.OrderedHeaders.Set("Referer", ref)
+				if req.OrderedHeaders != nil {
+					if req.OrderedHeaders.Get("Referer") == "" || req.OrderedHeaders.Get("referer") == "" {
+						req.OrderedHeaders.Set("Referer", ref)
+					}
+				} else {
+					if req.Header == nil {
+						req.Header = make(http.Header)
+						if req.Header.Get("Referer") == "" || req.Header.Get("referer") == "" {
+							req.Header.Set("Referer", ref)
+						}
+					}
+				}
+
+			}
+
+			err = s.checkRedirect(req, reqs)
+			if errors.Is(err, ErrUseLastResponse) || errors.Is(err, http.ErrUseLastResponse) {
+				return resp, nil
+			}
+
+			const maxBodySlurpSize = 2 << 10
+			if resp.ContentLength == -1 || resp.ContentLength <= maxBodySlurpSize {
+				_, _ = io.CopyN(io.Discard, resp.RawBody, maxBodySlurpSize)
+			}
+
+			_ = resp.RawBody.Close()
+
+			if err != nil {
+				return nil, err
 			}
 
 			if includeBody && ireq.Body != nil {
@@ -372,7 +405,6 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 
 		redirectMethod, shouldRedirect, includeBody = RedirectBehavior(req.Method, resp, reqs[0])
 		if !shouldRedirect {
-			req.CloseBody()
 			return resp, nil
 		}
 
@@ -385,8 +417,6 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 
 		req.CloseBody()
 	}
-
-	return nil, errors.New("too many Redirects")
 }
 
 // Get provides shortcut for sending GET request

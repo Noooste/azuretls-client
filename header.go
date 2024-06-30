@@ -3,6 +3,7 @@ package azuretls
 import (
 	http "github.com/Noooste/fhttp"
 	"net/url"
+	"sort"
 	"strings"
 )
 
@@ -100,6 +101,36 @@ func (oh *OrderedHeaders) Del(field string) OrderedHeaders {
 	}
 
 	return *oh
+}
+
+func (oh *OrderedHeaders) ToHeader() http.Header {
+	var result = make(http.Header, len(*oh))
+	var order = make([]string, 0, len(*oh))
+
+	for _, header := range *oh {
+		if len(header) == 0 {
+			continue
+		}
+
+		var key = http.CanonicalHeaderKey(header[0])
+
+		if result.Get(key) != "" {
+			for _, v := range header[1:] {
+				result.Add(key, v)
+			}
+		} else {
+			order = append(order, key)
+			if len(header) == 1 {
+				continue
+			}
+			result.Set(key, header[1])
+			for _, v := range header[2:] {
+				result.Add(key, v)
+			}
+		}
+	}
+
+	return result
 }
 
 //gocyclo:ignore
@@ -207,4 +238,83 @@ func shouldCopyHeaderOnRedirect(headerKey string, initial, dest *url.URL) bool {
 	}
 	// All other headers are copied:
 	return true
+}
+
+// makeHeadersCopier makes a function that copies headers from the
+// initial Request, ireq. For every redirect, this function must be called
+// so that it can copy headers into the upcoming Request.
+func (s *Session) makeHeadersCopier(ireq *Request) func(*Request) {
+	// The headers to copy are from the very initial request.
+	// We use a closured callback to keep a reference to these original headers.
+	var (
+		ireqhdr  = ireq.Header
+		icookies map[string][]*http.Cookie
+	)
+
+	var header = ireq.Header
+
+	if ireq.OrderedHeaders != nil {
+		header = ireq.OrderedHeaders.ToHeader()
+	}
+
+	if s.CookieJar != nil && header.Get("Cookie") != "" {
+		icookies = make(map[string][]*http.Cookie)
+		for _, c := range http.ReadCookies(ireq.Header, "") {
+			icookies[c.Name] = append(icookies[c.Name], c)
+		}
+	}
+
+	preq := ireq // The previous request
+	return func(req *Request) {
+		// If Jar is present and there was some initial cookies provided
+		// via the request header, then we may need to alter the initial
+		// cookies as we follow redirects since each redirect may end up
+		// modifying a pre-existing cookie.
+		//
+		// Since cookies already set in the request header do not contain
+		// information about the original domain and path, the logic below
+		// assumes any new set cookies override the original cookie
+		// regardless of domain or path.
+		//
+		// See https://golang.org/issue/17494
+		if s.CookieJar != nil && icookies != nil {
+			var changed bool
+			resp := req.Response // The response that caused the upcoming redirect
+			for k := range resp.Cookies {
+				if _, ok := icookies[k]; ok {
+					delete(icookies, k)
+					changed = true
+				}
+			}
+			if changed {
+				ireqhdr.Del("Cookie")
+				var ss []string
+				for _, cs := range icookies {
+					for _, c := range cs {
+						ss = append(ss, c.Name+"="+c.Value)
+					}
+				}
+				sort.Strings(ss) // Ensure deterministic headers
+				ireqhdr.Set("Cookie", strings.Join(ss, "; "))
+			}
+		}
+
+		// Copy the initial request's Header Values
+		// (at least the safe ones).
+		for k, vv := range ireqhdr {
+			if shouldCopyHeaderOnRedirect(k, preq.parsedUrl, req.parsedUrl) {
+				if req.OrderedHeaders != nil {
+					req.OrderedHeaders.Add(k, vv...)
+				} else {
+					if req.Header == nil {
+						req.Header = make(http.Header)
+					}
+
+					req.Header[k] = vv
+				}
+			}
+		}
+
+		preq = req // Update previous Request with the current request
+	}
 }

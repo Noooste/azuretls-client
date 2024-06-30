@@ -14,7 +14,7 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 	response.HttpResponse = httpResponse
 
 	var (
-		wg      = sync.WaitGroup{}
+		wg      sync.WaitGroup
 		headers = make(http.Header, len(httpResponse.Header))
 	)
 

@@ -2,6 +2,7 @@ package azuretls
 
 import (
 	"context"
+	"errors"
 	http "github.com/Noooste/fhttp"
 	"github.com/Noooste/fhttp/cookiejar"
 	"github.com/Noooste/fhttp/http2"
@@ -19,6 +20,8 @@ const (
 	Authority = ":authority"
 	Scheme    = ":scheme"
 )
+
+var ErrUseLastResponse = errors.New("azuretls: use last response")
 
 // Session represents the core structure for managing and conducting HTTP(S)
 // sessions. It holds configuration settings, headers, cookie storage,
@@ -87,6 +90,21 @@ type Session struct {
 	Callback func(request *Request, response *Response, err error)
 	// Function called after receiving a response.
 	CallbackWithContext func(ctx *Context)
+
+	// CheckRedirect specifies the policy for handling redirects.
+	// If CheckRedirect is not nil, the client calls it before
+	// following an HTTP redirect. The arguments req and via are
+	// the upcoming request and the requests made already, oldest
+	// first. If CheckRedirect returns an error, the Session's Get
+	// method returns both the previous Response (with its Body
+	// closed) and CheckRedirect's error (wrapped in an url.Error)
+	// instead of issuing the Request req.
+	// As a special case, if CheckRedirect returns ErrUseLastResponse,
+	// then the most recent response is returned, along with a nil error.
+	//
+	// If CheckRedirect is nil, the Session uses its default policy,
+	// which is to stop after 10 consecutive requests.
+	CheckRedirect func(req *Request, reqs []*Request) error
 
 	// Deprecated: This field is ignored as pin verification is always true.
 	// To disable pin verification, use InsecureSkipVerify.
