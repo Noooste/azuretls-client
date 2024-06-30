@@ -80,3 +80,26 @@ func TestRedirect2(t *testing.T) {
 		t.Fatal("TestRedirect2 failed, expected referer without @, got", v)
 	}
 }
+
+func TestRedirectWithCheckRedirect(t *testing.T) {
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	session.CheckRedirect = func(req *azuretls.Request, via []*azuretls.Request) error {
+		if req.Response == nil {
+			t.Error("expected non-nil Request.Response")
+		}
+
+		return azuretls.ErrUseLastResponse
+	}
+
+	response, err := session.Get("https://httpbin.org/redirect/1")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if response.StatusCode != 302 {
+		t.Fatal("TestRedirectWithCheckRedirect failed, expected: 200, got: ", response.StatusCode)
+	}
+}
