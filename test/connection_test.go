@@ -3,7 +3,6 @@ package azuretls_test
 import (
 	"fmt"
 	"github.com/Noooste/azuretls-client"
-	http "github.com/Noooste/fhttp"
 	url2 "net/url"
 	"runtime"
 	"sync"
@@ -127,35 +126,4 @@ func TestHighConcurrency(t *testing.T) {
 	if atomic.LoadInt64(ok) < count-1 { //~1 request can fail
 		t.Fatal("TestHighConcurrency failed, expected: ", count, ", got: ", ok)
 	}
-}
-
-func downloadImage(client *azuretls.Session, url string) ([]byte, error) {
-	resp, err := client.Do(&azuretls.Request{
-		Method: http.MethodGet,
-		Url:    url,
-		OrderedHeaders: azuretls.OrderedHeaders{
-			{"Host", "dd.prod.captcha-delivery.com"},
-			{"Connection", "keep-alive"},
-			{"sec-ch-ua", `"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"`},
-			{"Origin", "https://geo.captcha-delivery.com"},
-			{"sec-ch-ua-mobile", "?0"},
-			{"User-Agent", `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36`},
-			{"sec-ch-ua-platform", `"macOS"`},
-			{"Accept", "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"},
-			{"Sec-Fetch-Site", "same-site"},
-			{"Sec-Fetch-Mode", "cors"},
-			{"Sec-Fetch-Dest", "image"},
-			{"Referer", "https://geo.captcha-delivery.com/"},
-			{"Accept-Encoding", "gzip, deflate, br, zstd"},
-			{"Accept-Language", "en-GB,en-US;q=0.9,en;q=0.8"},
-		},
-		ForceHTTP1: true,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("status code: %d", resp.StatusCode)
-	}
-	return resp.Body, nil
 }
