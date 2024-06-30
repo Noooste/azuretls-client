@@ -3,13 +3,36 @@ package azuretls
 import (
 	"github.com/Noooste/fhttp/http2"
 	tls "github.com/Noooste/utls"
+	"math/rand"
 )
+
+// since version 110, Chrome TLS Client Hello extensions are shuffled
+// https://www.fastly.com/blog/a-first-look-at-chromes-tls-clienthello-permutation-in-the-wild
+// replace the rdn.Shuffle with a custom shuffle to avoid the panic
+// see issue 102
+func getShuffledExtensions(extensions []tls.TLSExtension) []tls.TLSExtension {
+	extensionsLength := len(extensions)
+
+	dest := make([]tls.TLSExtension, extensionsLength)
+	perm := rand.Perm(extensionsLength)
+	for i, v := range perm {
+		dest[v] = extensions[i]
+	}
+
+	final := make([]tls.TLSExtension, 0, extensionsLength+3) // first grease + last grease + padding
+	final = append(final, &tls.UtlsGREASEExtension{})
+	final = append(final, dest...)
+	final = append(final, &tls.UtlsGREASEExtension{})
+	final = append(final, &tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle})
+
+	return final
+}
 
 // GetLastChromeVersion apply the latest Chrome version
 // Current Chrome version : 121
 func GetLastChromeVersion() *tls.ClientHelloSpec {
 	extensions := []tls.TLSExtension{
-		&tls.UtlsGREASEExtension{},
+		// &tls.UtlsGREASEExtension{},
 		&tls.KeyShareExtension{KeyShares: []tls.KeyShare{
 			{Group: tls.CurveID(tls.GREASE_PLACEHOLDER), Data: []byte{0}},
 			{Group: tls.X25519Kyber768Draft00},
@@ -58,35 +81,22 @@ func GetLastChromeVersion() *tls.ClientHelloSpec {
 			0x00, // pointFormatUncompressed
 		}},
 		tls.BoringGREASEECH(),
-		&tls.UtlsGREASEExtension{},
-		&tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle},
+		// &tls.UtlsGREASEExtension{},
+		// &tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle},
 	}
-
-	extensionsLength := len(extensions)
-	lastTwo := extensionsLength - 2
-
-	// since version 110, Chrome TLS Client Hello extensions are shuffled
-	// https://www.fastly.com/blog/a-first-look-at-chromes-tls-clienthello-permutation-in-the-wild
-	rdn.Shuffle(extensionsLength, func(i, j int) {
-		if i >= lastTwo || j >= lastTwo || i == 0 || j == 0 {
-			// ignore GREASE extensions and padding extension
-			return
-		}
-		extensions[i], extensions[j] = extensions[j], extensions[i]
-	})
 
 	return &tls.ClientHelloSpec{
 		CipherSuites: []uint16{
 			tls.GREASE_PLACEHOLDER,
+			tls.TLS_CHACHA20_POLY1305_SHA256,
 			tls.TLS_AES_128_GCM_SHA256,
 			tls.TLS_AES_256_GCM_SHA384,
-	                tls.TLS_CHACHA20_POLY1305_SHA256,
-	                tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-	                tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-	                tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-	                tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-	                tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
 			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
 			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
 			tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
@@ -97,7 +107,7 @@ func GetLastChromeVersion() *tls.ClientHelloSpec {
 		CompressionMethods: []byte{
 			0x00, // compressionNone
 		},
-		Extensions: extensions,
+		Extensions: getShuffledExtensions(extensions),
 	}
 }
 
