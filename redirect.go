@@ -1,10 +1,13 @@
 package azuretls
 
 import (
+	"errors"
 	http "github.com/Noooste/fhttp"
 	"net/url"
 	"strings"
 )
+
+var ErrTooManyRedirects = errors.New("too many redirects")
 
 // RefererForURL returns a referer without any authentication info or
 // an empty string if lastReq scheme is https and newReq scheme is http.
@@ -42,7 +45,6 @@ func RedirectBehavior(reqMethod string, resp *Response, ireq *Request) (redirect
 		// RFC 2616 allowed automatic redirection only with GET and
 		// HEAD requests. RFC 7231 lifts this restriction, but we still
 		// restrict other methods to GET to maintain compatibility.
-		// See Issue 18570.
 		if reqMethod != http.MethodGet && reqMethod != http.MethodHead {
 			redirectMethod = http.MethodGet
 		}
@@ -59,7 +61,6 @@ func RedirectBehavior(reqMethod string, resp *Response, ireq *Request) (redirect
 			// without Location headers. Since Go 1.7 and earlier
 			// didn't follow these codes, just stop here instead
 			// of returning an error.
-			// See Issue 17773.
 			shouldRedirect = false
 			break
 		}
@@ -70,4 +71,19 @@ func RedirectBehavior(reqMethod string, resp *Response, ireq *Request) (redirect
 	}
 
 	return redirectMethod, shouldRedirect, includeBody
+}
+
+func defaultCheckRedirect(req *Request, via []*Request) error {
+	if uint(len(via)) >= req.MaxRedirects {
+		return ErrTooManyRedirects
+	}
+	return nil
+}
+
+func (s *Session) checkRedirect(req *Request, via []*Request) error {
+	fn := s.CheckRedirect
+	if fn == nil {
+		fn = defaultCheckRedirect
+	}
+	return fn(req, via)
 }
