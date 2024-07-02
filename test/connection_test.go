@@ -90,6 +90,13 @@ func concurrency(session *azuretls.Session, wg *sync.WaitGroup, ok *int64) bool 
 			fmt.Println(err2)
 			return false
 		}
+
+		_, err2 = session.Get("http://example.com/")
+
+		if err2 != nil {
+			fmt.Println(err2)
+			return false
+		}
 	}
 
 	atomic.AddInt64(ok, 1)
@@ -107,7 +114,6 @@ func TestHighConcurrency(t *testing.T) {
 
 	wait.Add(int(count))
 
-	var err error
 	var ok = new(int64)
 
 	var i int64
@@ -118,12 +124,7 @@ func TestHighConcurrency(t *testing.T) {
 
 	wait.Wait()
 
-	if err != nil {
-		t.Error("TestHighConcurrency failed, expected: ", count, ", got: ", ok)
-		t.Fatal(err)
-	}
-
 	if atomic.LoadInt64(ok) < count-1 { //~1 request can fail
-		t.Fatal("TestHighConcurrency failed, expected: ", count, ", got: ", ok)
+		t.Fatal("TestHighConcurrency failed, expected: ", count, ", got: ", *ok)
 	}
 }
