@@ -311,7 +311,9 @@ func (s *Session) initConn(req *Request) (conn *Conn, err error) {
 	defer conn.mu.Unlock()
 
 	if conn.Conn == nil {
-		if s.ProxyDialer != nil {
+		// if the request has HTTP scheme, the default http.Transport will
+		// take the responsibility of creating the connection
+		if s.ProxyDialer != nil && (req.parsedUrl.Scheme == SchemeHttps || req.parsedUrl.Scheme == SchemeWss) {
 			if err = s.getProxyConn(req, conn, host); err != nil {
 				return nil, err
 			}
