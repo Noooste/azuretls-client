@@ -198,6 +198,10 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 					err = fmt.Errorf("timeout")
 				}
 
+				if strings.Contains(err.Error(), "use of closed network connection") {
+					s.Connections.Remove(request.parsedUrl)
+				}
+
 				s.dumpRequest(request, response, err)
 				s.logResponse(response, err)
 
@@ -344,7 +348,6 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 						}
 					}
 				}
-
 			}
 
 			err = s.checkRedirect(req, reqs)
