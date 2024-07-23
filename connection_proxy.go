@@ -250,7 +250,7 @@ func (c *proxyDialer) connect(req *http.Request, conn net.Conn, negotiatedProtoc
 				c.H2Conn = h2clientConn
 				c.conn = conn
 				c.h2Mu.Unlock()
-				return proxyConn, err
+				return proxyConn, nil
 			}
 		}
 	}

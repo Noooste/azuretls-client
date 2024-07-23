@@ -211,6 +211,8 @@ type Response struct {
 	Request *Request
 	// Length of content in the response.
 	ContentLength int64
+
+	Session *Session
 }
 
 // Context represents the context of a request. It holds the session, request,

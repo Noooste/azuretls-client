@@ -1,9 +1,12 @@
 package azuretls
 
 import (
+	"context"
 	http "github.com/Noooste/fhttp"
 	"github.com/Noooste/fhttp/http2"
+	"net"
 	"net/url"
+	"time"
 )
 
 func (s *Session) initTransport(browser string) (err error) {
@@ -27,12 +30,23 @@ func (s *Session) initHTTP1() {
 	s.Transport = &http.Transport{
 		TLSHandshakeTimeout:   s.TimeOut,
 		ResponseHeaderTimeout: s.TimeOut,
-		Proxy: func(req *http.Request) (*url.URL, error) {
-			if s.ProxyDialer == nil {
+		DialTLSContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			s.Connections.mu.RLock()
+			defer s.Connections.mu.RUnlock()
+			rc := s.Connections.hosts[addr]
+			return rc.TLS, nil
+		},
+		Proxy: func(*http.Request) (*url.URL, error) {
+			if s.Proxy == "" {
 				return nil, nil
 			}
-			return s.ProxyDialer.ProxyURL, nil
+
+			return url.Parse(s.Proxy)
 		},
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
 	}
 }
 
