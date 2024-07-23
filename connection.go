@@ -317,7 +317,8 @@ func (s *Session) initConn(req *Request) (conn *Conn, err error) {
 			}
 		} else {
 			if conn.Conn, err = (&net.Dialer{
-				Timeout: conn.TimeOut,
+				Timeout:   conn.TimeOut,
+				KeepAlive: 30 * time.Second,
 			}).DialContext(s.ctx, "tcp", host); err != nil {
 				return nil, err
 			}

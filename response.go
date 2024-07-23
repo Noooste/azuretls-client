@@ -12,6 +12,7 @@ import (
 func (s *Session) buildResponse(response *Response, httpResponse *http.Response) (err error) {
 	response.RawBody = httpResponse.Body
 	response.HttpResponse = httpResponse
+	response.Session = s
 
 	var (
 		wg      sync.WaitGroup
@@ -60,7 +61,12 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 }
 
 func (r *Response) ReadBody() (body []byte, err error) {
-	defer r.HttpResponse.Body.Close()
+	defer func() {
+		_ = r.HttpResponse.Body.Close()
+		if r.HttpResponse.Close {
+			r.Session.Connections.Remove(r.HttpResponse.Request.URL)
+		}
+	}()
 	return io.ReadAll(r.HttpResponse.Body)
 }
 

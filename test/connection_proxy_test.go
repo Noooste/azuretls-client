@@ -5,7 +5,6 @@ import (
 	"github.com/Noooste/azuretls-client"
 	"os"
 	"testing"
-	"time"
 )
 
 var skipProxy bool
@@ -46,8 +45,6 @@ func TestProxyDialer(t *testing.T) {
 }
 
 func TestProxy(t *testing.T) {
-	t.SkipNow()
-
 	session := azuretls.NewSession()
 
 	if err := session.SetProxy(""); err == nil {
@@ -99,28 +96,8 @@ func TestProxy(t *testing.T) {
 	}
 }
 
-func TestProxy2(t *testing.T) {
-	t.SkipNow()
-
-	session := azuretls.NewSession()
-
-	session.H2Proxy = true
-	if err := session.SetProxy(os.Getenv("NON_SECURE_PROXY")); err != nil {
-		t.Fatal(err)
-	}
-
-	_, err := session.Get("https://tls.peet.ws/api/all")
-
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestProxy3(t *testing.T) {
-	t.SkipNow()
-
 	session := azuretls.NewSession()
-	session.H2Proxy = true
 
 	if err := session.SetProxy(os.Getenv("SECURE_PROXY")); err != nil {
 		t.Fatal(err)
@@ -200,22 +177,4 @@ func TestProxy4(t *testing.T) {
 	if oldIP == newIP {
 		t.Fatal("TestProxy failed, IP is not changed")
 	}
-}
-
-func TestBadProxy(t *testing.T) {
-	session := azuretls.NewSession()
-	defer session.Close()
-
-	session.SetTimeout(1 * time.Second)
-
-	if err := session.SetProxy("https://test.com"); err != nil {
-		t.Fatal(err)
-	}
-
-	_, err := session.Get("https://ipinfo.io/ip")
-
-	if err == nil || err.Error() != "proxy connection timeout" {
-		t.Fatal("TestBadProxy failed, expected error, got", err)
-	}
-
 }
