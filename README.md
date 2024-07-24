@@ -340,7 +340,7 @@ Supported proxy formats include:
   
 *If a scheme is not provided, `http` will be used by default.*
 
-**If you need to use IPV6 proxies, please correctly format it with the right scheme.** eg.s: `http://user:pass@[2001:0db8:85a3:0000:0000:8a2e:0370:7334]:8080`
+**If you need to use IPV6 proxies, please format it correctly with the appropriate scheme, for example:** `http://user:pass@[2001:0db8:85a3:0000:0000:8a2e:0370:7334]:8080`
 
 ```go
 session := azuretls.NewSession()
