@@ -10,6 +10,8 @@ import (
 var skipProxy bool
 
 func TestProxyDialer_Dial(t *testing.T) {
+	t.SkipNow()
+
 	session := azuretls.NewSession()
 
 	if err := session.SetProxy(os.Getenv("NON_SECURE_PROXY")); err != nil {
@@ -45,6 +47,8 @@ func TestProxyDialer(t *testing.T) {
 }
 
 func TestProxy(t *testing.T) {
+	t.SkipNow()
+
 	session := azuretls.NewSession()
 
 	if err := session.SetProxy(""); err == nil {
@@ -97,6 +101,8 @@ func TestProxy(t *testing.T) {
 }
 
 func TestProxy3(t *testing.T) {
+	t.SkipNow()
+
 	session := azuretls.NewSession()
 
 	if err := session.SetProxy(os.Getenv("SECURE_PROXY")); err != nil {

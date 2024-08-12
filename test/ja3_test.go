@@ -347,3 +347,20 @@ func TestGetLastChromeVersion(t *testing.T) {
 
 	wg.Wait()
 }
+
+func TestGetMondialRelay(t *testing.T) {
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	resp, err := session.Get("https://www.mondialrelay.fr/suivi-de-colis/", azuretls.OrderedHeaders{
+		{"User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"},
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.StatusCode != 200 {
+		t.Fatal("Expected 200")
+	}
+}
