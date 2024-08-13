@@ -38,7 +38,7 @@ func NewSessionWithContext(ctx context.Context) *Session {
 		Browser:   Chrome,
 
 		Connections:        NewRequestConnPool(ctx),
-		GetClientHelloSpec: GetLastChromeVersion,
+		GetClientHelloSpec: GetBrowserClientHelloFunc(Chrome),
 
 		UserAgent: defaultUserAgent,
 
@@ -228,7 +228,7 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 			return response, err
 
 		default:
-			if err = s.initTransport(s.Browser); err != nil {
+			if err = s.InitTransport(s.Browser); err != nil {
 				s.dumpRequest(request, nil, err)
 				return nil, err
 			}
@@ -501,17 +501,20 @@ func (s *Session) Connect(u string) error {
 	var request = &Request{}
 	var err error
 
-	request.parsedUrl, err = url.Parse(u)
+	if request.parsedUrl, err = url.Parse(u); err != nil {
+		return err
+	}
+
 	request.Method = http.MethodConnect
 	request.startTime = time.Now()
 
-	if err != nil {
+	if err = s.prepareRequest(request); err != nil {
 		return err
 	}
 
 	s.logRequest(request)
 
-	if err = s.initTransport(s.Browser); err != nil {
+	if err = s.InitTransport(s.Browser); err != nil {
 		return err
 	}
 

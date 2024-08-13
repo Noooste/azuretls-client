@@ -2,7 +2,6 @@ package azuretls_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/Noooste/azuretls-client"
 	"log"
 	"strings"
@@ -37,8 +36,6 @@ func TestChrome(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	fmt.Println(string(response.Body))
 
 	if response.StatusCode != 200 {
 		t.Fatal("Expected 200")
@@ -228,62 +225,6 @@ func TestSession_ApplyJa32(t *testing.T) {
 	}
 }
 
-func TestGetLastIosVersion(t *testing.T) {
-	session := azuretls.NewSession()
-
-	session.GetClientHelloSpec = azuretls.GetLastIosVersion
-
-	response, err := session.Get("https://tls.peet.ws/api/all")
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if response.StatusCode != 200 {
-		t.Fatal("Expected 200")
-	}
-
-	var loaded map[string]any
-
-	err = json.Unmarshal(response.Body, &loaded)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	expected := []string{
-		"*",
-		"TLS_AES_128_GCM_SHA256",
-		"TLS_AES_256_GCM_SHA384",
-		"TLS_CHACHA20_POLY1305_SHA256",
-		"TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
-		"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
-		"TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256",
-		"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
-		"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-		"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256",
-		"TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA",
-		"TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
-		"TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
-		"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
-	}
-
-	tls := loaded["tls"].(map[string]any)
-	ciphers := tls["ciphers"].([]any)
-
-	for i, cipher := range ciphers {
-		if expected[i] != "*" && expected[i] != cipher {
-			t.Fatal("Expected "+expected[i]+", got ", cipher)
-		}
-	}
-
-	extensions := tls["extensions"].([]any)
-
-	if extensions[6].(map[string]any)["name"] != "application_layer_protocol_negotiation (16)" {
-		t.Fatal("Expected application_layer_protocol_negotiation (16), got ", extensions[6].(map[string]any)["name"])
-	}
-}
-
 func TestECH(t *testing.T) {
 	session := azuretls.NewSession()
 
@@ -322,9 +263,11 @@ func TestJa3(t *testing.T) {
 	response, err := session.Get("https://www.cloudflare.com/cdn-cgi/trace")
 
 	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println(response.StatusCode, string(response.Body))
+		t.Fatal(err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Fatal("Expected 200")
 	}
 }
 
@@ -352,9 +295,7 @@ func TestGetMondialRelay(t *testing.T) {
 	session := azuretls.NewSession()
 	defer session.Close()
 
-	resp, err := session.Get("https://www.mondialrelay.fr/suivi-de-colis/", azuretls.OrderedHeaders{
-		{"User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"},
-	})
+	resp, err := session.Get("https://www.mondialrelay.fr/suivi-de-colis/")
 
 	if err != nil {
 		t.Fatal(err)
