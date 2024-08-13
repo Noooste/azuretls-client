@@ -69,6 +69,7 @@ type Session struct {
 
 	// Maximum number of redirects to follow.
 	MaxRedirects uint
+
 	// Maximum time to wait for request to complete.
 	TimeOut time.Duration
 
@@ -104,13 +105,21 @@ type Session struct {
 	// Deprecated: This field is ignored as pin verification is always true.
 	// To disable pin verification, use InsecureSkipVerify.
 	VerifyPins bool
+
 	// If true, server's certificate is not verified (insecure: this may facilitate attack from middleman).
 	InsecureSkipVerify bool
 
 	// Headers for User-Agent and Sec-Ch-Ua, respectively.
 	UserAgent string
 
+	// HeaderPriority specifies the priority of the request's headers.
+	// As this information is not included in the Akamai fingerprint, you may have to specify it manually.
+	// Note that you can also specify the browser in the session so that this is done automatically.
 	HeaderPriority *http2.PriorityParam
+
+	// ProxyHeader defines the headers used for the CONNECT method to the proxy,
+	// you may define the order with the http.HeaderOrderKey
+	ProxyHeader http.Header
 
 	proxyConnected bool
 
@@ -121,7 +130,6 @@ type Session struct {
 	logging       bool
 	loggingIgnore []*regexp.Regexp
 
-	// Context for cancellable and timeout operations.
 	ctx context.Context
 
 	mu *sync.Mutex
