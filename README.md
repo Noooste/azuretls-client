@@ -98,6 +98,27 @@ defer session.Close()
 session := azuretls.NewSessionWithContext(context.Background())
 defer session.Close()
 ```
+### Predefined browsers/devices
+
+Some browsers/devices are already defined in the module:
+- Chrome 
+- Firefox
+- Opera  
+- Safari 
+- Edge   
+- Ios
+
+In order to use them, you can simply do:
+
+```go
+// without context
+session := azuretls.NewSession()
+// don't forget to close the session when you no longer need it, to free up resources
+defer session.Close() 
+
+session.Browser = azuretls.Firefox // JA3 and HTTP2 specifications will be automatically set
+```
+
 ### Make Requests
 
 #### REQUEST ARGUMENTS
