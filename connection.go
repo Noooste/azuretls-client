@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"github.com/Noooste/fhttp/http2"
 	tls "github.com/Noooste/utls"
 	"net"
@@ -243,7 +244,15 @@ func (s *Session) getProxyConn(req *Request, conn *Conn, host string) (err error
 	s.ProxyDialer.tr = s.HTTP2Transport
 	s.ProxyDialer.Dialer.Timeout = conn.TimeOut
 
+	if s.ModifyDialer != nil {
+		if err = s.ModifyDialer(&s.ProxyDialer.Dialer); err != nil {
+			cancel()
+			return
+		}
+	}
+
 	timer := time.NewTimer(conn.TimeOut)
+	fmt.Println(conn.TimeOut)
 	defer timer.Stop()
 
 	connChan := make(chan net.Conn, 1)
@@ -318,10 +327,18 @@ func (s *Session) initConn(req *Request) (conn *Conn, err error) {
 				return nil, err
 			}
 		} else {
-			if conn.Conn, err = (&net.Dialer{
+			dialer := &net.Dialer{
 				Timeout:   conn.TimeOut,
 				KeepAlive: 30 * time.Second,
-			}).DialContext(s.ctx, "tcp", host); err != nil {
+			}
+
+			if s.ModifyDialer != nil {
+				if err = s.ModifyDialer(dialer); err != nil {
+					return
+				}
+			}
+
+			if conn.Conn, err = dialer.DialContext(s.ctx, "tcp", host); err != nil {
 				return nil, err
 			}
 		}

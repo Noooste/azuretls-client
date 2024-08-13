@@ -8,6 +8,7 @@ import (
 	"github.com/Noooste/fhttp/http2"
 	tls "github.com/Noooste/utls"
 	"io"
+	"net"
 	"net/url"
 	"regexp"
 	"sync"
@@ -51,21 +52,11 @@ type Session struct {
 	// Function to provide custom TLS handshake details.
 	GetClientHelloSpec func() *tls.ClientHelloSpec
 
-	mu *sync.Mutex
-
 	// Proxy address.
 	Proxy string
 	// If true, use HTTP2 for proxy connections.
-	H2Proxy        bool
-	ProxyDialer    *proxyDialer
-	proxyConnected bool
-
-	dump       bool
-	dumpDir    string
-	dumpIgnore []*regexp.Regexp
-
-	logging       bool
-	loggingIgnore []*regexp.Regexp
+	H2Proxy     bool
+	ProxyDialer *proxyDialer
 
 	// If true, print detailed logs or debugging information. Deprecated: Use Dump instead.
 	Verbose bool
@@ -88,8 +79,12 @@ type Session struct {
 
 	// Deprecated, use CallbackWithContext instead.
 	Callback func(request *Request, response *Response, err error)
+
 	// Function called after receiving a response.
 	CallbackWithContext func(ctx *Context)
+
+	// Function to modify the dialer used for establishing connections.
+	ModifyDialer func(dialer *net.Dialer) error
 
 	// CheckRedirect specifies the policy for handling redirects.
 	// If CheckRedirect is not nil, the client calls it before
@@ -111,10 +106,25 @@ type Session struct {
 	VerifyPins bool
 	// If true, server's certificate is not verified (insecure: this may facilitate attack from middleman).
 	InsecureSkipVerify bool
-	// Context for cancellable and timeout operations.
-	ctx context.Context
+
 	// Headers for User-Agent and Sec-Ch-Ua, respectively.
 	UserAgent string
+
+	HeaderPriority *http2.PriorityParam
+
+	proxyConnected bool
+
+	dump       bool
+	dumpDir    string
+	dumpIgnore []*regexp.Regexp
+
+	logging       bool
+	loggingIgnore []*regexp.Regexp
+
+	// Context for cancellable and timeout operations.
+	ctx context.Context
+
+	mu *sync.Mutex
 
 	closed bool
 }

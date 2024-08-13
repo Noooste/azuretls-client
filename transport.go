@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func (s *Session) initTransport(browser string) (err error) {
+func (s *Session) InitTransport(browser string) (err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -36,6 +36,20 @@ func (s *Session) initHTTP1() {
 			rc := s.Connections.hosts[addr]
 			return rc.TLS, nil
 		},
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			dialer := &net.Dialer{
+				Timeout:   s.TimeOut,
+				KeepAlive: 30 * time.Second,
+			}
+
+			if s.ModifyDialer != nil {
+				if err := s.ModifyDialer(dialer); err != nil {
+					return nil, err
+				}
+			}
+
+			return dialer.DialContext(s.ctx, network, addr)
+		},
 		Proxy: func(*http.Request) (*url.URL, error) {
 			if s.Proxy == "" {
 				return nil, nil
@@ -44,7 +58,7 @@ func (s *Session) initHTTP1() {
 			return url.Parse(s.Proxy)
 		},
 		ForceAttemptHTTP2:     true,
-		MaxIdleConns:          100,
+		MaxIdleConns:          1e3,
 		IdleConnTimeout:       90 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 	}
@@ -60,7 +74,13 @@ func (s *Session) initHTTP2(browser string) error {
 	tr.Priorities = defaultStreamPriorities(browser)
 	tr.Settings, tr.SettingsOrder = defaultHeaderSettings(browser)
 	tr.ConnectionFlow = defaultWindowsUpdate(browser)
-	tr.HeaderPriority = defaultHeaderPriorities(browser)
+
+	if s.HeaderPriority != nil {
+		tr.HeaderPriority = s.HeaderPriority
+	} else {
+		tr.HeaderPriority = defaultHeaderPriorities(browser)
+	}
+
 	tr.StrictMaxConcurrentStreams = true
 
 	tr.PushHandler = &http2.DefaultPushHandler{}
