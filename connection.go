@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/x509"
 	"errors"
-	"fmt"
 	"github.com/Noooste/fhttp/http2"
 	tls "github.com/Noooste/utls"
 	"net"
@@ -252,7 +251,6 @@ func (s *Session) getProxyConn(req *Request, conn *Conn, host string) (err error
 	}
 
 	timer := time.NewTimer(conn.TimeOut)
-	fmt.Println(conn.TimeOut)
 	defer timer.Stop()
 
 	connChan := make(chan net.Conn, 1)

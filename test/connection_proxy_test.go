@@ -184,3 +184,21 @@ func TestProxy4(t *testing.T) {
 		t.Fatal("TestProxy failed, IP is not changed")
 	}
 }
+
+func TestProxyCONNECT(t *testing.T) {
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	_ = session.SetProxy(os.Getenv("NON_SECURE_PROXY"))
+
+	err := session.Connect("https://tls.peet.ws:443")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = session.Get("https://tls.peet.ws/api/all")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+}
