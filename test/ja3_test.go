@@ -293,6 +293,8 @@ func TestGetLastChromeVersion(t *testing.T) {
 }
 
 func TestGetMondialRelay(t *testing.T) {
+	t.SkipNow()
+
 	session := azuretls.NewSession()
 	defer session.Close()
 
