@@ -31,6 +31,8 @@ type proxyDialer struct {
 
 	tr         *http2.Transport
 	ForceHTTP2 bool
+
+	sess *Session
 }
 
 const (
@@ -74,6 +76,7 @@ func (s *Session) assignProxy(proxy string) error {
 	s.ProxyDialer = &proxyDialer{
 		ProxyURL:      parsed,
 		DefaultHeader: make(http.Header),
+		sess:          s,
 	}
 
 	if parsed.User != nil {
@@ -120,6 +123,16 @@ func (c *proxyDialer) DialContext(ctx context.Context, userAgent, network, addre
 
 	for k, v := range c.DefaultHeader {
 		req.Header[k] = v
+	}
+
+	for k, v := range c.sess.ProxyHeader {
+		if k == http.HeaderOrderKey {
+			for _, vv := range v {
+				req.Header[http.HeaderOrderKey] = append(req.Header[http.HeaderOrderKey], strings.ToLower(vv))
+			}
+		} else {
+			req.Header[k] = v
+		}
 	}
 
 	if ctxHeader, ctxHasHeader := ctx.Value(ContextKeyHeader{}).(http.Header); ctxHasHeader {
