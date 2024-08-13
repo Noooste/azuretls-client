@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/Noooste/azuretls-client"
 	"log"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -294,6 +295,10 @@ func TestGetLastChromeVersion(t *testing.T) {
 func TestGetMondialRelay(t *testing.T) {
 	session := azuretls.NewSession()
 	defer session.Close()
+
+	if err := session.SetProxy(os.Getenv("NON_SECURE_PROXY")); err != nil {
+		t.Fatal(err)
+	}
 
 	resp, err := session.Get("https://www.mondialrelay.fr/suivi-de-colis/")
 
