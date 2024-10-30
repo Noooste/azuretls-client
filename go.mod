@@ -1,8 +1,6 @@
 module github.com/Noooste/azuretls-client
 
-go 1.21
-
-toolchain go1.23.2
+go 1.20
 
 require (
 	github.com/Noooste/fhttp v1.0.12
