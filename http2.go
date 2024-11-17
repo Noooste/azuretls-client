@@ -76,9 +76,17 @@ func (s *Session) ApplyHTTP2(fp string) error {
 	return nil
 }
 
+func splitSettings(settings string) []string {
+	if strings.Contains(settings, ",") {
+		return strings.Split(settings, ",")
+	}
+
+	return strings.Split(settings, ";")
+}
+
 func applySettings(settings string, tr *http2.Transport) error {
 	if settings != "0" {
-		values := strings.Split(settings, ",")
+		values := splitSettings(settings)
 
 		settingsFrame := make(map[http2.SettingID]uint32, len(values))
 
@@ -88,17 +96,17 @@ func applySettings(settings string, tr *http2.Transport) error {
 		)
 
 		for i, setting := range values {
-			s2 := strings.Split(setting, ":")
-			if len(s2) != 2 {
+			split := strings.Split(setting, ":")
+			if len(split) != 2 {
 				return fmt.Errorf(invalidSettingsIndex, i, "length")
 			}
 
-			id, err = strconv.ParseUint(s2[0], 10, 16)
+			id, err = strconv.ParseUint(split[0], 10, 16)
 			if err != nil {
 				return fmt.Errorf(invalidSettingsIndex, i, "id")
 			}
 
-			val, err = strconv.ParseUint(s2[1], 10, 32)
+			val, err = strconv.ParseUint(split[1], 10, 32)
 			if err != nil {
 				return fmt.Errorf(invalidSettingsIndex, i, "value")
 			}
