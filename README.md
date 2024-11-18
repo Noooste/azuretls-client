@@ -70,7 +70,7 @@ Whether you're a seasoned developer looking for a feature-rich HTTP client or yo
 ## Dependencies
 
 ```
-golang ^1.20
+golang ^1.22
 ```
 
 ## Installation

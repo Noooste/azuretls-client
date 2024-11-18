@@ -1,13 +1,13 @@
 github.com/Noooste/fhttp v1.0.12 h1:2N15bIATKaC6q+LVyRGyxPyuqEPvwAS3Uk1peC3YVHU=
 github.com/Noooste/fhttp v1.0.12/go.mod h1:CMVxKOhNheqJN5HYE4Rlvz2SRdV8Uv7YWmi6OwmB/Bk=
-github.com/Noooste/utls v1.2.11 h1:yZERwourMevzxMPbrw+JQmhMZLB9aU88sWTxSTzQZAQ=
-github.com/Noooste/utls v1.2.11/go.mod h1:/iJ0ORCNgIpyX/hrUk/8jK76ogcXvEJGldWFxqKtIUM=
+github.com/Noooste/utls v1.2.12 h1:Zcm/7OB6W4Ro1q2OV1BrFb3qBI7uqYeC21wHYX+Ez9I=
+github.com/Noooste/utls v1.2.12/go.mod h1:CJaLzDHOhjuKESY3/wTSEzs3N2QgdXTrNQE3sW2632M=
 github.com/Noooste/websocket v1.0.3 h1:drW7tvZ3YqzqI9wApnaH1Q0syFMXO7gbLlsBWjZvMNA=
 github.com/Noooste/websocket v1.0.3/go.mod h1:Qhw0Rtuju/fPPbcb3R5XGq7poa51qPDL462jTltl9nQ=
 github.com/andybalholm/brotli v1.1.1 h1:PR2pgnyFznKEugtsUo0xLdDop5SKXd5Qf5ysW+7XdTA=
 github.com/andybalholm/brotli v1.1.1/go.mod h1:05ib4cKhjx3OQYUY22hTVd34Bc8upXjOLL2rKwwZBoA=
-github.com/cloudflare/circl v1.3.9 h1:QFrlgFYf2Qpi8bSpVPK1HBvWpx16v/1TZivyo7pGuBE=
-github.com/cloudflare/circl v1.3.9/go.mod h1:PDRU+oXvdD7KCtgKxW95M5Z8BpSCJXQORiZFnBQS5QU=
+github.com/cloudflare/circl v1.5.0 h1:hxIWksrX6XN5a1L2TI/h53AGPhNHoUBo+TD1ms9+pys=
+github.com/cloudflare/circl v1.5.0/go.mod h1:uddAzsPgqdMAYatqJ0lsjX1oECcQLIlRpzZh3pJrofs=
 github.com/fatih/color v1.18.0 h1:S8gINlzdQ840/4pfAwic/ZE0djQEH3wM94VfqLTZcOM=
 github.com/fatih/color v1.18.0/go.mod h1:4FelSpRwEGDpQ12mAdzqdOukCy4u8WUtOY6lkT/6HfU=
 github.com/klauspost/compress v1.17.11 h1:In6xLpyWOi1+C7tXUUWv2ot1QvBjxevKAaI6IXrJmUc=
