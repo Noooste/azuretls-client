@@ -36,10 +36,86 @@ func TestToBytes(t *testing.T) {
 		t.Fatal("TestToBytes failed, expected: ", string(testBytes), ", got: ", string(got))
 	}
 
+	buf4 := strings.Builder{}
+	buf4.Write(testBytes)
+	got = azuretls.ToBytes(buf4)
+	if !bytes.Equal(got, testBytes) {
+		t.Fatal("TestToBytes failed, expected: ", string(testBytes), ", got: ", string(got))
+	}
+
+	buf5 := append([]byte{}, testBytes...)
+	got = azuretls.ToBytes(buf5)
+	if !bytes.Equal(got, testBytes) {
+		t.Fatal("TestToBytes failed, expected: ", string(testBytes), ", got: ", string(got))
+	}
+
 	var testInt = 1
 	var testIntBytes = []byte{49}
 	if !bytes.Equal(azuretls.ToBytes(testInt), testIntBytes) {
 		t.Fatal("TestToBytes failed, expected: ", string(testIntBytes), ", got: ", azuretls.ToBytes(testInt))
+	}
+}
+
+func TestToReader(t *testing.T) {
+	var testString = "test"
+	var testBytes = []byte(testString)
+
+	if !bytes.Equal(azuretls.ToBytes(testString), testBytes) {
+		t.Fatal("TestToReader failed, expected: ", testBytes, ", got: ", azuretls.ToBytes(testString))
+	}
+
+	buf := new(bytes.Buffer)
+	buf.Write(testBytes)
+	reader, err := azuretls.ToReader(buf)
+	if err != nil {
+		t.Fatal("TestToReader failed")
+	}
+
+	if !bytes.Equal(azuretls.ToBytes(reader), testBytes) {
+		t.Fatal("TestToReader failed")
+	}
+
+	buf2 := bytes.Buffer{}
+	buf2.Write(testBytes)
+	reader, err = azuretls.ToReader(buf2)
+	if err != nil {
+		t.Fatal("TestToReader failed")
+	}
+
+	if !bytes.Equal(azuretls.ToBytes(reader), testBytes) {
+		t.Fatal("TestToReader failed")
+	}
+
+	buf3 := new(strings.Builder)
+	buf3.Write(testBytes)
+	reader, err = azuretls.ToReader(buf3)
+	if err != nil {
+		t.Fatal("TestToReader failed")
+	}
+
+	if !bytes.Equal(azuretls.ToBytes(reader), testBytes) {
+		t.Fatal("TestToReader failed")
+	}
+
+	buf4 := strings.Builder{}
+	buf4.Write(testBytes)
+	reader, err = azuretls.ToReader(buf4)
+	if err != nil {
+		t.Fatal("TestToReader failed")
+	}
+
+	if !bytes.Equal(azuretls.ToBytes(reader), testBytes) {
+		t.Fatal("TestToReader failed")
+	}
+
+	buf5 := append([]byte{}, testBytes...)
+	reader, err = azuretls.ToReader(buf5)
+	if err != nil {
+		t.Fatal("TestToReader failed")
+	}
+
+	if !bytes.Equal(azuretls.ToBytes(reader), testBytes) {
+		t.Fatal("TestToReader failed")
 	}
 }
 
@@ -55,9 +131,25 @@ func TestUrlEncode(t *testing.T) {
 	}
 
 	var testString = "bar=bar&baz=baz+baz+baz"
+	var otherTestString = "baz=baz+baz+baz&bar=bar"
 
 	if azuretls.UrlEncode(f) != testString {
 		t.Fatal("TestUrlEncode failed, expected: ", testString, ", got: ", azuretls.UrlEncode(f))
+	}
+
+	var FooMap = map[string]string{
+		"bar": "bar",
+		"baz": "baz baz baz",
+	}
+
+	encoded := azuretls.UrlEncode(FooMap)
+	if encoded != testString && encoded != otherTestString {
+		t.Fatal("TestUrlEncode failed, expected: ", testString, ", got: ", encoded)
+	}
+
+	var FooString = "baz baz baz baz"
+	if azuretls.UrlEncode(FooString) != "baz+baz+baz+baz" {
+		t.Fatal("TestUrlEncode failed, expected: baz+baz+baz+baz, got: ", azuretls.UrlEncode(FooString))
 	}
 }
 

@@ -63,9 +63,6 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 func (r *Response) ReadBody() (body []byte, err error) {
 	defer func() {
 		_ = r.HttpResponse.Body.Close()
-		if r.HttpResponse.Close {
-			r.Session.Connections.Remove(r.HttpResponse.Request.URL)
-		}
 	}()
 	return io.ReadAll(r.HttpResponse.Body)
 }

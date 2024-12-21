@@ -14,12 +14,6 @@ import (
 	"time"
 )
 
-const (
-	http2errClientConnClosed    = "http2: client conn is closed"
-	http2errClientConnUnusable  = "http2: client conn not usable"
-	http2errClientConnGotGoAway = "http2: Transport received Server's graceful shutdown GOAWAY"
-)
-
 // NewSession creates a new session
 // It is a shortcut for NewSessionWithContext(context.Background())
 func NewSession() *Session {
@@ -37,12 +31,14 @@ func NewSessionWithContext(ctx context.Context) *Session {
 		CookieJar: cookieJar,
 		Browser:   Chrome,
 
-		Connections:        NewRequestConnPool(ctx),
 		GetClientHelloSpec: GetBrowserClientHelloFunc(Chrome),
 
 		UserAgent: defaultUserAgent,
 
 		MaxRedirects: 10,
+
+		PinManager: make(map[string]*PinManager),
+		pinMu:      new(sync.RWMutex),
 
 		mu: new(sync.Mutex),
 
@@ -65,7 +61,6 @@ func (s *Session) SetTimeout(timeout time.Duration) {
 // SetContext sets the given context for the session
 func (s *Session) SetContext(ctx context.Context) {
 	s.ctx = ctx
-	s.Connections.SetContext(ctx)
 }
 
 func (s *Session) Context() context.Context {
@@ -100,25 +95,22 @@ func (s *Session) SetProxy(proxy string) error {
 		return err
 	}
 
-	s.Connections.Close()
-	s.Connections = NewRequestConnPool(s.ctx)
-
+	if s.Transport != nil {
+		s.Transport.CloseIdleConnections()
+	}
 	return nil
 }
 
 // ClearProxy removes the proxy from the session
 func (s *Session) ClearProxy() {
 	s.Proxy = ""
-	s.ProxyDialer = nil
-	s.Connections.Close()
-	s.Connections = NewRequestConnPool(s.ctx)
+	s.Transport.Proxy = nil
 }
 
 func (s *Session) send(request *Request) (response *Response, err error) {
 	var (
 		httpResponse *http.Response
 		roundTripper http.RoundTripper
-		rConn        *Conn
 	)
 
 	if err = s.buildRequest(request.ctx, request); err != nil {
@@ -132,15 +124,7 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 		Request:    request,
 	}
 
-	transportOK := make(chan bool, 1)
-	connOK := make(chan bool, 1)
-	timer := time.NewTimer(request.TimeOut)
-
 	defer func() {
-		close(transportOK)
-		close(connOK)
-		timer.Stop()
-
 		if s.Callback != nil {
 			s.Callback(request, response, err)
 		}
@@ -162,81 +146,53 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 		}
 	}()
 
-	for {
-		select {
-		case <-timer.C:
-			return nil, fmt.Errorf("timeout")
-
-		case <-transportOK:
-			if rConn, err = s.initConn(request); err != nil {
-				s.dumpRequest(request, nil, err)
-				return nil, err
-			}
-			connOK <- true
-			break
-
-		case <-connOK:
-			request.conn = rConn
-			request.Proto = rConn.Proto
-
-			if rConn.HTTP2 != nil {
-				roundTripper = rConn.HTTP2
-			} else {
-				roundTripper = s.Transport
-			}
-
-			s.logRequest(request)
-
-			if !request.IgnoreBody {
-				request.HttpRequest = request.HttpRequest.WithContext(request.ctx)
-			}
-
-			httpResponse, err = roundTripper.RoundTrip(request.HttpRequest)
-
-			if err != nil {
-				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-					err = fmt.Errorf("timeout")
-				}
-
-				if strings.Contains(err.Error(), "use of closed network connection") {
-					s.Connections.Remove(request.parsedUrl)
-				}
-
-				s.dumpRequest(request, response, err)
-				s.logResponse(response, err)
-
-				return nil, err
-			}
-
-			if err = s.buildResponse(response, httpResponse); err != nil {
-				_ = httpResponse.Body.Close()
-
-				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-					err = fmt.Errorf("read body: timeout")
-				}
-
-				return nil, err
-			}
-
-			s.dumpRequest(request, response, err)
-			s.logResponse(response, err)
-
-			if err != nil {
-				return nil, err
-			}
-
-			return response, err
-
-		default:
-			if err = s.InitTransport(s.Browser); err != nil {
-				s.dumpRequest(request, nil, err)
-				return nil, err
-			}
-			transportOK <- true
-			break
-		}
+	if err = s.InitTransport(s.Browser); err != nil {
+		s.dumpRequest(request, nil, err)
+		return nil, err
 	}
 
+	roundTripper = s.Transport
+	s.logRequest(request)
+
+	if request.ForceHTTP1 {
+		request.ctx = context.WithValue(request.ctx, forceHTTP1Key, true)
+	}
+
+	if !request.IgnoreBody {
+		request.HttpRequest = request.HttpRequest.WithContext(request.ctx)
+	}
+
+	httpResponse, err = roundTripper.RoundTrip(request.HttpRequest)
+
+	if err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			err = fmt.Errorf("timeout")
+		}
+
+		s.dumpRequest(request, response, err)
+		s.logResponse(response, err)
+
+		return nil, err
+	}
+
+	if err = s.buildResponse(response, httpResponse); err != nil {
+		_ = httpResponse.Body.Close()
+
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			err = fmt.Errorf("read body: timeout")
+		}
+
+		return nil, err
+	}
+
+	s.dumpRequest(request, response, err)
+	s.logResponse(response, err)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return response, err
 }
 
 // Do sends a request and returns a response
@@ -498,35 +454,13 @@ func (s *Session) Patch(url string, data any, args ...any) (*Response, error) {
 
 // Connect initiates a connection to the specified URL
 func (s *Session) Connect(u string) error {
-	var request = &Request{}
-	var err error
-
-	if request.parsedUrl, err = url.Parse(u); err != nil {
-		return err
+	req := &Request{
+		Method: http.MethodConnect,
+		Url:    u,
 	}
 
-	request.Method = http.MethodConnect
-	request.startTime = time.Now()
-
-	if err = s.prepareRequest(request); err != nil {
-		return err
-	}
-
-	s.logRequest(request)
-
-	if err = s.InitTransport(s.Browser); err != nil {
-		return err
-	}
-
-	if _, err = s.initConn(request); err != nil {
-		return err
-	}
-
-	s.logResponse(&Response{
-		Request: request,
-	}, err)
-
-	return nil
+	_, err := s.do(req)
+	return err
 }
 
 func (c *Context) Context() context.Context {
@@ -538,8 +472,6 @@ func (c *Context) Context() context.Context {
 //
 // After calling this function, the session is no longer usable.
 func (s *Session) Close() {
-	s.Connections.Close()
-	s.Connections = nil
 	s.closed = true
 	s.mu = nil
 	s.dumpIgnore = nil

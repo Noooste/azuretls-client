@@ -7,12 +7,11 @@ import (
 	"fmt"
 	"golang.org/x/net/idna"
 	"io"
-	"math/rand"
+	"net"
 	"net/url"
 	"reflect"
 	"regexp"
 	"strings"
-	"time"
 	"unicode/utf8"
 )
 
@@ -25,10 +24,12 @@ const (
 	Socks5H     = "socks5h"
 
 	defaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+
+	forceHTTP1Key = "force-http1"
+	userAgentKey  = "user-agent"
 )
 
 var (
-	rdn       = rand.New(rand.NewSource(time.Now().UnixNano()))
 	numberReg = regexp.MustCompile(`\d+`)
 )
 
@@ -89,7 +90,7 @@ func ToBytes(b any) []byte {
 	}
 }
 
-func toReader(b any) (io.Reader, error) {
+func ToReader(b any) (io.Reader, error) {
 	switch b.(type) {
 	case string:
 		return strings.NewReader(b.(string)), nil
@@ -233,4 +234,16 @@ func (s *Session) urlMatch(host *url.URL, urls []*regexp.Regexp) bool {
 	}
 
 	return false
+}
+
+func getHost(u *url.URL) string {
+	addr := u.Hostname()
+	if v, err := idnaASCII(addr); err == nil {
+		addr = v
+	}
+	port := u.Port()
+	if port == "" {
+		port = portMap[u.Scheme]
+	}
+	return net.JoinHostPort(addr, port)
 }
