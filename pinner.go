@@ -45,8 +45,16 @@ func NewPinManager() *PinManager {
 // should be added to continue trusting the service.
 func (p *PinManager) AddPin(pin string) {
 	p.mu.Lock()
+	defer p.mu.Unlock()
 	p.m[pin] = true
-	p.mu.Unlock()
+}
+
+func (p *PinManager) AddPins(pin []string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for _, v := range pin {
+		p.m[v] = true
+	}
 }
 
 // Verify checks whether a given certificate's public key is
@@ -110,17 +118,45 @@ func (p *PinManager) GetPins() []string {
 // a session. This allows for URL-specific pinning, useful in scenarios
 // where different services (URLs) are trusted with different certificates.
 func (s *Session) AddPins(u *url.URL, pins []string) error {
-	conn := s.Connections.Get(u)
-	conn.mu.Lock()
-	defer conn.mu.Unlock()
+	host := getHost(u)
 
-	if conn.PinManager == nil {
-		conn.PinManager = NewPinManager()
+	s.pinMu.RLock()
+	if manager, err := s.PinManager[host]; err {
+		s.pinMu.RUnlock()
+		manager.AddPins(pins)
+		return nil
+	}
+	s.pinMu.RUnlock()
+
+	s.pinMu.Lock()
+	defer s.pinMu.Unlock()
+
+	manager := NewPinManager()
+	manager.AddPins(pins)
+
+	s.PinManager[host] = manager
+
+	return nil
+}
+
+func (s *Session) Pin(addr string) error {
+	s.pinMu.RLock()
+	if _, err := s.PinManager[addr]; err {
+		s.pinMu.RUnlock()
+		return nil
+	}
+	s.pinMu.RUnlock()
+
+	s.pinMu.Lock()
+	defer s.pinMu.Unlock()
+
+	manager := NewPinManager()
+	err := manager.New(addr)
+	if err != nil {
+		return err
 	}
 
-	for _, pin := range pins {
-		conn.PinManager.AddPin(pin)
-	}
+	s.PinManager[addr] = manager
 
 	return nil
 }
@@ -129,16 +165,8 @@ func (s *Session) AddPins(u *url.URL, pins []string) error {
 // with a specific URL in the session. This can be used to reset trust
 // settings or in scenarios where a service's certificate is no longer deemed trustworthy.
 func (s *Session) ClearPins(u *url.URL) error {
-	conn := s.Connections.Get(u)
-
-	conn.mu.Lock()
-	defer conn.mu.Unlock()
-
-	for k := range conn.PinManager.m {
-		conn.PinManager.m[k] = false
-	}
-
-	conn.PinManager.redo = true
-
+	s.pinMu.Lock()
+	defer s.pinMu.Unlock()
+	delete(s.PinManager, getHost(u))
 	return nil
 }

@@ -7,7 +7,7 @@ require (
 	github.com/Noooste/utls v1.2.12
 	github.com/Noooste/websocket v1.0.3
 	github.com/fatih/color v1.18.0
-	golang.org/x/net v0.32.0
+	golang.org/x/net v0.33.0
 )
 
 require (

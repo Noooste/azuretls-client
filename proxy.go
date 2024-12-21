@@ -8,7 +8,7 @@ import (
 	"fmt"
 	http "github.com/Noooste/fhttp"
 	"github.com/Noooste/fhttp/http2"
-	"github.com/Noooste/utls"
+	tls "github.com/Noooste/utls"
 	"golang.org/x/net/proxy"
 	"io"
 	"net"
@@ -28,9 +28,6 @@ type proxyDialer struct {
 	h2Mu   sync.Mutex
 	H2Conn *http2.ClientConn
 	conn   net.Conn
-
-	tr         *http2.Transport
-	ForceHTTP2 bool
 
 	sess *Session
 }
@@ -256,8 +253,8 @@ func (c *proxyDialer) InitProxyConn(ctx context.Context, network string) (rawCon
 }
 
 func (c *proxyDialer) connect(req *http.Request, conn net.Conn, negotiatedProtocol string) (net.Conn, error) {
-	if c.ForceHTTP2 || negotiatedProtocol == http2.NextProtoTLS {
-		if h2clientConn, err := c.tr.NewClientConn(conn); err == nil {
+	if negotiatedProtocol == http2.NextProtoTLS {
+		if h2clientConn, err := c.sess.HTTP2Transport.NewClientConn(conn); err == nil {
 			if proxyConn, err := c.connectHTTP2(req, conn, h2clientConn); err == nil {
 				c.h2Mu.Lock()
 				c.H2Conn = h2clientConn

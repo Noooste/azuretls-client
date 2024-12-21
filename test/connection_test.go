@@ -3,57 +3,12 @@ package azuretls_test
 import (
 	"fmt"
 	"github.com/Noooste/azuretls-client"
-	url2 "net/url"
-	"runtime"
+	"net"
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 )
-
-func TestSessionConn(t *testing.T) {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-
-	session := azuretls.NewSession()
-
-	response, err := session.Get("https://example.com/")
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if response.StatusCode != 200 {
-		t.Fatal("TestHeader failed, expected: 200, got: ", response.StatusCode)
-	}
-
-	u := &url2.URL{
-		Scheme: "https",
-		Host:   "example.com",
-	}
-
-	firstConn := session.Connections.Get(u)
-
-	if !firstConn.HTTP2.CanTakeNewRequest() {
-		t.Fatal("TestSessionConn failed, Conn is not reusable")
-	}
-
-	if err = firstConn.TLS.VerifyHostname("example.com"); err != nil {
-		t.Fatal("TestSessionConn failed, VerifyHostname failed : ", err)
-	}
-
-	response, err = session.Get("https://example.com/")
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if response.StatusCode != 200 {
-		t.Fatal("TestHeader failed, expected: 200, got: ", response.StatusCode)
-	}
-
-	if session.Connections.Get(u) != firstConn {
-		t.Fatal("TestSessionConn failed, Conn is not reused")
-	}
-}
 
 func TestHTTP1Conn(t *testing.T) {
 	session := azuretls.NewSession()
@@ -122,5 +77,91 @@ func TestHighConcurrency(t *testing.T) {
 
 	if atomic.LoadInt64(ok) < count-1 { //~1 request can fail
 		t.Fatal("TestHighConcurrency failed, expected: ", count, ", got: ", ok)
+	}
+}
+
+func TestPeetClosingConn(t *testing.T) {
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	_, err := session.Get("https://tls.peet.ws/api/all")
+
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = session.Get("https://tls.peet.ws/api/all")
+
+	if err != nil {
+		panic(err)
+	}
+}
+
+func TestForceHTTP1Request(t *testing.T) {
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	response, err := session.Do(&azuretls.Request{
+		Method:     "GET",
+		Url:        "https://tls.peet.ws/api/all",
+		ForceHTTP1: true,
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Fatal("TestHeader failed, expected: 200, got: ", response.StatusCode)
+	}
+
+	var result map[string]any
+
+	if err = response.JSON(&result); err != nil {
+		t.Fatal(err)
+	}
+
+	if result["http_version"] != "HTTP/1.1" {
+		t.Fatal("TestHeader failed, expected: HTTP/1.1, got: ", result["protocol"])
+	}
+
+	response, err = session.Do(&azuretls.Request{
+		Method: "GET",
+		Url:    "https://tls.peet.ws/api/all",
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Fatal("TestHeader failed, expected: 200, got: ", response.StatusCode)
+	}
+
+	if err = response.JSON(&result); err != nil {
+		t.Fatal(err)
+	}
+
+	if result["http_version"] != "h2" {
+		t.Fatal("TestHeader failed, expected: HTTP/1.1, got: ", result["protocol"])
+	}
+}
+func TestModifyDialer(t *testing.T) {
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	session.ModifyDialer = func(dialer *net.Dialer) error {
+		dialer.Timeout = 10 * time.Second
+		return nil
+	}
+
+	response, err := session.Get("https://tls.peet.ws/api/all")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Fatal("TestHeader failed, expected: 200, got: ", response.StatusCode)
 	}
 }

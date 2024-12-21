@@ -42,9 +42,6 @@ type Session struct {
 	// Name or identifier of the browser used in the session.
 	Browser string
 
-	// Pool of persistent connections to manage concurrent requests.
-	Connections *ConnPool
-
 	HTTP2Transport *http2.Transport
 	Transport      *http.Transport
 
@@ -105,6 +102,9 @@ type Session struct {
 	// To disable pin verification, use InsecureSkipVerify.
 	VerifyPins bool
 
+	PinManager map[string]*PinManager
+	pinMu      *sync.RWMutex
+
 	// If true, server's certificate is not verified (insecure: this may facilitate attack from middleman).
 	InsecureSkipVerify bool
 
@@ -161,9 +161,6 @@ type Request struct {
 	Header http.Header
 	// Order of headers for the request.
 	HeaderOrder HeaderOrder
-
-	// Connection associated with the request.
-	conn *Conn
 
 	proxy   string
 	ua      string
