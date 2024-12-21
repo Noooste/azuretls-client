@@ -31,8 +31,6 @@ func NewSessionWithContext(ctx context.Context) *Session {
 		CookieJar: cookieJar,
 		Browser:   Chrome,
 
-		GetClientHelloSpec: GetBrowserClientHelloFunc(Chrome),
-
 		UserAgent: defaultUserAgent,
 
 		MaxRedirects: 10,
@@ -82,9 +80,10 @@ func (s *Session) SetProxy(proxy string) error {
 		return fmt.Errorf("proxy is empty")
 	}
 
+	proxy = strings.Trim(proxy, " \n\r")
+
 	switch {
-	case strings.HasPrefix(proxy, "socks5h://"), strings.HasPrefix(proxy, "socks5://"),
-		strings.HasPrefix(proxy, "http://"), strings.HasPrefix(proxy, "https://"):
+	case strings.Contains(proxy, "://"):
 		s.Proxy = proxy
 
 	default:

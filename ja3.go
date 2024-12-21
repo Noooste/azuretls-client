@@ -124,7 +124,7 @@ func (s *Session) ApplyJa3(ja3, navigator string) error {
 //
 // Any absent field in the client hello will raise an error.
 func (s *Session) ApplyJa3WithSpecifications(ja3 string, specifications *TlsSpecifications, navigator string) error {
-	_, err := stringToSpec(ja3, DefaultTlsSpecifications(navigator), navigator)
+	_, err := stringToSpec(ja3, specifications, navigator)
 	if err != nil {
 		return err
 	}
@@ -521,28 +521,6 @@ func getSupportedAlgorithms(navigator string) []tls.SignatureScheme {
 			tls.PKCS1WithSHA384,
 			tls.PSSWithSHA512,
 			tls.PKCS1WithSHA512,
-		}
-	case Opera:
-		return []tls.SignatureScheme{
-			1027,
-			1283,
-			1539,
-			2052,
-			2053,
-			2054,
-			2057,
-			2058,
-			2059,
-			1025,
-			1281,
-			1537,
-			1026,
-			771,
-			769,
-			770,
-			515,
-			513,
-			514,
 		}
 	}
 }

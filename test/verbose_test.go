@@ -139,7 +139,12 @@ func TestSession_DumpAndLog(t *testing.T) {
 
 	session := azuretls.NewSession()
 
-	session.DumpAndLog("./tmp")
+	session.DumpAndLog("./tmp", "/redirect")
+
+	if !session.LogIgnore("https://httpbin.org/redirect") {
+		t.Error("LogIgnore failed")
+		return
+	}
 
 	session.Get("https://httpbin.org/get")
 	session.Get("https://httpbin.org/redirect")

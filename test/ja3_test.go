@@ -1,7 +1,6 @@
 package azuretls_test
 
 import (
-	"encoding/json"
 	"github.com/Noooste/azuretls-client"
 	"log"
 	"os"
@@ -160,10 +159,7 @@ func TestSession_ApplyJa3(t *testing.T) {
 	}
 
 	var loaded map[string]any
-
-	err = json.Unmarshal(response.Body, &loaded)
-
-	if err != nil {
+	if err = response.JSON(&loaded); err != nil {
 		t.Fatal(err)
 	}
 
@@ -310,5 +306,114 @@ func TestGetMondialRelay(t *testing.T) {
 
 	if resp.StatusCode != 200 {
 		t.Fatal("Expected 200")
+	}
+}
+
+func TestFirefoxProfile(t *testing.T) {
+	session := azuretls.NewSession()
+
+	response, err := session.Get("https://tls.peet.ws/api/all")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var loaded map[string]any
+	if err = response.JSON(&loaded); err != nil {
+		t.Fatal(err)
+	}
+
+	hash := loaded["tls"].(map[string]any)["peetprint_hash"].(string)
+
+	if hash == "" {
+		t.Fatal("Expected hash")
+	}
+
+	session.Close()
+
+	session = azuretls.NewSession()
+	session.Browser = azuretls.Firefox
+
+	response, err = session.Get("https://tls.peet.ws/api/all")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = response.JSON(&loaded); err != nil {
+		t.Fatal(err)
+	}
+
+	fHash := loaded["tls"].(map[string]any)["peetprint_hash"].(string)
+
+	if fHash == "" {
+		t.Fatal("Expected hash")
+	}
+
+	if fHash == hash {
+		t.Fatal("Expected different hashes")
+	}
+}
+
+func TestIosProfile(t *testing.T) {
+	session := azuretls.NewSession()
+
+	response, err := session.Get("https://tls.peet.ws/api/all")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var loaded map[string]any
+	if err = response.JSON(&loaded); err != nil {
+		t.Fatal(err)
+	}
+
+	hash := loaded["tls"].(map[string]any)["peetprint_hash"].(string)
+
+	if hash == "" {
+		t.Fatal("Expected hash")
+	}
+
+	session.Close()
+
+	session = azuretls.NewSession()
+	session.Browser = azuretls.Ios
+
+	response, err = session.Get("https://tls.peet.ws/api/all")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = response.JSON(&loaded); err != nil {
+		t.Fatal(err)
+	}
+
+	fHash := loaded["tls"].(map[string]any)["peetprint_hash"].(string)
+
+	if fHash == "" {
+		t.Fatal("Expected hash")
+	}
+
+	if fHash == hash {
+		t.Fatal("Expected different hashes")
+	}
+}
+
+func TestGetApplyJa3WithoutSpecifications(t *testing.T) {
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	err := session.ApplyJa3WithSpecifications("771,4865-4867-4866-49195-49199-52393-52392-49196-49200-49162-49161-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-34-51-43-13-45-28-65037,29-23-24-25-256-257,0", &azuretls.TlsSpecifications{}, azuretls.Firefox)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	err = session.ApplyJa3WithSpecifications("771,4865-4867-4866-49195-49199-52393-52392-49196-49200-49162-49161-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-34-51-43-13-45-28-65037,29-23-24-25-256-257,0", &azuretls.TlsSpecifications{}, azuretls.Chrome)
+	if err != nil {
+		log.Fatal(err)
+		return
 	}
 }

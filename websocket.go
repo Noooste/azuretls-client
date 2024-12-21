@@ -7,7 +7,6 @@ import (
 	"github.com/Noooste/websocket"
 	"net"
 	url2 "net/url"
-	"time"
 )
 
 type Websocket struct {
@@ -87,27 +86,7 @@ func (s *Session) NewWebsocketWithContext(ctx context.Context, url string, readB
 			ctx = context.WithValue(ctx, forceHTTP1Key, true)
 			return s.dialTLS(ctx, network, addr)
 		},
-		NetDialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			dialer := &net.Dialer{
-				Timeout:   s.TimeOut,
-				KeepAlive: 30 * time.Second,
-			}
-
-			if s.ModifyDialer != nil {
-				if err = s.ModifyDialer(dialer); err != nil {
-					return nil, err
-				}
-			}
-
-			return dialer.DialContext(s.ctx, network, addr)
-		},
-		Proxy: func(*http.Request) (*url2.URL, error) {
-			if s.Proxy == "" {
-				return nil, nil
-			}
-
-			return url2.Parse(s.Proxy)
-		},
+		NetDialContext: s.dial,
 	}
 
 	c, resp, err := ws.dialer.DialContext(ctx, req.Url, req.HttpRequest.Header, req.HttpRequest.Header[http.HeaderOrderKey])

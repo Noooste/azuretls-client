@@ -1,6 +1,6 @@
 # AzureTLS Client 
 [![GoDoc](https://godoc.org/github.com/Noooste/azuretls-client?status.svg)](https://godoc.org/github.com/Noooste/azuretls-client)
-![Coverage](https://img.shields.io/badge/Coverage-76.5%25-brightgreen)
+[![codecov](https://codecov.io/gh/Noooste/azuretls-client/graph/badge.svg?token=XGHX707RK6)](https://codecov.io/gh/Noooste/azuretls-client)
 [![build](https://github.com/Noooste/azuretls-client/actions/workflows/push.yml/badge.svg)](https://github.com/Noooste/azuretls-client/actions/workflows/push.yml)
 [![Go Report Card](https://goreportcard.com/badge/Noooste/azuretls-client)](https://goreportcard.com/report/Noooste/azuretls-client)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Noooste/azuretls-client/blob/master/LICENSE)
@@ -354,6 +354,7 @@ Supported proxy formats include:
 - `socks5(h)://ip`
 - `socks5(h)://ip:port`
 - `socks5(h)://username:password@ip:port`
+- `ip`
 - `ip:port`
 - `ip:port:username:password`
 - `username:password:ip:port`
