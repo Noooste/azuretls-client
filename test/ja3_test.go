@@ -400,3 +400,20 @@ func TestIosProfile(t *testing.T) {
 		t.Fatal("Expected different hashes")
 	}
 }
+
+func TestGetApplyJa3WithoutSpecifications(t *testing.T) {
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	err := session.ApplyJa3WithSpecifications("771,4865-4867-4866-49195-49199-52393-52392-49196-49200-49162-49161-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-34-51-43-13-45-28-65037,29-23-24-25-256-257,0", &azuretls.TlsSpecifications{}, azuretls.Firefox)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	err = session.ApplyJa3WithSpecifications("771,4865-4867-4866-49195-49199-52393-52392-49196-49200-49162-49161-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-34-51-43-13-45-28-65037,29-23-24-25-256-257,0", &azuretls.TlsSpecifications{}, azuretls.Chrome)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+}
