@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/Noooste/azuretls-client"
-	"github.com/Noooste/fhttp/http2"
-	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -55,29 +53,6 @@ func ExampleSession_Post() {
 
 	// Output:
 	// 200
-	// true
-}
-
-func ExampleSession_Connect() {
-	session := azuretls.NewSession()
-
-	err := session.Connect("https://www.google.com")
-
-	if err != nil {
-		return
-	}
-
-	connection := session.Connections.Get(&url.URL{
-		Scheme: azuretls.SchemeHttps,
-		Host:   "www.google.com",
-	})
-
-	fmt.Println(connection != nil)
-	fmt.Println(connection.PinManager.GetPins() != nil)
-	fmt.Println(connection.TLS.ConnectionState().NegotiatedProtocol == http2.NextProtoTLS)
-	// Output:
-	// true
-	// true
 	// true
 }
 

@@ -3,15 +3,11 @@ package azuretls
 import (
 	"context"
 	"errors"
-	"fmt"
 	http "github.com/Noooste/fhttp"
 	"github.com/Noooste/websocket"
 	"net"
 	url2 "net/url"
-)
-
-var (
-	ErrNilRequest = errors.New("request is nil")
+	"time"
 )
 
 type Websocket struct {
@@ -48,10 +44,6 @@ func (s *Session) NewWebsocketWithContext(ctx context.Context, url string, readB
 	req := new(Request)
 	req.Url = url
 
-	if req == nil {
-		return nil, ErrNilRequest
-	}
-
 	if err := s.prepareRequest(req, args...); err != nil {
 		return nil, err
 	}
@@ -85,36 +77,37 @@ func (s *Session) NewWebsocketWithContext(ctx context.Context, url string, readB
 	}
 
 	req.ForceHTTP1 = true
-	if _, err = s.initConn(req); err != nil {
-		return nil, err
-	}
 
 	ws.dialer = &websocket.Dialer{
-		HandshakeTimeout:  s.TimeOut,
-		ReadBufferSize:    readBufferSize,
-		WriteBufferSize:   writeBufferSize,
-		EnableCompression: true,
-	}
+		HandshakeTimeout: s.TimeOut,
+		ReadBufferSize:   readBufferSize,
+		WriteBufferSize:  writeBufferSize,
+		Jar:              s.CookieJar,
+		NetDialTLSContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			ctx = context.WithValue(ctx, forceHTTP1Key, true)
+			return s.dialTLS(ctx, network, addr)
+		},
+		NetDialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			dialer := &net.Dialer{
+				Timeout:   s.TimeOut,
+				KeepAlive: 30 * time.Second,
+			}
 
-	ws.dialer.Jar = s.CookieJar
+			if s.ModifyDialer != nil {
+				if err = s.ModifyDialer(dialer); err != nil {
+					return nil, err
+				}
+			}
 
-	ws.dialer.NetDialTLSContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-		s.Connections.mu.RLock()
-		defer s.Connections.mu.RUnlock()
-		if rc, ok := s.Connections.hosts[addr]; ok {
-			return rc.TLS, nil
-		}
-		return nil, fmt.Errorf("no connection for %s", addr)
-	}
+			return dialer.DialContext(s.ctx, network, addr)
+		},
+		Proxy: func(*http.Request) (*url2.URL, error) {
+			if s.Proxy == "" {
+				return nil, nil
+			}
 
-	ws.dialer.NetDialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-		s.Connections.mu.RLock()
-		defer s.Connections.mu.RUnlock()
-		if rc, ok := s.Connections.hosts[addr]; ok {
-			return rc.Conn, nil
-		}
-
-		return nil, fmt.Errorf("no connection for %s", addr)
+			return url2.Parse(s.Proxy)
+		},
 	}
 
 	c, resp, err := ws.dialer.DialContext(ctx, req.Url, req.HttpRequest.Header, req.HttpRequest.Header[http.HeaderOrderKey])

@@ -143,7 +143,7 @@ func newRequest(ctx context.Context, verbose bool, req *Request) (newReq *http.R
 		} else {
 			var reader io.Reader
 
-			if reader, err = toReader(req.Body); err != nil {
+			if reader, err = ToReader(req.Body); err != nil {
 				return nil, err
 			}
 
