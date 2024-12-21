@@ -354,6 +354,7 @@ Supported proxy formats include:
 - `socks5(h)://ip`
 - `socks5(h)://ip:port`
 - `socks5(h)://username:password@ip:port`
+- `ip`
 - `ip:port`
 - `ip:port:username:password`
 - `username:password:ip:port`

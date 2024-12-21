@@ -43,14 +43,7 @@ func (s *Session) assignProxy(proxy string) error {
 		return err
 	}
 
-	if parsed.Host == "" {
-		return fmt.Errorf(invalidProxy, proxy, "make sure to specify full url like http(s)://username:password@ip:port")
-	}
-
 	switch parsed.Scheme {
-	case "":
-		return fmt.Errorf(invalidProxy, proxy, "empty scheme")
-
 	case SchemeHttp:
 		if parsed.Port() == "" {
 			parsed.Host = net.JoinHostPort(parsed.Host, "80")

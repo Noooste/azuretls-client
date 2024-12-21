@@ -105,7 +105,13 @@ func (s *Session) upgradeTLS(ctx context.Context, conn net.Conn, addr string) (n
 	}
 
 	tlsConn := tls.UClient(conn, &config, tls.HelloCustom)
-	specs := s.GetClientHelloSpec()
+
+	var fn = s.GetClientHelloSpec
+	if fn == nil {
+		fn = GetBrowserClientHelloFunc(s.Browser)
+	}
+
+	specs := fn()
 
 	if v, k := ctx.Value(forceHTTP1Key).(bool); k && v {
 		for _, ext := range specs.Extensions {

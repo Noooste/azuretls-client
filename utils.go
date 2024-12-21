@@ -34,8 +34,19 @@ var (
 )
 
 func formatProxy(proxy string) string {
-	var split = strings.Split(strings.Trim(proxy, "\n\r"), ":")
-	if len(split) == 4 {
+	var split = strings.Split(proxy, ":")
+	length := len(split)
+	switch length {
+	case 1:
+		// proxy = ip
+		return "http://" + split[0]
+	case 2:
+		// proxy = ip:port
+		return "http://" + split[0] + ":" + split[1]
+	case 3:
+		// proxy = username:password@ip:port
+		return "http://" + proxy
+	case 4:
 		if numberReg.MatchString(split[1]) {
 			// proxy = ip:port:username:password
 			return "http://" + split[2] + ":" + split[3] + "@" + split[0] + ":" + split[1]
@@ -43,17 +54,9 @@ func formatProxy(proxy string) string {
 
 		// proxy = username:password:ip:port
 		return "http://" + split[0] + ":" + split[1] + "@" + split[2] + ":" + split[3]
-
-	} else if len(split) == 2 {
-		// proxy = ip:port
-		return "http://" + split[0] + ":" + split[1]
-
-	} else if len(split) == 3 {
-		// proxy = username:password@ip:port
-		return "http://" + proxy
+	default:
+		return ""
 	}
-
-	return ""
 }
 
 // ToBytes converts any type to []byte, it supports string, []byte, io.Reader,
