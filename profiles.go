@@ -44,7 +44,7 @@ func getShuffledExtensions(extensions []tls.TLSExtension) []tls.TLSExtension {
 }
 
 // GetLastChromeVersion apply the latest Chrome version
-// Current Chrome version : 127
+// Current Chrome version : 132
 func GetLastChromeVersion() *tls.ClientHelloSpec {
 	extensions := []tls.TLSExtension{
 		// &tls.UtlsGREASEExtension{},
@@ -95,7 +95,15 @@ func GetLastChromeVersion() *tls.ClientHelloSpec {
 		&tls.SupportedPointsExtension{SupportedPoints: []byte{
 			0x00, // pointFormatUncompressed
 		}},
-		tls.BoringGREASEECH(),
+		&tls.GREASEEncryptedClientHelloExtension{
+			CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
+				{
+					KdfId:  dicttls.HKDF_SHA256,
+					AeadId: dicttls.AEAD_AES_128_GCM,
+				},
+			},
+			CandidatePayloadLens: []uint16{128, 160, 192, 224}, // +16: 144, 176, 208, 240
+		},
 		// &tls.UtlsGREASEExtension{},
 		// &tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle},
 	}

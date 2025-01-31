@@ -1,6 +1,7 @@
 package azuretls_test
 
 import (
+	"fmt"
 	"github.com/Noooste/azuretls-client"
 	"log"
 	"os"
@@ -12,7 +13,7 @@ import (
 func TestDefaultConfig(t *testing.T) {
 	session := azuretls.NewSession()
 
-	response, err := session.Get("https://tls.peet.ws/api/all")
+	response, err := session.Get("https://tls.browserleaks.com/")
 
 	if err != nil {
 		t.Fatal(err)
@@ -21,6 +22,8 @@ func TestDefaultConfig(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Fatal("Expected 200")
 	}
+
+	fmt.Println(string(response.Body))
 }
 
 func TestChrome(t *testing.T) {

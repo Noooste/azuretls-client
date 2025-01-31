@@ -225,10 +225,6 @@ func stringToSpec(ja3 string, specifications *TlsSpecifications, navigator strin
 		}
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
 	specs.Extensions = extensions
 	specs.TLSVersMin = uint16(v)
 	specs.TLSVersMax = maxVers
