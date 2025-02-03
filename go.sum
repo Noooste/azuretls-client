@@ -1,7 +1,7 @@
 github.com/Noooste/fhttp v1.0.12 h1:2N15bIATKaC6q+LVyRGyxPyuqEPvwAS3Uk1peC3YVHU=
 github.com/Noooste/fhttp v1.0.12/go.mod h1:CMVxKOhNheqJN5HYE4Rlvz2SRdV8Uv7YWmi6OwmB/Bk=
-github.com/Noooste/utls v1.2.12 h1:Zcm/7OB6W4Ro1q2OV1BrFb3qBI7uqYeC21wHYX+Ez9I=
-github.com/Noooste/utls v1.2.12/go.mod h1:CJaLzDHOhjuKESY3/wTSEzs3N2QgdXTrNQE3sW2632M=
+github.com/Noooste/utls v1.3.1 h1:oI8kLnpmOnqKSJLifSz+G7UoXyTBFiw0kXTWMyhKHuw=
+github.com/Noooste/utls v1.3.1/go.mod h1:CJaLzDHOhjuKESY3/wTSEzs3N2QgdXTrNQE3sW2632M=
 github.com/Noooste/websocket v1.0.3 h1:drW7tvZ3YqzqI9wApnaH1Q0syFMXO7gbLlsBWjZvMNA=
 github.com/Noooste/websocket v1.0.3/go.mod h1:Qhw0Rtuju/fPPbcb3R5XGq7poa51qPDL462jTltl9nQ=
 github.com/andybalholm/brotli v1.1.1 h1:PR2pgnyFznKEugtsUo0xLdDop5SKXd5Qf5ysW+7XdTA=
