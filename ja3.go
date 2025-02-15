@@ -188,7 +188,7 @@ func stringToSpec(ja3 string, specifications *TlsSpecifications, navigator strin
 			return nil, err
 		}
 	} else {
-		extensions, _, maxVers, err = []tls.TLSExtension{}, 0, tls.VersionTLS13, nil
+		extensions, _, maxVers = []tls.TLSExtension{}, 0, tls.VersionTLS13
 		if information[3] != "" {
 			var (
 				c   = make([]tls.CurveID, 0, len(curves))
@@ -454,6 +454,14 @@ func getExtensions(extensions []string, specifications *TlsSpecifications, defau
 			break
 
 		case "17513":
+			if specifications.ApplicationSettingsProtocols != nil {
+				builtExtensions = append(builtExtensions, &tls.OldApplicationSettingsExtension{SupportedProtocols: specifications.ApplicationSettingsProtocols})
+			} else {
+				builtExtensions = append(builtExtensions, &tls.OldApplicationSettingsExtension{SupportedProtocols: []string{"h2"}})
+			}
+			break
+
+		case "17613":
 			if specifications.ApplicationSettingsProtocols != nil {
 				builtExtensions = append(builtExtensions, &tls.ApplicationSettingsExtension{SupportedProtocols: specifications.ApplicationSettingsProtocols})
 			} else {

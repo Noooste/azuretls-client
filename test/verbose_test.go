@@ -61,6 +61,11 @@ func TestSession_EnableVerbose2(t *testing.T) {
 
 	_, err := session.Get("https://httpbin.org/get")
 
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	time.Sleep(50 * time.Millisecond)
 	f, err := os.ReadDir("./tmp")
 

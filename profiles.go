@@ -44,15 +44,17 @@ func getShuffledExtensions(extensions []tls.TLSExtension) []tls.TLSExtension {
 }
 
 // GetLastChromeVersion apply the latest Chrome version
-// Current Chrome version : 132
+// Current Chrome version : 133
 func GetLastChromeVersion() *tls.ClientHelloSpec {
 	extensions := []tls.TLSExtension{
 		// &tls.UtlsGREASEExtension{},
-		&tls.KeyShareExtension{KeyShares: []tls.KeyShare{
-			{Group: tls.CurveID(tls.GREASE_PLACEHOLDER), Data: []byte{0}},
-			{Group: tls.X25519MLKEM768},
-			{Group: tls.X25519},
-		}},
+		&tls.KeyShareExtension{
+			KeyShares: []tls.KeyShare{
+				{Group: tls.CurveID(tls.GREASE_PLACEHOLDER), Data: []byte{0}},
+				{Group: tls.X25519MLKEM768},
+				{Group: tls.X25519},
+			},
+		},
 		&tls.ALPNExtension{AlpnProtocols: []string{
 			http2.NextProtoTLS,
 			"http/1.1",

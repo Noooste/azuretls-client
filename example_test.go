@@ -87,14 +87,14 @@ func ExampleSession_DumpIgnore() {
 func ExampleSession_Dump() {
 	session := azuretls.NewSession()
 
-	session.Dump("./logs", "*.httpbin.org")
+	_ = session.Dump("./logs", "*.httpbin.org")
 
-	session.Get("https://www.google.com", azuretls.OrderedHeaders{
+	_, _ = session.Get("https://www.google.com", azuretls.OrderedHeaders{
 		{"User-Agent", "Mozilla/5.0"},
 		{"Accept", "text/html"},
 	})
 
-	session.Get("https://httpbin.org/get")
+	_, _ = session.Get("https://httpbin.org/get")
 
 	time.Sleep(1 * time.Second)
 
@@ -111,8 +111,8 @@ func ExampleSession_Log() {
 
 	session.Log("/any/path/to/ignore", "can.ignore.this", "*.all.subdomains")
 
-	session.Get("https://www.google.com")
-	session.Get("https://www.google.com/any/path/to/ignore")
+	_, _ = session.Get("https://www.google.com")
+	_, _ = session.Get("https://www.google.com/any/path/to/ignore")
 }
 
 func ExampleSession_SetProxy() {
@@ -133,7 +133,7 @@ func ExampleSession_SetProxy() {
 func ExampleSession_ApplyJa3() {
 	session := azuretls.NewSession()
 
-	ja3 := "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17513-21,29-23-24,0"
+	ja3 := "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,45-13-43-0-16-65281-51-18-11-27-35-23-10-5-17613-21,29-23-24,0"
 
 	if err := session.ApplyJa3(ja3, azuretls.Chrome); err != nil {
 		panic(err)
