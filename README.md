@@ -5,34 +5,22 @@
 [![Go Report Card](https://goreportcard.com/badge/Noooste/azuretls-client)](https://goreportcard.com/report/Noooste/azuretls-client)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Noooste/azuretls-client/blob/master/LICENSE)
 
-# 📖 Introduction 
+## 📖 Overview
 
-Welcome to AzureTLS Client, a robust and flexible HTTP client library for Golang designed with security and customization in mind. Whether you're building a web scraper, an API client, or any application that requires HTTP requests, AzureTLS Client provides a suite of features to meet your needs.
+AzureTLS Client is a Go HTTP client library focused on providing extensive control over TLS fingerprinting and connection parameters. This library extends Go's standard HTTP capabilities with features especially useful for web scraping, testing, and specialized API clients.
 
-## Why AzureTLS Client?
+The client allows detailed customization of TLS ClientHello messages, HTTP/2 settings, and header ordering while maintaining a clean and simple API similar to the standard library.
 
-- **Security**: With built-in SSL pinning and proxy support, AzureTLS Client takes security seriously, ensuring your connections are secure and reliable.
-  
-- **Customization**: Modify TLS ClientHello fingerprints, configure HTTP/2 settings, and even set ordered headers. AzureTLS Client is built to be as flexible as your project requires.
-  
-- **Performance**: Built on top of Golang's native packages, AzureTLS Client is designed for speed and efficiency, making it suitable for both small and large-scale applications.
+## 🌟 Key Features
 
-Whether you're a seasoned developer looking for a feature-rich HTTP client or you're just getting started with Golang, AzureTLS Client offers a blend of performance, customization, and security to help you build better applications.
-
-
-# 🌟 Features 
-
-- Latest Chrome ClientHello Support
-- HTTP/1.1 and HTTP/2 Compatibility
-- Customizable ClientHello TLS (JA3 strings and extensions)
-- Configurable HTTP/2 Frames (SETTINGS, PRIORITY, WINDOW_UPDATE)
-- Built-in Proxy Support
-- SSL Pinning
-- PreHook and Callback Functions
-- Integrated Cookie Jar
-- Websocket with JA3
-
-
+- Full control over TLS ClientHello fingerprints (JA3)
+- HTTP/1.1 and HTTP/2 protocol support with configurable settings
+- Precise header ordering control
+- Built-in proxy support (HTTP/HTTPS/SOCKS)
+- SSL pinning functionality
+- Integrated cookie handling
+- WebSocket support with JA3 fingerprinting
+- Chrome, Firefox, Safari, Edge and iOS browser emulation presets
 
 📑 Table of Contents
 =================
@@ -41,6 +29,7 @@ Whether you're a seasoned developer looking for a feature-rich HTTP client or yo
 * [Dependencies](#dependencies)
 * [Installation](#installation)
 * [Usage](#usage)
+   * [Quick Example](#quick-example)
    * [Create a Session](#create-a-session)
    * [Make Requests](#make-requests)
       * [GET](#get)
@@ -73,18 +62,36 @@ Whether you're a seasoned developer looking for a feature-rich HTTP client or yo
 golang ^1.22
 ```
 
+
 ## Installation
 
 ```bash
-$ go get github.com/Noooste/azuretls-client
-````
+go get github.com/Noooste/azuretls-client
+```
 
 ## Usage
 
+### Quick Example
 ```go
+package main
+
 import (
+    "fmt"
     "github.com/Noooste/azuretls-client"
 )
+
+func main() {
+    session := azuretls.NewSession()
+    defer session.Close()
+
+    // Make a request
+    response, err := session.Get("https://tls.peet.ws/api/all")
+    if err != nil {
+        panic(err)
+    }
+    
+    fmt.Printf("Status: %d\n", response.StatusCode)
+}
 ```
 
 ### Create a Session
