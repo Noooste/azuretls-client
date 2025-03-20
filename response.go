@@ -88,3 +88,7 @@ func (r *Response) MustJSON(v any) {
 		panic(err)
 	}
 }
+
+func (r *Response) String() string {
+	return string(r.Body)
+}

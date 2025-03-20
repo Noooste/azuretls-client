@@ -43,6 +43,21 @@ func defaultHeaderSettings(navigator string) (map[http2.SettingID]uint32, []http
 				http2.SettingMaxHeaderListSize,
 			}
 
+	case Safari:
+		return map[http2.SettingID]uint32{
+				http2.SettingEnablePush:           0,
+				http2.SettingMaxConcurrentStreams: 100,
+				http2.SettingInitialWindowSize:    2097152,
+				0x8:                               1,
+				0x9:                               1,
+			}, []http2.SettingID{
+				http2.SettingEnablePush,
+				http2.SettingMaxConcurrentStreams,
+				http2.SettingInitialWindowSize,
+				0x8,
+				0x9,
+			}
+
 	default: //chrome
 		return map[http2.SettingID]uint32{
 				http2.SettingHeaderTableSize:   65536,
@@ -64,6 +79,8 @@ func defaultWindowsUpdate(navigator string) uint32 {
 		return 12517377
 	case Ios:
 		return 15663105
+	case Safari:
+		return 10420225
 	default:
 		return 15663105
 	}
