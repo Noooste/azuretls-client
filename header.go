@@ -210,6 +210,8 @@ func (r *Request) formatHeader() {
 			r.HttpRequest.Header[http.PHeaderOrderKey] = []string{Method, Path, Authority, Scheme}
 		case Ios:
 			r.HttpRequest.Header[http.PHeaderOrderKey] = []string{Method, Scheme, Path, Authority}
+		case Safari:
+			r.HttpRequest.Header[http.PHeaderOrderKey] = []string{Method, Scheme, Authority, Path}
 		default: //chrome sub products
 			r.HttpRequest.Header[http.PHeaderOrderKey] = GetDefaultPseudoHeaders()
 		}
