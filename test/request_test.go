@@ -234,6 +234,4 @@ func TestHTTP1Request(t *testing.T) {
 		t.Fatal("TestHTTP1Request failed, expected: 200, got: ", resp.StatusCode)
 		return
 	}
-
-	fmt.Println(resp.String())
 }

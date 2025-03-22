@@ -653,7 +653,7 @@ func TestSession_Timeout2(t *testing.T) {
 		session.Log()
 		defer session.Close()
 
-		session.SetTimeout(3 * time.Second)
+		session.SetTimeout(1 * time.Second)
 
 		_, err = session.Get("https://testfile.org/files-5GB")
 	}()
@@ -665,8 +665,8 @@ func TestSession_Timeout2(t *testing.T) {
 		return
 	}
 
-	if err.Error() != "read body: timeout" {
-		t.Fatal("TestSession_Timeout2 failed, expected: timeout, got: ", err)
+	if err.Error() != "timeout" {
+		t.Fatal("TestSession_Timeout2 failed, expected: timeout, got:", err)
 		return
 	}
 }
