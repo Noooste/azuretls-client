@@ -84,6 +84,7 @@ func (s *Session) NewWebsocketWithContext(ctx context.Context, url string, readB
 		Jar:              s.CookieJar,
 		NetDialTLSContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
 			ctx = context.WithValue(ctx, forceHTTP1Key, true)
+			ctx = context.WithValue(ctx, "request", req)
 			return s.dialTLS(ctx, network, addr)
 		},
 		NetDialContext: s.dial,
