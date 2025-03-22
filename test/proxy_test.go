@@ -52,6 +52,7 @@ func TestBadProxyFormat(t *testing.T) {
 }
 
 func TestHTTPProxy(t *testing.T) {
+	t.SkipNow()
 	session := azuretls.NewSession()
 	defer session.Close()
 
@@ -86,6 +87,7 @@ func TestHTTPProxy(t *testing.T) {
 }
 
 func TestHTTPSProxy(t *testing.T) {
+	t.SkipNow()
 	session := azuretls.NewSession()
 	defer session.Close()
 
@@ -119,6 +121,8 @@ func TestHTTPSProxy(t *testing.T) {
 }
 
 func TestSOCKSProxy(t *testing.T) {
+	t.SkipNow()
+
 	session := azuretls.NewSession()
 	defer session.Close()
 

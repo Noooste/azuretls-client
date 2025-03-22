@@ -153,13 +153,13 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 	roundTripper = s.Transport
 	s.logRequest(request)
 
+	request.ctx = context.WithValue(request.ctx, "request", request)
+
 	if request.ForceHTTP1 {
 		request.ctx = context.WithValue(request.ctx, forceHTTP1Key, true)
 	}
 
-	if !request.IgnoreBody {
-		request.HttpRequest = request.HttpRequest.WithContext(request.ctx)
-	}
+	request.HttpRequest = request.HttpRequest.WithContext(request.ctx)
 
 	httpResponse, err = roundTripper.RoundTrip(request.HttpRequest)
 

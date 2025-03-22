@@ -213,3 +213,25 @@ func TestRequest_InsecureSkipVerify(t *testing.T) {
 	}
 	fmt.Println(response.StatusCode)
 }
+
+func TestHTTP1Request(t *testing.T) {
+	session := azuretls.NewSession()
+
+	req := &azuretls.Request{
+		Method:     http.MethodGet,
+		Url:        "https://tls.peet.ws/api/all",
+		ForceHTTP1: true,
+	}
+
+	resp, err := session.Do(req)
+
+	if err != nil {
+		t.Fatal("TestHTTP1Request failed, expected: nil, got: ", err)
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatal("TestHTTP1Request failed, expected: 200, got: ", resp.StatusCode)
+		return
+	}
+}
