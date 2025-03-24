@@ -3,7 +3,7 @@ module github.com/Noooste/azuretls-client
 go 1.22.0
 
 require (
-	github.com/Noooste/fhttp v1.0.12
+	github.com/Noooste/fhttp v1.0.13
 	github.com/Noooste/utls v1.3.6
 	github.com/Noooste/websocket v1.0.3
 	github.com/fatih/color v1.18.0

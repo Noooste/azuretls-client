@@ -235,3 +235,68 @@ func TestHTTP1Request(t *testing.T) {
 		return
 	}
 }
+
+func TestRequestNoDuplicateContentLength(t *testing.T) {
+	session := azuretls.NewSession()
+
+	session.InsecureSkipVerify = true
+	if err := session.SetProxy("localhost:8888"); err != nil {
+		t.Fatal(err)
+	}
+
+	req := &azuretls.Request{
+		Method: http.MethodPost,
+		Url:    "https://httpbin.org/post",
+		Body:   "test",
+		OrderedHeaders: azuretls.OrderedHeaders{
+			{"content-length", "4"},
+		},
+	}
+
+	resp, err := session.Do(req)
+
+	if err != nil {
+		t.Fatal("TestRequestNoDuplicateContentLength failed, expected: nil, got: ", err)
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatal("TestRequestNoDuplicateContentLength failed, expected: 200, got: ", resp.StatusCode)
+		return
+	}
+
+	if !strings.Contains(string(resp.Body), "test") {
+		t.Fatal("TestRequestNoDuplicateContentLength failed, expected: true, got: false")
+		return
+	}
+
+	fmt.Println(resp.String())
+}
+
+func TestRequestDuplicateHeaders(t *testing.T) {
+	s := azuretls.NewSession()
+	defer s.Close()
+
+	s.InsecureSkipVerify = true
+	if err := s.SetProxy("localhost:8888"); err != nil {
+		t.Fatal(err)
+	}
+
+	s.Browser = azuretls.Chrome
+	header := map[string][]string{
+		"User-Agent": {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36"},
+	}
+	for range 5 {
+		time.Sleep(1 * time.Second)
+		_, err := s.Do(&azuretls.Request{
+			Method:  http.MethodPost,
+			Url:     "https://www.twayair.com",
+			Header:  header,
+			Body:    "hello",
+			TimeOut: 3 * time.Second,
+		})
+		if err != nil {
+			panic(err)
+		}
+	}
+}
