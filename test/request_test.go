@@ -239,11 +239,6 @@ func TestHTTP1Request(t *testing.T) {
 func TestRequestNoDuplicateContentLength(t *testing.T) {
 	session := azuretls.NewSession()
 
-	session.InsecureSkipVerify = true
-	if err := session.SetProxy("localhost:8888"); err != nil {
-		t.Fatal(err)
-	}
-
 	req := &azuretls.Request{
 		Method: http.MethodPost,
 		Url:    "https://httpbin.org/post",
@@ -276,11 +271,6 @@ func TestRequestNoDuplicateContentLength(t *testing.T) {
 func TestRequestDuplicateHeaders(t *testing.T) {
 	s := azuretls.NewSession()
 	defer s.Close()
-
-	s.InsecureSkipVerify = true
-	if err := s.SetProxy("localhost:8888"); err != nil {
-		t.Fatal(err)
-	}
 
 	s.Browser = azuretls.Chrome
 	header := map[string][]string{
