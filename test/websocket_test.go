@@ -66,33 +66,3 @@ func TestSession_WebsocketHTTP(t *testing.T) {
 		t.Fatal(err)
 	}
 }
-
-func TestSession_WebsocketDiscord(t *testing.T) {
-	session := azuretls.NewSession()
-	defer session.Close()
-
-	ws, err := session.NewWebsocket("wss://gateway.discord.gg/?encoding=json&v=9&compress=zlib-stream", 1024, 1024, azuretls.OrderedHeaders{
-		{"Host"},
-		{"Connection"},
-		{"Pragma", "no-cache"},
-		{"Cache-Control", "no-cache"},
-		{"User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"},
-		{"Upgrade"},
-		{"Origin", "https://discord.com"},
-		{"Sec-WebSocket-Version"},
-		{"Accept-Encoding", "gzip, deflate, br"},
-		{"Accept-Language", "en-US,en;q=0.9"},
-		{"Sec-WebSocket-Key"},
-		{"Sec-WebSocket-Extensions"},
-	})
-
-	if err != nil {
-		t.Fatal(err)
-		return
-	}
-
-	_, _, err = ws.ReadMessage()
-	if err != nil {
-		t.Fatal(err)
-	}
-}

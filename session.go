@@ -145,7 +145,7 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 		}
 	}()
 
-	if err = s.InitTransport(s.Browser); err != nil {
+	if err = s.initTransport(s.Browser); err != nil {
 		s.dumpRequest(request, nil, err)
 		return nil, err
 	}
@@ -371,6 +371,8 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 			req.ContentLength = 0
 			req.OrderedHeaders.Del("Content-Length")
 			req.OrderedHeaders.Del("Content-Type")
+			req.Header.Del("Content-Length")
+			req.Header.Del("Content-Type")
 		}
 
 		req.CloseBody()

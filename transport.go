@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func (s *Session) InitTransport(browser string) (err error) {
+func (s *Session) initTransport(browser string) (err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
