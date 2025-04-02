@@ -475,6 +475,14 @@ func (c *Context) Context() context.Context {
 func (s *Session) Close() {
 	s.closed = true
 	s.mu = nil
+
+	if s.Transport != nil {
+		s.Transport.CloseIdleConnections()
+	}
+	if s.HTTP2Transport != nil {
+		s.HTTP2Transport.CloseIdleConnections()
+	}
+
 	s.dumpIgnore = nil
 	s.loggingIgnore = nil
 	s.CookieJar = nil
