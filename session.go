@@ -102,8 +102,24 @@ func (s *Session) SetProxy(proxy string) error {
 
 // ClearProxy removes the proxy from the session
 func (s *Session) ClearProxy() {
+	if s.ProxyDialer != nil {
+		if s.ProxyDialer.conn != nil {
+			_ = s.ProxyDialer.conn.Close()
+		}
+		if s.ProxyDialer.H2Conn != nil {
+			_ = s.ProxyDialer.H2Conn.Close()
+		}
+	}
+
+	if s.Transport != nil {
+		s.Transport.Proxy = nil
+		s.Transport.CloseIdleConnections()
+	}
+	if s.HTTP2Transport != nil {
+		s.HTTP2Transport.CloseIdleConnections()
+	}
+
 	s.Proxy = ""
-	s.Transport.Proxy = nil
 }
 
 func (s *Session) send(request *Request) (response *Response, err error) {
@@ -475,22 +491,6 @@ func (c *Context) Context() context.Context {
 func (s *Session) Close() {
 	s.closed = true
 	s.mu = nil
-
-	if s.Transport != nil {
-		s.Transport.CloseIdleConnections()
-	}
-	if s.HTTP2Transport != nil {
-		s.HTTP2Transport.CloseIdleConnections()
-	}
-
-	if s.ProxyDialer != nil {
-		if s.ProxyDialer.conn != nil {
-			_ = s.ProxyDialer.conn.Close()
-		}
-		if s.ProxyDialer.H2Conn != nil {
-			_ = s.ProxyDialer.H2Conn.Close()
-		}
-	}
 
 	s.ClearProxy()
 
