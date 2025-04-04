@@ -483,6 +483,17 @@ func (s *Session) Close() {
 		s.HTTP2Transport.CloseIdleConnections()
 	}
 
+	if s.ProxyDialer != nil {
+		if s.ProxyDialer.conn != nil {
+			_ = s.ProxyDialer.conn.Close()
+		}
+		if s.ProxyDialer.H2Conn != nil {
+			_ = s.ProxyDialer.H2Conn.Close()
+		}
+	}
+
+	s.ClearProxy()
+
 	s.dumpIgnore = nil
 	s.loggingIgnore = nil
 	s.CookieJar = nil
