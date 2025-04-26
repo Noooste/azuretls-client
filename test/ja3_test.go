@@ -12,7 +12,7 @@ import (
 func TestDefaultConfig(t *testing.T) {
 	session := azuretls.NewSession()
 
-	response, err := session.Get("https://tls.browserleaks.com/")
+	response, err := session.Get("https://tls.peet.ws/api/all")
 
 	if err != nil {
 		t.Fatal(err)
