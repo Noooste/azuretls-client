@@ -665,7 +665,7 @@ func TestSession_Timeout2(t *testing.T) {
 		return
 	}
 
-	if strings.Contains(err.Error(), "timeout") {
+	if !strings.Contains(err.Error(), "timeout") {
 		t.Fatal("TestSession_Timeout2 failed, expected: timeout, got:", err)
 		return
 	}
