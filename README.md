@@ -59,7 +59,7 @@ The client allows detailed customization of TLS ClientHello messages, HTTP/2 set
 ## Dependencies
 
 ```
-golang ^1.23
+golang ^1.24
 ```
 
 
