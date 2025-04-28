@@ -19,6 +19,7 @@ func TestPins(t *testing.T) {
 
 func TestSession_AddPins2(t *testing.T) {
 	session := azuretls.NewSession()
+	session.PinManager = azuretls.NewPinManager() // use a specific one to test pinning
 
 	if err := session.AddPins(&url.URL{
 		Scheme: "https",

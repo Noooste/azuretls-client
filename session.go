@@ -35,8 +35,7 @@ func NewSessionWithContext(ctx context.Context) *Session {
 
 		MaxRedirects: 10,
 
-		PinManager: make(map[string]*PinManager),
-		pinMu:      new(sync.RWMutex),
+		PinManager: DefaultPinManager,
 
 		mu: new(sync.Mutex),
 
