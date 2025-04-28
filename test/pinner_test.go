@@ -15,20 +15,11 @@ func TestPins(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	/*
-		url := &url.URL{
-			Scheme: "https",
-			Host:   "example.com",
-		}
-
-		if len(session.Connections.Get(url).PinManager.GetPins()) == 0 {
-			t.Fatal("TestPins failed, PinManager is empty")
-		}
-	*/
 }
 
 func TestSession_AddPins2(t *testing.T) {
 	session := azuretls.NewSession()
+	session.PinManager = azuretls.NewPinManager() // use a specific one to test pinning
 
 	if err := session.AddPins(&url.URL{
 		Scheme: "https",

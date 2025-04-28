@@ -52,7 +52,7 @@ func (s *Session) upgradeTLS(ctx context.Context, conn net.Conn, addr string) (n
 	}
 
 	if !s.InsecureSkipVerify {
-		if err = s.Pin(addr); err != nil {
+		if err = s.PinManager.AddHost(addr); err != nil {
 			return nil, errors.New("failed to pin: " + err.Error())
 		}
 	}
@@ -83,21 +83,14 @@ func (s *Session) upgradeTLS(ctx context.Context, conn net.Conn, addr string) (n
 				}
 			}
 
-			if s.PinManager == nil {
-				return nil
-			}
-
-			s.pinMu.RLock()
-			manager := s.PinManager[addr]
-			s.pinMu.RUnlock()
-
-			if manager == nil {
-				return nil
+			pins := s.PinManager.GetHost(addr)
+			if pins == nil {
+				return errors.New("no pins found for " + addr)
 			}
 
 			for _, chain := range verifiedChains {
 				for _, cert := range chain {
-					if manager.Verify(cert) {
+					if pins.Verify(cert) {
 						return nil
 					}
 				}

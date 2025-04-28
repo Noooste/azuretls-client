@@ -102,8 +102,10 @@ type Session struct {
 	// To disable pin verification, use InsecureSkipVerify.
 	VerifyPins bool
 
-	PinManager map[string]*PinManager
-	pinMu      *sync.RWMutex
+	// PinManager is used to manage and verify TLS pins.
+	// By default, DefaultPinManager is used: it is a singleton and is shared across all sessions.
+	// You can create a new PinManager using NewPinManager() and set it here to have a specific pin manager for this Session.
+	PinManager *PinManager
 
 	// If true, server's certificate is not verified (insecure: this may facilitate attack from middleman).
 	InsecureSkipVerify bool
