@@ -109,6 +109,7 @@ func (s *Session) ClearProxy() {
 		if s.ProxyDialer.H2Conn != nil {
 			_ = s.ProxyDialer.H2Conn.Close()
 		}
+		s.ProxyDialer = nil
 	}
 
 	if s.Transport != nil {

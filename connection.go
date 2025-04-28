@@ -51,7 +51,7 @@ func (s *Session) upgradeTLS(ctx context.Context, conn net.Conn, addr string) (n
 		return nil, errors.New("failed to split addr and port: " + err.Error())
 	}
 
-	if !s.InsecureSkipVerify {
+	if !s.InsecureSkipVerify && s.ProxyDialer != nil {
 		if err = s.Pin(addr); err != nil {
 			return nil, errors.New("failed to pin: " + err.Error())
 		}
