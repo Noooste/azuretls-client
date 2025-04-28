@@ -146,9 +146,9 @@ func (r *Request) formatHeader() {
 				continue
 			}
 
-			var key = strings.ToLower(el[0])
+			var key = el[0]
 
-			r.HttpRequest.Header[http.HeaderOrderKey] = append(r.HttpRequest.Header[http.HeaderOrderKey], key)
+			r.HttpRequest.Header[http.HeaderOrderKey] = append(r.HttpRequest.Header[http.HeaderOrderKey], strings.ToLower(key))
 
 			if len(el) == 1 {
 				// skip empty header value, the key indicates the order
@@ -156,7 +156,7 @@ func (r *Request) formatHeader() {
 			}
 
 			if _, ok := r.HttpRequest.Header[key]; !ok {
-				if setUserAgent && key == "user-agent" {
+				if setUserAgent && strings.ToLower(key) == "user-agent" {
 					setUserAgent = false
 				}
 			}
@@ -172,7 +172,6 @@ func (r *Request) formatHeader() {
 	} else if r.Header != nil && len(r.Header) > 0 {
 		r.HttpRequest.Header = r.Header.Clone()
 		if r.HeaderOrder != nil && len(r.HeaderOrder) > 0 {
-
 			if v, ok := r.Header[http.HeaderOrderKey]; ok {
 				r.HttpRequest.Header[http.HeaderOrderKey] = append(v, r.HeaderOrder...)
 			} else {
