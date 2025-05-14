@@ -334,19 +334,17 @@ func GetLastSafariVersion() *tls.ClientHelloSpec {
 }
 
 // GetLastFirefoxVersion apply the latest Firefox,
-// version 120+
+// version 138
 func GetLastFirefoxVersion() *tls.ClientHelloSpec {
 	return &tls.ClientHelloSpec{
-		TLSVersMin: tls.VersionTLS12,
-		TLSVersMax: tls.VersionTLS13,
 		CipherSuites: []uint16{
 			tls.TLS_AES_128_GCM_SHA256,
 			tls.TLS_CHACHA20_POLY1305_SHA256,
 			tls.TLS_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
 			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,
-			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
@@ -367,74 +365,64 @@ func GetLastFirefoxVersion() *tls.ClientHelloSpec {
 			&tls.RenegotiationInfoExtension{
 				Renegotiation: tls.RenegotiateOnceAsClient,
 			},
-			&tls.SupportedCurvesExtension{
-				Curves: []tls.CurveID{
-					tls.X25519,
-					tls.CurveP256,
-					tls.CurveP384,
-					tls.CurveP521,
-					256,
-					257,
-				},
-			},
-			&tls.SupportedPointsExtension{
-				SupportedPoints: []uint8{
-					0x0, // uncompressed
-				},
-			},
-			&tls.SessionTicketExtension{},
-			&tls.ALPNExtension{
-				AlpnProtocols: []string{
-					"h2",
-					"http/1.1",
-				},
-			},
-			&tls.StatusRequestExtension{},
-			&tls.FakeDelegatedCredentialsExtension{
-				SupportedSignatureAlgorithms: []tls.SignatureScheme{
-					tls.ECDSAWithP256AndSHA256,
-					tls.ECDSAWithP384AndSHA384,
-					tls.ECDSAWithP521AndSHA512,
-					tls.ECDSAWithSHA1,
-				},
-			},
-			&tls.KeyShareExtension{
-				KeyShares: []tls.KeyShare{
-					{
-						Group: tls.X25519,
-					},
-					{
-						Group: tls.CurveP256,
-					},
-				},
-			},
-			&tls.SupportedVersionsExtension{
-				Versions: []uint16{
-					tls.VersionTLS13,
-					tls.VersionTLS12,
-				},
-			},
-			&tls.SignatureAlgorithmsExtension{
-				SupportedSignatureAlgorithms: []tls.SignatureScheme{
-					tls.ECDSAWithP256AndSHA256,
-					tls.ECDSAWithP384AndSHA384,
-					tls.ECDSAWithP521AndSHA512,
-					tls.PSSWithSHA256,
-					tls.PSSWithSHA384,
-					tls.PSSWithSHA512,
-					tls.PKCS1WithSHA256,
-					tls.PKCS1WithSHA384,
-					tls.PKCS1WithSHA512,
-					tls.ECDSAWithSHA1,
-					tls.PKCS1WithSHA1,
-				},
-			},
-			&tls.PSKKeyExchangeModesExtension{Modes: []uint8{
-				tls.PskModeDHE,
+			&tls.SupportedCurvesExtension{Curves: []tls.CurveID{
+				tls.X25519MLKEM768,
+				tls.X25519,
+				tls.CurveP256,
+				tls.CurveP384,
+				tls.CurveP521,
+				tls.FakeCurveFFDHE2048,
+				tls.FakeCurveFFDHE3072,
 			}},
-			&tls.FakeRecordSizeLimitExtension{
-				Limit: 0x4001,
+			&tls.SupportedPointsExtension{SupportedPoints: []byte{
+				0x00, // pointFormatUncompressed
+			}},
+			&tls.SessionTicketExtension{},
+			&tls.ALPNExtension{AlpnProtocols: []string{
+				"h2",
+				"http/1.1",
+			}},
+			&tls.StatusRequestExtension{},
+			&tls.DelegatedCredentialsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
+				tls.ECDSAWithP256AndSHA256,
+				tls.ECDSAWithP384AndSHA384,
+				tls.ECDSAWithP521AndSHA512,
+				tls.ECDSAWithSHA1,
+			}},
+			&tls.SCTExtension{},
+			&tls.KeyShareExtension{KeyShares: []tls.KeyShare{
+				{Group: tls.X25519MLKEM768},
+				{Group: tls.X25519},
+				{Group: tls.CurveP256},
+			}},
+			&tls.SupportedVersionsExtension{Versions: []uint16{
+				tls.VersionTLS13,
+				tls.VersionTLS12,
+			}},
+			&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
+				tls.ECDSAWithP256AndSHA256,
+				tls.ECDSAWithP384AndSHA384,
+				tls.ECDSAWithP521AndSHA512,
+				tls.PSSWithSHA256,
+				tls.PSSWithSHA384,
+				tls.PSSWithSHA512,
+				tls.PKCS1WithSHA256,
+				tls.PKCS1WithSHA384,
+				tls.PKCS1WithSHA512,
+				tls.ECDSAWithSHA1,
+				tls.PKCS1WithSHA1,
+			}},
+			&tls.PSKKeyExchangeModesExtension{
+				Modes: []uint8{
+					tls.PskModeDHE,
+				},
 			},
+			&tls.FakeRecordSizeLimitExtension{Limit: 0x4001},
+			&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
+				tls.CertCompressionZlib,
+				tls.CertCompressionBrotli,
+				tls.CertCompressionZstd,
+			}},
 			&tls.GREASEEncryptedClientHelloExtension{
 				CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
 					{
@@ -443,10 +431,14 @@ func GetLastFirefoxVersion() *tls.ClientHelloSpec {
 					},
 					{
 						KdfId:  dicttls.HKDF_SHA256,
+						AeadId: dicttls.AEAD_AES_256_GCM,
+					},
+					{
+						KdfId:  dicttls.HKDF_SHA256,
 						AeadId: dicttls.AEAD_CHACHA20_POLY1305,
 					},
 				},
-				CandidatePayloadLens: []uint16{223}, // +16: 239
+				CandidatePayloadLens: []uint16{128, 223}, // +16: 144, 239
 			},
 		},
 	}
