@@ -103,7 +103,9 @@ func (c *proxyDialer) DialContext(ctx context.Context, userAgent, network, addre
 
 	req := (&http.Request{
 		Method: http.MethodConnect,
-		URL:    &url.URL{Host: address},
+		URL: &url.URL{
+			Host: address,
+		},
 		Header: make(http.Header),
 		Host:   address,
 	}).WithContext(ctx)
@@ -131,21 +133,16 @@ func (c *proxyDialer) DialContext(ctx context.Context, userAgent, network, addre
 		}
 	}
 
-	c.h2Mu.Lock()
-	unlocked := false
 	if c.H2Conn != nil && c.conn != nil {
+		c.h2Mu.Lock()
 		if c.H2Conn.CanTakeNewRequest() {
 			rc := c.conn
 			cc := c.H2Conn
 			c.h2Mu.Unlock()
-			unlocked = true
 			if proxyConn, err := c.connectHTTP2(req, rc, cc); err == nil {
 				return proxyConn, nil
 			}
 		}
-	}
-
-	if !unlocked {
 		c.h2Mu.Unlock()
 	}
 
@@ -153,6 +150,15 @@ func (c *proxyDialer) DialContext(ctx context.Context, userAgent, network, addre
 
 	if err != nil {
 		return nil, err
+	}
+
+	_, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil, err
+	}
+
+	if port == portMap[SchemeHttp] {
+		return rawConn, nil
 	}
 
 	return c.connect(req, rawConn, negotiatedProtocol)

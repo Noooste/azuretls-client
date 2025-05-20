@@ -26,7 +26,8 @@ func (s *Session) dial(ctx context.Context, network, addr string) (net.Conn, err
 		if ctx.Value(userAgentKey) != nil {
 			userAgent = ctx.Value(userAgentKey).(string)
 		}
-		return s.ProxyDialer.DialContext(ctx, userAgent, network, addr)
+		conn, err := s.ProxyDialer.DialContext(ctx, userAgent, network, addr)
+		return conn, err
 	}
 
 	dialer := &net.Dialer{
@@ -40,7 +41,8 @@ func (s *Session) dial(ctx context.Context, network, addr string) (net.Conn, err
 		}
 	}
 
-	return dialer.DialContext(ctx, network, addr)
+	conn, err := dialer.DialContext(ctx, network, addr)
+	return conn, err
 }
 
 func (s *Session) upgradeTLS(ctx context.Context, conn net.Conn, addr string) (net.Conn, error) {
