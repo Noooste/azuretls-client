@@ -42,8 +42,9 @@ type Session struct {
 	// Name or identifier of the browser used in the session.
 	Browser string
 
-	HTTP2Transport *http2.Transport
 	Transport      *http.Transport
+	HTTP2Transport *http2.Transport
+	HTTP3Config    *HTTP3Config
 
 	// Function to provide custom TLS handshake details.
 	GetClientHelloSpec func() *tls.ClientHelloSpec
@@ -186,7 +187,9 @@ type Request struct {
 	// you will have to close using Response.CloseBody manually.
 	IgnoreBody bool
 	Proto      string
+
 	ForceHTTP1 bool
+	ForceHTTP3 bool
 
 	// Length of content in the request.
 	ContentLength int64

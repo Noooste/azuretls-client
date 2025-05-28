@@ -166,7 +166,12 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 		return nil, err
 	}
 
-	roundTripper = s.Transport
+	roundTripper, err = s.selectTransport(request)
+	if err != nil {
+		s.dumpRequest(request, nil, err)
+		return nil, err
+	}
+
 	s.logRequest(request)
 
 	request.ctx = context.WithValue(request.ctx, "request", request)
