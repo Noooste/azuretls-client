@@ -15,6 +15,7 @@ The client allows detailed customization of TLS ClientHello messages, HTTP/2 set
 
 - Full control over TLS ClientHello fingerprints (JA3)
 - HTTP/1.1 and HTTP/2 protocol support with configurable settings
+- HTTP/3.0 support
 - Precise header ordering control
 - Built-in proxy support (HTTP/HTTPS/SOCKS)
 - SSL pinning functionality
@@ -42,6 +43,7 @@ The client allows detailed customization of TLS ClientHello messages, HTTP/2 set
       * [CONNECT](#connect)
    * [Modify TLS Client Hello (JA3)](#modify-tls-client-hello-ja3)
    * [Modify HTTP2](#modify-http2)
+   * [Use HTTP/3](#use-http3)
    * [Headers](#headers)
    * [Proxy](#proxy)
    * [SSL Pinning](#ssl-pinning)
@@ -284,6 +286,49 @@ if err != nil {
 fmt.Println(response.StatusCode, string(response.Body))
 ```
 #
+
+### Use HTTP/3
+To use HTTP/3, you can call the function `session.EnableHTTP3()` before making any requests.
+
+HTTP/3 is currently in early stages of development and **may not be fully stable**.
+
+```go
+// Create session
+session := azuretls.NewSession()
+defer session.Close()
+
+// Enable HTTP/3
+err := session.EnableHTTP3()
+if err != nil {
+    panic(fmt.Sprintf("Failed to enable HTTP/3: %v", err))
+}
+
+// Enable logging
+session.Log()
+
+// Test direct HTTP/3
+resp, err := session.Do(&azuretls.Request{
+    Method:     http.MethodGet,
+    Url:        "https://cloudflare.com/cdn-cgi/trace", // Cloudflare supports HTTP/3
+    ForceHTTP3: true,
+})
+
+if err != nil {
+    t.Fatal(err)
+}
+
+// Check response
+if resp.StatusCode != 200 {
+    panic(fmt.Sprintf("Expected status code 200, got %d", resp.StatusCode))
+}
+
+// Verify HTTP/3 was used
+if resp.HttpResponse.Proto != "HTTP/3.0" {
+    panic(fmt.Sprintf("Expected HTTP/3.0, got %s", resp.HttpResponse.Proto))
+}
+```
+
+
 ### Headers
 
 You can define headers for the session with the `session.Header` attribute, or use the `session.OrderedHeaders` attribute to maintain header order.
