@@ -264,7 +264,7 @@ func (d *SOCKS5UDPDialer) sendUDPAssociate(conn net.Conn, host, port string) (*n
 	}
 
 	// Read response
-	resp := make([]byte, 3)
+	resp := make([]byte, 2)
 	if _, err := io.ReadFull(conn, resp); err != nil {
 		return nil, fmt.Errorf("failed to read response header: %w", err)
 	}
@@ -284,13 +284,17 @@ func (d *SOCKS5UDPDialer) sendUDPAssociate(conn net.Conn, host, port string) (*n
 // readAddress reads SOCKS5 address from connection
 func (d *SOCKS5UDPDialer) readAddress(conn net.Conn) (*net.UDPAddr, error) {
 	// Read address type
-	addrType := make([]byte, 1)
+	addrType := make([]byte, 2)
 	if _, err := io.ReadFull(conn, addrType); err != nil {
 		return nil, err
 	}
 
-	var host string
-	switch addrType[0] {
+	var (
+		host         string
+		addrTypeByte = addrType[1] // The second byte is the address type
+	)
+
+	switch addrTypeByte {
 	case socks5IPv4:
 		addr := make([]byte, 4)
 		if _, err := io.ReadFull(conn, addr); err != nil {
@@ -640,4 +644,8 @@ func (c *socks5PacketConn) SetWriteDeadline(t time.Time) error {
 
 func (c *socks5PacketConn) SetReadBuffer(b int) error {
 	return c.conn.udpConn.SetReadBuffer(b)
+}
+
+func (c *socks5PacketConn) SetWriteBuffer(b int) error {
+	return c.conn.udpConn.SetWriteBuffer(b)
 }

@@ -125,3 +125,12 @@ func containsHTTP3(altSvc string) bool {
 func contains(str, substr string) bool {
 	return len(str) >= len(substr) && str[:len(substr)] == substr
 }
+
+func listContains[T comparable](list []T, item T) bool {
+	for _, v := range list {
+		if v == item {
+			return true
+		}
+	}
+	return false
+}

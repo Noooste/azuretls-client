@@ -3,7 +3,6 @@ package azuretls
 import (
 	"errors"
 	http "github.com/Noooste/fhttp"
-	"github.com/Noooste/fhttp/http2"
 	tls "github.com/Noooste/utls"
 	"net/url"
 	"sync"
@@ -32,16 +31,7 @@ type HTTP3Transport struct {
 func (s *Session) NewHTTP3Transport() (*HTTP3Transport, error) {
 	tlsConfig := &tls.Config{
 		InsecureSkipVerify: s.InsecureSkipVerify,
-		NextProtos:         []string{http2.NextProtoTLS, http3.NextProtoH3},
 	}
-
-	//if s.GetClientHelloSpec != nil {
-	//	// Apply custom TLS configuration
-	//	// Note: QUIC has different TLS requirements than TCP
-	//	// specs := s.GetClientHelloSpec()
-	//	// Apply relevant specs to tlsConfig
-	//	// applySpecsToQUICTLS(tlsConfig, specs)
-	//}
 
 	quicConfig := &quic.Config{
 		MaxIdleTimeout:                 90 * time.Second,
@@ -50,6 +40,34 @@ func (s *Session) NewHTTP3Transport() (*HTTP3Transport, error) {
 		InitialStreamReceiveWindow:     512 * 1024,
 		InitialConnectionReceiveWindow: 1024 * 1024,
 	}
+
+	//fn := s.GetClientHelloSpec
+	//if fn == nil {
+	//	fn = GetBrowserClientHelloFunc(s.Browser)
+	//}
+	//
+	//quicConfig.TLSGetClientHelloSpec = func() *tls.ClientHelloSpec {
+	//	spec := fn()
+	//	if spec == nil {
+	//		fmt.Println("Warning: GetClientHelloSpec returned nil, using default spec")
+	//		spec = &tls.ClientHelloSpec{}
+	//	}
+	//	for _, ext := range spec.Extensions {
+	//		switch extension := ext.(type) {
+	//		case *tls.ALPNExtension:
+	//			// Ensure HTTP/3 is included in ALPN protocols
+	//			if !listContains(extension.AlpnProtocols, http3.NextProtoH3) {
+	//				extension.AlpnProtocols = []string{http3.NextProtoH3}
+	//			}
+	//		case *tls.SupportedVersionsExtension:
+	//			// Ensure HTTP/3 supported versions are included
+	//			if len(extension.Versions) >= 1 && extension.Versions[0] != tls.VersionTLS13 || len(extension.Versions) == 0 {
+	//				extension.Versions = []uint16{tls.VersionTLS13}
+	//			}
+	//		}
+	//	}
+	//	return spec
+	//}
 
 	transport := &HTTP3Transport{
 		Transport: &http3.Transport{

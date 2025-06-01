@@ -16,16 +16,16 @@ func (s *Session) dialQUIC(ctx context.Context, addr string, tlsConf *tls.Config
 		return nil, err
 	}
 
-	// Create UDP connection
-	udpConn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4zero, Port: 0})
-	if err != nil {
-		return nil, err
-	}
-
 	// Apply custom dialer modifications if set
 	if s.ModifyDialer != nil {
 		// Note: ModifyDialer works with net.Dialer, need adaptation for UDP
 		// This is a limitation of the current design
+	}
+
+	// Create UDP connection
+	udpConn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4zero, Port: 0})
+	if err != nil {
+		return nil, err
 	}
 
 	// Handle proxy if configured
