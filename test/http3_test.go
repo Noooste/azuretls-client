@@ -1,0 +1,373 @@
+// test/http3_socks5_test.go
+package azuretls_test
+
+import (
+	"testing"
+	"time"
+
+	"github.com/Noooste/azuretls-client"
+)
+
+func TestHTTP3Direct(t *testing.T) {
+	// Create session
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	// Enable HTTP/3
+	err := session.EnableHTTP3()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Enable logging
+	session.Log()
+
+	// Test direct HTTP/3
+	resp, err := session.Do(&azuretls.Request{
+		Method:     "GET",
+		Url:        "https://cloudflare.com/cdn-cgi/trace", // Cloudflare supports HTTP/3
+		ForceHTTP3: true,
+		TimeOut:    10 * time.Second,
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check response
+	if resp.StatusCode != 200 {
+		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	// Verify HTTP/3 was used
+	if resp.HttpResponse.Proto != "HTTP/3.0" {
+		t.Logf("Warning: Expected HTTP/3.0, got %s (server might not support HTTP/3)", resp.HttpResponse.Proto)
+	}
+
+	t.Logf("Response body: %s", string(resp.Body))
+}
+
+//func TestHTTP3WithSOCKS5(t *testing.T) {
+//	// Start a local SOCKS5 server for testing
+//	server, err := socks5.NewClassicServer("127.0.0.1:1080", "127.0.0.1", "", "", 0, 0)
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	// Start the server in background
+//	go func() {
+//		if err := server.ListenAndServe(nil); err != nil {
+//			log.Printf("SOCKS5 server error: %v", err)
+//		}
+//	}()
+//
+//	// Wait for server to start
+//	time.Sleep(time.Second)
+//
+//	// Create session
+//	session := azuretls.NewSession()
+//	defer session.Close()
+//
+//	// Set SOCKS5 proxy
+//	if err := session.SetProxy("socks5://127.0.0.1:1080"); err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	// Enable HTTP/3
+//	err = session.EnableHTTP3()
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	// Enable logging
+//	session.Log()
+//
+//	// Test direct HTTP/3
+//	resp, err := session.Do(&azuretls.Request{
+//		Method:     "GET",
+//		Url:        "https://fp.impersonate.pro/api/http3", // Cloudflare supports HTTP/3
+//		ForceHTTP3: true,
+//		TimeOut:    10 * time.Second,
+//	})
+//
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	// Check response
+//	if resp.StatusCode != 200 {
+//		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
+//	}
+//
+//	// Verify HTTP/3 was used
+//	if resp.HttpResponse.Proto != "HTTP/3.0" {
+//		t.Logf("Warning: Expected HTTP/3.0, got %s (server might not support HTTP/3)", resp.HttpResponse.Proto)
+//	}
+//
+//	t.Logf("Response body: %s", string(resp.Body))
+//}
+//
+//func TestSOCKS5UDPDirect(t *testing.T) {
+//	// Start a local SOCKS5 server
+//	server, err := socks5.NewClassicServer("127.0.0.1:1081", "127.0.0.1", "", "", 0, 0)
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	go func() {
+//		if err := server.ListenAndServe(nil); err != nil {
+//			log.Printf("SOCKS5 server error: %v", err)
+//		}
+//	}()
+//
+//	time.Sleep(time.Second)
+//
+//	// Test direct SOCKS5 UDP connection
+//	dialer := azuretls.NewSOCKS5UDPDialer("127.0.0.1:1081", "", "")
+//
+//	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+//	defer cancel()
+//
+//	conn, err := dialer.DialUDP(ctx, "udp", "8.8.8.8:53")
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//	defer conn.Close()
+//
+//	// Build a simple DNS query
+//	query := buildDNSQuery("example.com")
+//
+//	_, err = conn.Write(query)
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	// Read response
+//	response := make([]byte, 512)
+//	n, err := conn.Read(response)
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	if n < 12 {
+//		t.Fatal("DNS response too short")
+//	}
+//
+//	t.Logf("Successfully received DNS response of %d bytes", n)
+//}
+//
+//func TestHTTP3MultipleRequests(t *testing.T) {
+//	// Start SOCKS5 server
+//	server, err := socks5.NewClassicServer("127.0.0.1:1082", "127.0.0.1", "", "", 0, 0)
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	go func() {
+//		if err := server.ListenAndServe(nil); err != nil {
+//			log.Printf("SOCKS5 server error: %v", err)
+//		}
+//	}()
+//
+//	time.Sleep(time.Second)
+//
+//	// Create session
+//	session := azuretls.NewSession()
+//	defer session.Close()
+//
+//	if err := session.SetProxy("socks5://127.0.0.1:1082"); err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	err = session.EnableHTTP3()
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	// Test multiple sites that support HTTP/3
+//	sites := []string{
+//		"https://cloudflare.com/cdn-cgi/trace",
+//		"https://blog.cloudflare.com/",
+//		"https://one.one.one.one/",
+//	}
+//
+//	for _, site := range sites {
+//		t.Run(site, func(t *testing.T) {
+//			resp, err := session.Do(&azuretls.Request{
+//				Method:     "GET",
+//				Url:        site,
+//				ForceHTTP3: true,
+//				TimeOut:    10 * time.Second,
+//			})
+//
+//			if err != nil {
+//				t.Errorf("Failed to fetch %s: %v", site, err)
+//				return
+//			}
+//
+//			if resp.StatusCode != 200 {
+//				t.Errorf("Expected status 200 for %s, got %d", site, resp.StatusCode)
+//				return
+//			}
+//
+//			t.Logf("%s - Protocol: %s, Status: %d", site, resp.HttpResponse.Proto, resp.StatusCode)
+//		})
+//	}
+//}
+//
+//func TestHTTP3Fallback(t *testing.T) {
+//	// Start SOCKS5 server
+//	server, err := socks5.NewClassicServer("127.0.0.1:1083", "127.0.0.1", "", "", 0, 0)
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	go func() {
+//		if err := server.ListenAndServe(nil); err != nil {
+//			log.Printf("SOCKS5 server error: %v", err)
+//		}
+//	}()
+//
+//	time.Sleep(time.Second)
+//
+//	// Create session
+//	session := azuretls.NewSession()
+//	defer session.Close()
+//
+//	if err := session.SetProxy("socks5://127.0.0.1:1083"); err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	err = session.EnableHTTP3()
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	// Test site that might not support HTTP/3
+//	resp, err := session.Get("https://example.com")
+//
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	if resp.StatusCode != 200 {
+//		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
+//	}
+//
+//	// Should fall back to HTTP/2 or HTTP/1.1
+//	t.Logf("Protocol used: %s (fallback is expected for sites without HTTP/3)", resp.HttpResponse.Proto)
+//}
+//
+//// Helper function to build DNS query
+//func buildDNSQuery(domain string) []byte {
+//	query := make([]byte, 0, 512)
+//
+//	// Header
+//	query = append(query, 0x00, 0x01) // ID
+//	query = append(query, 0x01, 0x00) // Flags
+//	query = append(query, 0x00, 0x01) // Questions
+//	query = append(query, 0x00, 0x00) // Answers
+//	query = append(query, 0x00, 0x00) // Authority
+//	query = append(query, 0x00, 0x00) // Additional
+//
+//	// Question
+//	parts := []string{}
+//	for _, p := range strings.Split(domain, ".") {
+//		if p != "" {
+//			parts = append(parts, p)
+//		}
+//	}
+//
+//	for _, part := range parts {
+//		query = append(query, byte(len(part)))
+//		query = append(query, []byte(part)...)
+//	}
+//	query = append(query, 0x00)       // Root
+//	query = append(query, 0x00, 0x01) // Type A
+//	query = append(query, 0x00, 0x01) // Class IN
+//
+//	return query
+//}
+//
+//func TestSOCKS5Authentication(t *testing.T) {
+//	// Test with username/password authentication
+//	server, err := socks5.NewClassicServer("127.0.0.1:1084", "127.0.0.1", "testuser", "testpass", 0, 0)
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	go func() {
+//		if err := server.ListenAndServe(nil); err != nil {
+//			log.Printf("SOCKS5 server error: %v", err)
+//		}
+//	}()
+//
+//	time.Sleep(time.Second)
+//
+//	// Test with correct credentials
+//	session := azuretls.NewSession()
+//	defer session.Close()
+//
+//	if err := session.SetProxy("socks5://testuser:testpass@127.0.0.1:1084"); err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	err = session.EnableHTTP3()
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	resp, err := session.Get("https://cloudflare.com/cdn-cgi/trace")
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//
+//	if resp.StatusCode != 200 {
+//		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
+//	}
+//
+//	t.Log("Authentication successful")
+//}
+//
+//// Benchmark SOCKS5 UDP performance
+//func BenchmarkSOCKS5UDP(b *testing.B) {
+//	// Start server
+//	server, err := socks5.NewClassicServer("127.0.0.1:1085", "127.0.0.1", "", "", 0, 0)
+//	if err != nil {
+//		b.Fatal(err)
+//	}
+//
+//	go func() {
+//		if err := server.ListenAndServe(nil); err != nil {
+//			log.Printf("SOCKS5 server error: %v", err)
+//		}
+//	}()
+//
+//	time.Sleep(time.Second)
+//
+//	dialer := azuretls.NewSOCKS5UDPDialer("127.0.0.1:1085", "", "")
+//	ctx := context.Background()
+//
+//	conn, err := dialer.DialUDP(ctx, "udp", "8.8.8.8:53")
+//	if err != nil {
+//		b.Fatal(err)
+//	}
+//	defer conn.Close()
+//
+//	query := buildDNSQuery("example.com")
+//	response := make([]byte, 512)
+//
+//	b.ResetTimer()
+//
+//	for i := 0; i < b.N; i++ {
+//		_, err := conn.Write(query)
+//		if err != nil {
+//			b.Fatal(err)
+//		}
+//
+//		_, err = conn.Read(response)
+//		if err != nil {
+//			b.Fatal(err)
+//		}
+//	}
+//}

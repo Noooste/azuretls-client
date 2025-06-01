@@ -4,9 +4,9 @@ import (
 	"context"
 	"crypto/x509"
 	"errors"
-	http "github.com/Noooste/fhttp"
+	"github.com/Noooste/fhttp"
 	"github.com/Noooste/fhttp/http2"
-	tls "github.com/Noooste/utls"
+	"github.com/Noooste/utls"
 	"net"
 	"time"
 )
