@@ -438,6 +438,7 @@ func getExtensions(extensions []string, specifications *TlsSpecifications, defau
 			case Chrome:
 				builtExtensions = append(builtExtensions, &tls.KeyShareExtension{KeyShares: []tls.KeyShare{
 					{Group: tls.GREASE_PLACEHOLDER, Data: []byte{0}},
+					{Group: tls.X25519MLKEM768},
 					{Group: tls.X25519},
 				}})
 
