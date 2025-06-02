@@ -15,7 +15,7 @@ The client allows detailed customization of TLS ClientHello messages, HTTP/2 set
 
 - Full control over TLS ClientHello fingerprints (JA3)
 - HTTP/1.1 and HTTP/2 protocol support with configurable settings
-- HTTP/3.0 early support
+- HTTP/3.0 early support with proxy
 - Precise header ordering control
 - Built-in proxy support (HTTP/HTTPS/SOCKS)
 - SSL pinning functionality
