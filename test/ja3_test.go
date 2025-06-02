@@ -417,3 +417,22 @@ func TestGetApplyJa3WithoutSpecifications(t *testing.T) {
 		return
 	}
 }
+
+func TestGetApplyJa3WithMLKEM(t *testing.T) {
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,27-45-11-5-13-0-17613-65281-10-23-18-16-65037-43-35-51,4588-29-23-24,0", azuretls.Chrome); err != nil {
+		panic(err)
+	}
+
+	response, err := session.Get("https://www.google.com/")
+
+	if err != nil {
+		panic(err)
+	}
+
+	if response.StatusCode != 200 {
+		panic(err)
+	}
+}
