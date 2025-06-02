@@ -5,23 +5,96 @@
 [![Go Report Card](https://goreportcard.com/badge/Noooste/azuretls-client)](https://goreportcard.com/report/Noooste/azuretls-client)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Noooste/azuretls-client/blob/master/LICENSE)
 
-## 📖 Overview
+## 🚀 Simple, Powerful HTTP Client for Go
 
-AzureTLS Client is a Go HTTP client library focused on providing extensive control over TLS fingerprinting and connection parameters. This library extends Go's standard HTTP capabilities with features especially useful for web scraping, testing, and specialized API clients.
+AzureTLS Client is a high-performance HTTP client library for Go that combines **simplicity** with **unlimited customization**. Whether you're building a simple API client or need advanced features like TLS fingerprinting and HTTP/2 customization, AzureTLS Client has you covered.
 
-The client allows detailed customization of TLS ClientHello messages, HTTP/2 settings, and header ordering while maintaining a clean and simple API similar to the standard library.
+### ✨ Why Choose AzureTLS Client?
+
+**🎯 Simple by Default**
+```go
+session := azuretls.NewSession()
+response, err := session.Get("https://api.example.com/data")
+```
+
+**⚡ Powerful When Needed**
+- Full TLS fingerprint control (JA3/JA4)
+- HTTP/2 and HTTP/3 support with custom settings
+- Advanced proxy support (HTTP/HTTPS/SOCKS5)
+- Precise header ordering and control
 
 ## 🌟 Key Features
 
-- Full control over TLS ClientHello fingerprints (JA3)
-- HTTP/1.1 and HTTP/2 protocol support with configurable settings
-- HTTP/3.0 early support with proxy
-- Precise header ordering control
-- Built-in proxy support (HTTP/HTTPS/SOCKS)
-- SSL pinning functionality
-- Integrated cookie handling
-- WebSocket support with JA3 fingerprinting
-- Chrome, Firefox, Safari, Edge and iOS browser emulation presets
+- **🌐 Modern Protocols** - HTTP/1.1, HTTP/2, and HTTP/3 support
+- **🔧 TLS Fingerprinting** - Full control over ClientHello (JA3/JA4)
+- **🎭 Browser Emulation** - Chrome, Firefox, Safari, Edge presets
+- **🔗 Advanced Proxy Support** - HTTP, HTTPS, SOCKS5 with authentication
+- **📋 Header Control** - Precise ordering and custom headers
+- **🍪 Cookie Management** - Automatic handling with persistent jar
+- **🔒 SSL Pinning** - Enhanced security with certificate validation
+- **🐛 Debug Tools** - Request logging and dumping capabilities
+
+## 🎯 Perfect For
+
+- **API Integration** - Simple REST API clients
+- **Web Scraping** - Advanced bot detection evasion
+- **Security Testing** - Custom TLS fingerprinting
+- **Load Testing** - High-performance concurrent requests
+- **Proxy Management** - Multi-proxy rotation and testing
+
+## 📋 Quick Examples
+
+### Simple GET Request
+```go
+session := azuretls.NewSession()
+defer session.Close()
+
+response, err := session.Get("https://api.github.com/user")
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Status: %d\n", response.StatusCode)
+```
+
+### POST with JSON
+```go
+data := map[string]string{
+    "name": "AzureTLS",
+    "type": "HTTP Client",
+}
+
+response, err := session.Post("https://api.example.com/data", data)
+```
+
+### Browser Emulation
+```go
+session := azuretls.NewSession()
+session.Browser = azuretls.Firefox // Automatic JA3 + HTTP/2 fingerprinting
+
+response, err := session.Get("https://website.com")
+```
+
+### Custom Headers with Ordering
+```go
+session.OrderedHeaders = azuretls.OrderedHeaders{
+    {"User-Agent", "MyApp/1.0"},
+    {"Accept", "application/json"},
+    {"Authorization", "Bearer token"},
+}
+```
+
+### Proxy Support
+```go
+session := azuretls.NewSession()
+err := session.SetProxy("http://username:password@proxy.example.com:8080")
+if err != nil {
+    log.Fatal(err)
+}
+
+response, err := session.Get("https://api.example.com")
+```
+
+*Ready to build something amazing? Let's get started! 🚀*
 
 📑 Table of Contents
 =================
