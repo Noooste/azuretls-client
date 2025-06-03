@@ -94,16 +94,35 @@ if err != nil {
 response, err := session.Get("https://api.example.com")
 ```
 
-*Ready to build something amazing? Let's get started! 🚀*
+## 🤝 Community & Support
+
+- **Issues**: [GitHub Issues](https://github.com/Noooste/azuretls-client/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Noooste/azuretls-client/discussions)
+- **Examples**: [examples/](./examples/)
+
+## 🙏 Acknowledgments
+
+AzureTLS Client is built with ❤️ by the open source community. Special thanks to all [contributors](https://github.com/Noooste/azuretls-client/graphs/contributors) who help make this project better.
+
+## ⭐ Show Your Support
+
+If AzureTLS Client helps you build something awesome, consider:
+- ⭐ **Star this repository**
+- 🐛 **Report bugs** or suggest features
+- 💡 **Share your use cases** in discussions
+- 🤝 **Contribute** code or documentation
+
+---
+
+*Ready to build powerful HTTP clients with ease? Let's get started! 🚀*
 
 📑 Table of Contents
 =================
 
+
 * [Table of Contents](#-table-of-contents)
 * [Dependencies](#dependencies)
-* [Installation](#installation)
 * [Usage](#usage)
-   * [Quick Example](#quick-example)
    * [Create a Session](#create-a-session)
    * [Make Requests](#make-requests)
       * [GET](#get)
@@ -137,37 +156,7 @@ response, err := session.Get("https://api.example.com")
 golang ^1.24
 ```
 
-
-## Installation
-
-```bash
-go get github.com/Noooste/azuretls-client
-```
-
 ## Usage
-
-### Quick Example
-```go
-package main
-
-import (
-    "fmt"
-    "github.com/Noooste/azuretls-client"
-)
-
-func main() {
-    session := azuretls.NewSession()
-    defer session.Close()
-
-    // Make a request
-    response, err := session.Get("https://tls.peet.ws/api/all")
-    if err != nil {
-        panic(err)
-    }
-    
-    fmt.Printf("Status: %d\n", response.StatusCode)
-}
-```
 
 ### Create a Session
 ```go
@@ -746,4 +735,3 @@ session.Log(
 
 session.Get("https://www.google.com")
 ```
-
