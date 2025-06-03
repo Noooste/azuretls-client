@@ -14,7 +14,11 @@ AzureTLS Client is a high-performance HTTP client library for Go that combines *
 **🎯 Simple by Default**
 ```go
 session := azuretls.NewSession()
-response, err := session.Get("https://api.example.com/data")
+response, err := session.Get("https://www.google.com/")
+if err != nil {
+    panic(err)
+}
+fmt.Println(response.String())
 ```
 
 **⚡ Powerful When Needed**
