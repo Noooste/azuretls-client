@@ -106,7 +106,7 @@ func defaultHeaderPriorities(navigator string) *http2.PriorityParam {
 
 	case Ios:
 		return &http2.PriorityParam{
-			Weight:    254,
+			Weight:    255,
 			StreamDep: 0,
 			Exclusive: false,
 		}
