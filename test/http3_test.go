@@ -2,6 +2,8 @@
 package azuretls_test
 
 import (
+	"github.com/txthinking/socks5"
+	"log"
 	"testing"
 	"time"
 
@@ -47,66 +49,66 @@ func TestHTTP3Direct(t *testing.T) {
 	t.Logf("Response body: %s", string(resp.Body))
 }
 
-//func TestHTTP3WithSOCKS5(t *testing.T) {
-//	// Start a local SOCKS5 server for testing
-//	server, err := socks5.NewClassicServer("127.0.0.1:1080", "127.0.0.1", "", "", 0, 0)
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//
-//	// Start the server in background
-//	go func() {
-//		if err := server.ListenAndServe(nil); err != nil {
-//			log.Printf("SOCKS5 server error: %v", err)
-//		}
-//	}()
-//
-//	// Wait for server to start
-//	time.Sleep(time.Second)
-//
-//	// Create session
-//	session := azuretls.NewSession()
-//	defer session.Close()
-//
-//	// Set SOCKS5 proxy
-//	if err := session.SetProxy("socks5://127.0.0.1:1080"); err != nil {
-//		t.Fatal(err)
-//	}
-//
-//	// Enable HTTP/3
-//	err = session.EnableHTTP3()
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//
-//	// Enable logging
-//	session.Log()
-//
-//	// Test direct HTTP/3
-//	resp, err := session.Do(&azuretls.Request{
-//		Method:     "GET",
-//		Url:        "https://fp.impersonate.pro/api/http3", // Cloudflare supports HTTP/3
-//		ForceHTTP3: true,
-//		TimeOut:    10 * time.Second,
-//	})
-//
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//
-//	// Check response
-//	if resp.StatusCode != 200 {
-//		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
-//	}
-//
-//	// Verify HTTP/3 was used
-//	if resp.HttpResponse.Proto != "HTTP/3.0" {
-//		t.Logf("Warning: Expected HTTP/3.0, got %s (server might not support HTTP/3)", resp.HttpResponse.Proto)
-//	}
-//
-//	t.Logf("Response body: %s", string(resp.Body))
-//}
-//
+func TestHTTP3WithSOCKS5(t *testing.T) {
+	// Start a local SOCKS5 server for testing
+	server, err := socks5.NewClassicServer("127.0.0.1:1080", "127.0.0.1", "", "", 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Start the server in background
+	go func() {
+		if err := server.ListenAndServe(nil); err != nil {
+			log.Printf("SOCKS5 server error: %v", err)
+		}
+	}()
+
+	// Wait for server to start
+	time.Sleep(time.Second)
+
+	// Create session
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	// Set SOCKS5 proxy
+	if err := session.SetProxy("socks5://127.0.0.1:1080"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Enable HTTP/3
+	err = session.EnableHTTP3()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Enable logging
+	session.Log()
+
+	// Test direct HTTP/3
+	resp, err := session.Do(&azuretls.Request{
+		Method:     "GET",
+		Url:        "https://fp.impersonate.pro/api/http3", // Cloudflare supports HTTP/3
+		ForceHTTP3: true,
+		TimeOut:    10 * time.Second,
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check response
+	if resp.StatusCode != 200 {
+		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	// Verify HTTP/3 was used
+	if resp.HttpResponse.Proto != "HTTP/3.0" {
+		t.Logf("Warning: Expected HTTP/3.0, got %s (server might not support HTTP/3)", resp.HttpResponse.Proto)
+	}
+
+	t.Logf("Response body: %s", string(resp.Body))
+}
+
 //func TestSOCKS5UDPDirect(t *testing.T) {
 //	// Start a local SOCKS5 server
 //	server, err := socks5.NewClassicServer("127.0.0.1:1081", "127.0.0.1", "", "", 0, 0)
@@ -155,65 +157,145 @@ func TestHTTP3Direct(t *testing.T) {
 //
 //	t.Logf("Successfully received DNS response of %d bytes", n)
 //}
-//
-//func TestHTTP3MultipleRequests(t *testing.T) {
-//	// Start SOCKS5 server
-//	server, err := socks5.NewClassicServer("127.0.0.1:1082", "127.0.0.1", "", "", 0, 0)
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//
-//	go func() {
-//		if err := server.ListenAndServe(nil); err != nil {
-//			log.Printf("SOCKS5 server error: %v", err)
-//		}
-//	}()
-//
-//	time.Sleep(time.Second)
-//
-//	// Create session
-//	session := azuretls.NewSession()
-//	defer session.Close()
-//
-//	if err := session.SetProxy("socks5://127.0.0.1:1082"); err != nil {
-//		t.Fatal(err)
-//	}
-//
-//	err = session.EnableHTTP3()
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//
-//	// Test multiple sites that support HTTP/3
-//	sites := []string{
-//		"https://cloudflare.com/cdn-cgi/trace",
-//		"https://blog.cloudflare.com/",
-//		"https://one.one.one.one/",
-//	}
-//
-//	for _, site := range sites {
-//		t.Run(site, func(t *testing.T) {
-//			resp, err := session.Do(&azuretls.Request{
-//				Method:     "GET",
-//				Url:        site,
-//				ForceHTTP3: true,
-//				TimeOut:    10 * time.Second,
-//			})
-//
-//			if err != nil {
-//				t.Errorf("Failed to fetch %s: %v", site, err)
-//				return
-//			}
-//
-//			if resp.StatusCode != 200 {
-//				t.Errorf("Expected status 200 for %s, got %d", site, resp.StatusCode)
-//				return
-//			}
-//
-//			t.Logf("%s - Protocol: %s, Status: %d", site, resp.HttpResponse.Proto, resp.StatusCode)
-//		})
-//	}
-//}
+
+func TestHTTP3MultipleRequests(t *testing.T) {
+	// Start SOCKS5 server
+	server, err := socks5.NewClassicServer("127.0.0.1:1082", "127.0.0.1", "", "", 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	go func() {
+		if err := server.ListenAndServe(nil); err != nil {
+			log.Printf("SOCKS5 server error: %v", err)
+		}
+	}()
+
+	time.Sleep(time.Second)
+
+	// Create session
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	if err := session.SetProxy("socks5://127.0.0.1:1082"); err != nil {
+		t.Fatal(err)
+	}
+
+	err = session.EnableHTTP3()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Test multiple sites that support HTTP/3
+	sites := []string{
+		"https://cloudflare.com/cdn-cgi/trace",
+		"https://blog.cloudflare.com/",
+		"https://one.one.one.one/",
+	}
+
+	for _, site := range sites {
+		t.Run(site, func(t *testing.T) {
+			resp, err := session.Do(&azuretls.Request{
+				Method:     "GET",
+				Url:        site,
+				ForceHTTP3: true,
+				TimeOut:    10 * time.Second,
+			})
+
+			if err != nil {
+				t.Errorf("Failed to fetch %s: %v", site, err)
+				return
+			}
+
+			if resp.StatusCode != 200 {
+				t.Errorf("Expected status 200 for %s, got %d", site, resp.StatusCode)
+				return
+			}
+
+			t.Logf("%s - Protocol: %s, Status: %d", site, resp.HttpResponse.Proto, resp.StatusCode)
+		})
+	}
+}
+
+func TestHTTP3AndHTTP2(t *testing.T) {
+	// Start a local SOCKS5 server for testing
+	server, err := socks5.NewClassicServer("127.0.0.1:1080", "127.0.0.1", "", "", 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Start the server in background
+	go func() {
+		if err := server.ListenAndServe(nil); err != nil {
+			log.Printf("SOCKS5 server error: %v", err)
+		}
+	}()
+
+	// Wait for server to start
+	time.Sleep(time.Second)
+
+	// Create session
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	// Set SOCKS5 proxy
+	if err := session.SetProxy("socks5://127.0.0.1:1080"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Enable HTTP/3
+	err = session.EnableHTTP3()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Enable logging
+	session.Log()
+
+	// Test direct HTTP/3
+	resp, err := session.Do(&azuretls.Request{
+		Method:     "GET",
+		Url:        "https://fp.impersonate.pro/api/http3", // Cloudflare supports HTTP/3
+		ForceHTTP3: true,
+		TimeOut:    10 * time.Second,
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check response
+	if resp.StatusCode != 200 {
+		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	// Verify HTTP/3 was used
+	if resp.HttpResponse.Proto != "HTTP/3.0" {
+		t.Logf("Warning: Expected HTTP/3.0, got %s (server might not support HTTP/3)", resp.HttpResponse.Proto)
+	}
+
+	// Test direct HTTP/3
+	resp, err = session.Do(&azuretls.Request{
+		Method:  "GET",
+		Url:     "https://www.google.com", // Cloudflare supports HTTP/3
+		TimeOut: 10 * time.Second,
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check response
+	if resp.StatusCode != 200 {
+		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	// Verify HTTP/2 was used
+	if resp.HttpResponse.Proto != "HTTP/2.0" {
+		t.Logf("Warning: Expected HTTP/2.0, got %s (server might not support HTTP/2)", resp.HttpResponse.Proto)
+	}
+}
+
 //
 //func TestHTTP3Fallback(t *testing.T) {
 //	// Start SOCKS5 server
