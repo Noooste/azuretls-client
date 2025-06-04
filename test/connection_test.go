@@ -87,13 +87,13 @@ func TestPeetClosingConn(t *testing.T) {
 	_, err := session.Get("https://tls.peet.ws/api/all")
 
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
 	_, err = session.Get("https://tls.peet.ws/api/all")
 
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 }
 
