@@ -422,11 +422,11 @@ func TestGetApplyJa3WithMLKEM(t *testing.T) {
 	session := azuretls.NewSession()
 	defer session.Close()
 
-	if err := session.ApplyJa3("771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,27-45-11-5-13-0-17613-65281-10-23-18-16-65037-43-35-51,4588-29-23-24,0", azuretls.Chrome); err != nil {
+	if err := session.ApplyJa3("771,4867-4866-4865-49200-49196-156-49171-52393-157-47-49199-49172-52392-49195,13-18-35-11-16-23-45-10-43-5-51-0,4588-23-29-24,0-1-2", azuretls.Chrome); err != nil {
 		panic(err)
 	}
 
-	response, err := session.Get("https://www.google.com/")
+	response, err := session.Get("https://cloudflare-quic.com/")
 
 	if err != nil {
 		panic(err)
