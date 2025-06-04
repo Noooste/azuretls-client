@@ -5,11 +5,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	tls "github.com/Noooste/utls"
 	"io"
 	"net"
 	"sync"
 	"time"
+
+	tls "github.com/Noooste/utls"
 
 	"github.com/Noooste/quic-go"
 )
@@ -545,11 +546,10 @@ func (c *SOCKS5UDPConn) monitorControlConnection() {
 		default:
 			c.controlConn.SetReadDeadline(time.Now().Add(time.Second))
 			if _, err := c.controlConn.Read(buf); err != nil {
-				if !errors.Is(err, context.DeadlineExceeded) {
-					// Control connection closed, close UDP association
-					c.Close()
-					return
+				if nErr, ok := err.(net.Error); ok && nErr.Timeout() {
+					continue
 				}
+				return
 			}
 		}
 	}
@@ -582,14 +582,7 @@ func (s *Session) dialQUICViaSocks5(ctx context.Context, udpConn *net.UDPConn,
 		return nil, fmt.Errorf("failed to establish SOCKS5 UDP connection: %w", err)
 	}
 
-	// Create a custom net.PacketConn wrapper for QUIC
-	packetConn := &socks5PacketConn{
-		conn:       socks5Conn,
-		remoteAddr: remoteAddr,
-	}
-
-	// Dial QUIC using the SOCKS5 connection
-	return quic.DialEarly(ctx, packetConn, remoteAddr, tlsConf, quicConf)
+	return quic.DialEarly(ctx, socks5Conn.udpConn, remoteAddr, tlsConf, quicConf)
 }
 
 // socks5PacketConn wraps SOCKS5UDPConn to implement net.PacketConn for QUIC
