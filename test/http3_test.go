@@ -87,7 +87,7 @@ func TestHTTP3WithSOCKS5(t *testing.T) {
 	// Test direct HTTP/3
 	resp, err := session.Do(&azuretls.Request{
 		Method:     "GET",
-		Url:        "https://fp.impersonate.pro/api/http3", // Cloudflare supports HTTP/3
+		Url:        "https://cloudflare.com/cdn-cgi/trace", // Cloudflare supports HTTP/3
 		ForceHTTP3: true,
 		TimeOut:    10 * time.Second,
 	})

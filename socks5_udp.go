@@ -562,7 +562,7 @@ func (s *Session) dialQUICViaSocks5(ctx context.Context, udpConn *net.UDPConn,
 	remoteAddr *net.UDPAddr, tlsConf *tls.Config, quicConf *quic.Config) (quic.EarlyConnection, error) {
 
 	// Close the original UDP connection as we'll use SOCKS5
-	udpConn.Close()
+	_ = udpConn.Close()
 
 	// Create SOCKS5 UDP dialer
 	proxyURL := s.ProxyDialer.ProxyURL
@@ -582,7 +582,19 @@ func (s *Session) dialQUICViaSocks5(ctx context.Context, udpConn *net.UDPConn,
 		return nil, fmt.Errorf("failed to establish SOCKS5 UDP connection: %w", err)
 	}
 
-	return quic.DialEarly(ctx, socks5Conn.udpConn, remoteAddr, tlsConf, quicConf)
+	_, err = socks5Conn.WriteTo([]byte("probe"), remoteAddr.String())
+	if err != nil {
+		return nil, fmt.Errorf("SOCKS5 probe packet failed: %w", err)
+	}
+
+	// Create a custom net.PacketConn wrapper for QUIC
+	packetConn := &socks5PacketConn{
+		conn:       socks5Conn,
+		remoteAddr: remoteAddr,
+	}
+
+	// Dial QUIC using the SOCKS5 connection
+	return quic.DialEarly(ctx, packetConn, remoteAddr, tlsConf, quicConf)
 }
 
 // socks5PacketConn wraps SOCKS5UDPConn to implement net.PacketConn for QUIC
