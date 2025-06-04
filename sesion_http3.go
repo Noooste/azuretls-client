@@ -57,7 +57,7 @@ func (s *Session) DisableHTTP3() {
 // selectTransport chooses the appropriate transport for a request
 func (s *Session) selectTransport(req *Request) (rt http.RoundTripper, err error) {
 	defer func() {
-		if rt == s.HTTP3Config.transport {
+		if s.HTTP3Config != nil && rt == s.HTTP3Config.transport {
 			req.HttpRequest.Header.Del(http.HeaderOrderKey)
 			req.HttpRequest.Header.Del(http.PHeaderOrderKey)
 		}
