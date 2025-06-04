@@ -441,7 +441,12 @@ func getExtensions(extensions []string, specifications *TlsSpecifications, defau
 					{Group: tls.X25519MLKEM768},
 					{Group: tls.X25519},
 				}})
-
+			case Firefox:
+				builtExtensions = append(builtExtensions, &tls.KeyShareExtension{KeyShares: []tls.KeyShare{
+					{Group: tls.X25519MLKEM768},
+					{Group: tls.X25519},
+					{Group: tls.CurveP256},
+				}})
 			default: //firefox
 				builtExtensions = append(builtExtensions, &tls.KeyShareExtension{KeyShares: []tls.KeyShare{
 					{Group: tls.X25519},
