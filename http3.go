@@ -4,7 +4,6 @@ import (
 	"errors"
 	http "github.com/Noooste/fhttp"
 	tls "github.com/Noooste/utls"
-	"net/url"
 	"sync"
 	"time"
 
@@ -15,10 +14,6 @@ import (
 // HTTP3Transport wraps the http3.RoundTripper with proxy support
 type HTTP3Transport struct {
 	*http3.Transport
-
-	// Proxy configuration
-	ProxyURL    *url.URL
-	ProxyDialer *proxyDialer
 
 	// Connection pool for proxy connections
 	proxyConnPool sync.Map
@@ -41,34 +36,6 @@ func (s *Session) NewHTTP3Transport() (*HTTP3Transport, error) {
 		InitialConnectionReceiveWindow: 1024 * 1024,
 	}
 
-	//fn := s.GetClientHelloSpec
-	//if fn == nil {
-	//	fn = GetBrowserClientHelloFunc(s.Browser)
-	//}
-	//
-	//quicConfig.TLSGetClientHelloSpec = func() *tls.ClientHelloSpec {
-	//	spec := fn()
-	//	if spec == nil {
-	//		fmt.Println("Warning: GetClientHelloSpec returned nil, using default spec")
-	//		spec = &tls.ClientHelloSpec{}
-	//	}
-	//	for _, ext := range spec.Extensions {
-	//		switch extension := ext.(type) {
-	//		case *tls.ALPNExtension:
-	//			// Ensure HTTP/3 is included in ALPN protocols
-	//			if !listContains(extension.AlpnProtocols, http3.NextProtoH3) {
-	//				extension.AlpnProtocols = []string{http3.NextProtoH3}
-	//			}
-	//		case *tls.SupportedVersionsExtension:
-	//			// Ensure HTTP/3 supported versions are included
-	//			if len(extension.Versions) >= 1 && extension.Versions[0] != tls.VersionTLS13 || len(extension.Versions) == 0 {
-	//				extension.Versions = []uint16{tls.VersionTLS13}
-	//			}
-	//		}
-	//	}
-	//	return spec
-	//}
-
 	transport := &HTTP3Transport{
 		Transport: &http3.Transport{
 			TLSClientConfig: tlsConfig,
@@ -76,11 +43,6 @@ func (s *Session) NewHTTP3Transport() (*HTTP3Transport, error) {
 			Dial:            s.dialQUIC,
 		},
 		sess: s,
-	}
-
-	if s.ProxyDialer != nil {
-		transport.ProxyURL = s.ProxyDialer.ProxyURL
-		transport.ProxyDialer = s.ProxyDialer
 	}
 
 	return transport, nil
