@@ -2,6 +2,7 @@ package azuretls
 
 import (
 	"github.com/Noooste/fhttp/http2"
+	"github.com/Noooste/quic-go/http3"
 )
 
 const (
@@ -114,5 +115,35 @@ func defaultHeaderPriorities(navigator string) *http2.PriorityParam {
 			StreamDep: 0,
 			Exclusive: true,
 		}
+	}
+}
+
+func defaultHTTP3Settings(navigator string) (map[uint64]uint64, []uint64) {
+	switch navigator {
+	case Firefox:
+		return map[uint64]uint64{
+				http3.SettingsQpackMaxTableCapacity: 65536,
+				http3.SettingsQpackBlockedStreams:   20,
+				http3.SettingsEnableWebTransport:    0, // 0 = disabled
+			}, []uint64{
+				http3.SettingsQpackMaxTableCapacity,
+				http3.SettingsQpackBlockedStreams,
+				http3.SettingsEnableWebTransport,
+			}
+
+	default: // chrome
+		return map[uint64]uint64{
+				http3.SettingsQpackMaxTableCapacity: 65536,
+				http3.SettingsMaxFieldSectionSize:   262144,
+				http3.SettingsQpackBlockedStreams:   100,
+				http3.SettingsH3Datagram:            1,
+				http3.SettingsGREASE:                0, // random value will be generated
+			}, []uint64{
+				http3.SettingsQpackMaxTableCapacity,
+				http3.SettingsMaxFieldSectionSize,
+				http3.SettingsQpackBlockedStreams,
+				http3.SettingsH3Datagram,
+				http3.SettingsGREASE,
+			}
 	}
 }

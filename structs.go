@@ -232,6 +232,8 @@ type Response struct {
 	ContentLength int64
 
 	Session *Session
+
+	isHTTP3 bool
 }
 
 // Context represents the context of a request. It holds the session, request,

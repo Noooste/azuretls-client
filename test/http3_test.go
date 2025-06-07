@@ -15,21 +15,23 @@ func TestHTTP3Direct(t *testing.T) {
 	session := azuretls.NewSession()
 	defer session.Close()
 
-	// Enable HTTP/3
-	err := session.EnableHTTP3()
-	if err != nil {
-		t.Fatal(err)
+	if err := session.ApplyHTTP3("1:65536;7:20;GREASE|m,s,a,p"); err != nil {
+		t.Fatalf("Failed to apply HTTP/3 settings: %v", err)
 	}
 
-	// Enable logging
+	// Enable HTTP/3
 	session.Log()
 
 	// Test direct HTTP/3
 	resp, err := session.Do(&azuretls.Request{
 		Method:     "GET",
-		Url:        "https://cloudflare.com/cdn-cgi/trace", // Cloudflare supports HTTP/3
+		Url:        "https://fp.impersonate.pro/api/http3", // Cloudflare supports HTTP/3
 		ForceHTTP3: true,
 		TimeOut:    10 * time.Second,
+		OrderedHeaders: azuretls.OrderedHeaders{
+			{"Accept", "application/json"},
+			{"User-Agent", "AzureTLS-Client/1.0"},
+		},
 	})
 
 	if err != nil {
@@ -46,7 +48,7 @@ func TestHTTP3Direct(t *testing.T) {
 		t.Logf("Warning: Expected HTTP/3.0, got %s (server might not support HTTP/3)", resp.HttpResponse.Proto)
 	}
 
-	t.Logf("Response body: %s", string(resp.Body))
+	t.Logf("Response body: %s", resp.String())
 }
 
 func TestHTTP3WithSOCKS5(t *testing.T) {
