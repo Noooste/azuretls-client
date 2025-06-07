@@ -363,12 +363,6 @@ HTTP/3 is currently in early stages of development and **may not be fully stable
 session := azuretls.NewSession()
 defer session.Close()
 
-// Enable HTTP/3
-err := session.EnableHTTP3()
-if err != nil {
-    panic(fmt.Sprintf("Failed to enable HTTP/3: %v", err))
-}
-
 // Enable logging
 session.Log()
 
@@ -394,6 +388,29 @@ if resp.HttpResponse.Proto != "HTTP/3.0" {
 }
 ```
 
+To modify HTTP3, you have to apply the HTTP3 fingerprint to the session.
+You can retrieve your HTTP/3 fingerprint there : [fp.impersonate.pro](https://fp.impersonate.pro/api/http3)
+
+```go
+session := azuretls.NewSession()
+defer session.Close()
+
+if err := session.ApplyHTTP3("1:65536;6:262144;7:100;51:1;GREASE|m,a,s,p"); err != nil {
+    panic(err)
+}
+
+response, err := session.Do(&azuretls.Request{
+    Method:     http.MethodGet,
+    Url:        "https://fp.impersonate.pro/api/http3"
+    ForceHTTP3: true,
+})
+
+if err != nil {
+    panic(err)
+}
+
+fmt.Println(response.StatusCode, response.String())
+```
 
 ### Headers
 
