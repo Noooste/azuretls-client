@@ -374,7 +374,7 @@ resp, err := session.Do(&azuretls.Request{
 })
 
 if err != nil {
-    t.Fatal(err)
+panic(err)
 }
 
 // Check response
