@@ -320,8 +320,11 @@ func parseHTTP3Settings(settingsStr string) (map[uint64]uint64, []uint64, error)
 		)
 
 		kv := strings.Split(pair, ":")
+		fmt.Println("Parsing HTTP/3 settings pair:", pair)
 		if len(kv) == 1 {
+			fmt.Println("Parsing HTTP/3 settings pair:", pair)
 			if kv[0] == "GREASE" {
+				fmt.Println("GREASE setting detected")
 				key = http3.SettingsGREASE
 				value = 0
 			}
@@ -343,6 +346,7 @@ func parseHTTP3Settings(settingsStr string) (map[uint64]uint64, []uint64, error)
 		order = append(order, key)
 	}
 
+	fmt.Println("Parsed HTTP/3 settings:", settings)
 	return settings, order, nil
 }
 

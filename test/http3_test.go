@@ -15,7 +15,7 @@ func TestHTTP3Direct(t *testing.T) {
 	session := azuretls.NewSession()
 	defer session.Close()
 
-	if err := session.ApplyHTTP3("1:65536;7:20;727725890:0|m,s,a,p"); err != nil {
+	if err := session.ApplyHTTP3("1:65536;7:20;GREASE|m,s,a,p"); err != nil {
 		t.Fatalf("Failed to apply HTTP/3 settings: %v", err)
 	}
 
