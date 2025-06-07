@@ -354,7 +354,7 @@ fmt.Println(response.StatusCode, string(response.Body))
 #
 
 ### Use HTTP/3
-To use HTTP/3, you can call the function `session.EnableHTTP3()` before making any requests.
+To use HTTP/3, you may specify `ForceHTTP3: true` in the request.
 
 HTTP/3 is currently in early stages of development and **may not be fully stable**.
 
