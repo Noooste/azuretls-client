@@ -64,6 +64,9 @@ func (r *Response) ReadBody() (body []byte, err error) {
 	defer func() {
 		_ = r.HttpResponse.Body.Close()
 	}()
+	if r.isHTTP3 {
+		return DecodeResponseBody(r.HttpResponse.Body, r.HttpResponse.Header.Get("Content-Encoding"))
+	}
 	return io.ReadAll(r.HttpResponse.Body)
 }
 

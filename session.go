@@ -166,7 +166,7 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 		return nil, err
 	}
 
-	roundTripper, err = s.selectTransport(request)
+	roundTripper, response.isHTTP3, err = s.selectTransport(request)
 	if err != nil {
 		s.dumpRequest(request, nil, err)
 		return nil, err
