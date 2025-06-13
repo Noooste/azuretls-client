@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	http "github.com/Noooste/fhttp"
+	"github.com/Noooste/uquic-go"
 	tls "github.com/Noooste/utls"
 	"net"
 	"strconv"
@@ -12,8 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Noooste/quic-go"
-	"github.com/Noooste/quic-go/http3"
+	"github.com/Noooste/uquic-go/http3"
 )
 
 // HTTP3Transport wraps the http3.RoundTripper with proxy support
@@ -221,7 +221,15 @@ func (s *Session) dialQUIC(ctx context.Context, addr string, tlsConf *tls.Config
 	}
 
 	// Direct QUIC connection
-	return quic.DialEarly(ctx, udpConn, udpAddr, tlsConf, quicConf)
+	return (&quic.UTransport{
+		Transport: &quic.Transport{
+			Conn: udpConn,
+		},
+		QUICSpec: &quic.QUICSpec{
+			ClientHelloSpec:   GetBrowserHTTP3ClientHelloFunc(s.Browser)(),
+			InitialPacketSpec: getInitialPacket(s.Browser),
+		},
+	}).DialEarly(ctx, udpAddr, tlsConf, quicConf)
 }
 
 // dialQUICViaProxy establishes a QUIC connection through a proxy

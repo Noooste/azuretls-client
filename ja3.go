@@ -461,17 +461,17 @@ func getExtensions(extensions []string, specifications *TlsSpecifications, defau
 
 		case "17513":
 			if specifications.ApplicationSettingsProtocols != nil {
-				builtExtensions = append(builtExtensions, &tls.OldApplicationSettingsExtension{SupportedProtocols: specifications.ApplicationSettingsProtocols})
+				builtExtensions = append(builtExtensions, &tls.ApplicationSettingsExtension{SupportedProtocols: specifications.ApplicationSettingsProtocols})
 			} else {
-				builtExtensions = append(builtExtensions, &tls.OldApplicationSettingsExtension{SupportedProtocols: []string{"h2"}})
+				builtExtensions = append(builtExtensions, &tls.ApplicationSettingsExtension{SupportedProtocols: []string{"h2"}})
 			}
 			break
 
 		case "17613":
 			if specifications.ApplicationSettingsProtocols != nil {
-				builtExtensions = append(builtExtensions, &tls.ApplicationSettingsExtension{SupportedProtocols: specifications.ApplicationSettingsProtocols})
+				builtExtensions = append(builtExtensions, &tls.ApplicationSettingsExtensionNew{SupportedProtocols: specifications.ApplicationSettingsProtocols})
 			} else {
-				builtExtensions = append(builtExtensions, &tls.ApplicationSettingsExtension{SupportedProtocols: []string{"h2"}})
+				builtExtensions = append(builtExtensions, &tls.ApplicationSettingsExtensionNew{SupportedProtocols: []string{"h2"}})
 			}
 			break
 

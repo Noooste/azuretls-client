@@ -1,10 +1,12 @@
 package azuretls
 
 import (
+	"fmt"
 	"github.com/Noooste/fhttp/http2"
+	quic "github.com/Noooste/uquic-go"
+	"github.com/Noooste/uquic-go/http3"
 	tls "github.com/Noooste/utls"
 	"github.com/Noooste/utls/dicttls"
-	"math/rand"
 )
 
 // GetBrowserClientHelloFunc returns a function that returns a ClientHelloSpec for a specific browser
@@ -23,95 +25,18 @@ func GetBrowserClientHelloFunc(browser string) func() *tls.ClientHelloSpec {
 	}
 }
 
-// since version 110, Chrome TLS Client Hello extensions are shuffled
-// https://www.fastly.com/blog/a-first-look-at-chromes-tls-clienthello-permutation-in-the-wild
-// replace the rdn.Shuffle with a custom shuffle to avoid the panic
-// see issue 102
-func getShuffledExtensions(extensions []tls.TLSExtension) []tls.TLSExtension {
-	extensionsLength := len(extensions)
-
-	dest := make([]tls.TLSExtension, extensionsLength)
-	perm := rand.Perm(extensionsLength)
-	for i, v := range perm {
-		dest[v] = extensions[i]
+func GetBrowserHTTP3ClientHelloFunc(browser string) func() *tls.ClientHelloSpec {
+	switch browser {
+	case Chrome, Edge, Opera:
+		return GetLastChromeVersionForHTTP3
+	default:
+		panic(fmt.Errorf("browser for HTTP/3 '%s' is not yet implemented", browser))
 	}
-
-	final := make([]tls.TLSExtension, 0, extensionsLength+3) // first grease + last grease + padding
-	final = append(final, &tls.UtlsGREASEExtension{})
-	final = append(final, dest...)
-	final = append(final, &tls.UtlsGREASEExtension{})
-	final = append(final, &tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle})
-
-	return final
 }
 
 // GetLastChromeVersion apply the latest Chrome version
 // Current Chrome version : 133
 func GetLastChromeVersion() *tls.ClientHelloSpec {
-	extensions := []tls.TLSExtension{
-		// &tls.UtlsGREASEExtension{},
-		&tls.KeyShareExtension{
-			KeyShares: []tls.KeyShare{
-				{Group: tls.CurveID(tls.GREASE_PLACEHOLDER), Data: []byte{0}},
-				{Group: tls.X25519MLKEM768},
-				{Group: tls.X25519},
-			},
-		},
-		&tls.ALPNExtension{AlpnProtocols: []string{
-			http2.NextProtoTLS,
-			"http/1.1",
-		}},
-		&tls.SNIExtension{},
-		&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
-			tls.ECDSAWithP256AndSHA256,
-			tls.PSSWithSHA256,
-			tls.PKCS1WithSHA256,
-			tls.ECDSAWithP384AndSHA384,
-			tls.PSSWithSHA384,
-			tls.PKCS1WithSHA384,
-			tls.PSSWithSHA512,
-			tls.PKCS1WithSHA512,
-		}},
-		&tls.ExtendedMasterSecretExtension{},
-		&tls.SessionTicketExtension{},
-		&tls.SCTExtension{},
-		&tls.RenegotiationInfoExtension{},
-		&tls.PSKKeyExchangeModesExtension{Modes: []uint8{
-			tls.PskModeDHE,
-		}},
-		&tls.ApplicationSettingsExtension{SupportedProtocols: []string{http2.NextProtoTLS}},
-		&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
-			tls.CertCompressionBrotli,
-		}},
-		&tls.SupportedVersionsExtension{Versions: []uint16{
-			tls.GREASE_PLACEHOLDER,
-			tls.VersionTLS13,
-			tls.VersionTLS12,
-		}},
-		&tls.SupportedCurvesExtension{Curves: []tls.CurveID{
-			tls.GREASE_PLACEHOLDER,
-			tls.X25519MLKEM768,
-			tls.X25519,
-			tls.CurveP256,
-			tls.CurveP384,
-		}},
-		&tls.StatusRequestExtension{},
-		&tls.SupportedPointsExtension{SupportedPoints: []byte{
-			0x00, // pointFormatUncompressed
-		}},
-		&tls.GREASEEncryptedClientHelloExtension{
-			CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
-				{
-					KdfId:  dicttls.HKDF_SHA256,
-					AeadId: dicttls.AEAD_AES_128_GCM,
-				},
-			},
-			CandidatePayloadLens: []uint16{128, 160, 192, 224}, // +16: 144, 176, 208, 240
-		},
-		// &tls.UtlsGREASEExtension{},
-		// &tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle},
-	}
-
 	return &tls.ClientHelloSpec{
 		CipherSuites: []uint16{
 			tls.GREASE_PLACEHOLDER,
@@ -134,7 +59,179 @@ func GetLastChromeVersion() *tls.ClientHelloSpec {
 		CompressionMethods: []byte{
 			0x00, // compressionNone
 		},
-		Extensions: getShuffledExtensions(extensions),
+		Extensions: tls.ShuffleChromeTLSExtensions([]tls.TLSExtension{
+			&tls.UtlsGREASEExtension{},
+			&tls.KeyShareExtension{
+				KeyShares: []tls.KeyShare{
+					{Group: tls.CurveID(tls.GREASE_PLACEHOLDER), Data: []byte{0}},
+					{Group: tls.X25519MLKEM768},
+					{Group: tls.X25519},
+				},
+			},
+			&tls.ALPNExtension{AlpnProtocols: []string{
+				http2.NextProtoTLS,
+				"http/1.1",
+			}},
+			&tls.SNIExtension{},
+			&tls.SignatureAlgorithmsExtension{SupportedSignatureAlgorithms: []tls.SignatureScheme{
+				tls.ECDSAWithP256AndSHA256,
+				tls.PSSWithSHA256,
+				tls.PKCS1WithSHA256,
+				tls.ECDSAWithP384AndSHA384,
+				tls.PSSWithSHA384,
+				tls.PKCS1WithSHA384,
+				tls.PSSWithSHA512,
+				tls.PKCS1WithSHA512,
+			}},
+			&tls.ExtendedMasterSecretExtension{},
+			&tls.SessionTicketExtension{},
+			&tls.SCTExtension{},
+			&tls.RenegotiationInfoExtension{},
+			&tls.PSKKeyExchangeModesExtension{Modes: []uint8{
+				tls.PskModeDHE,
+			}},
+			&tls.ApplicationSettingsExtension{SupportedProtocols: []string{http2.NextProtoTLS}},
+			&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
+				tls.CertCompressionBrotli,
+			}},
+			&tls.SupportedVersionsExtension{Versions: []uint16{
+				tls.GREASE_PLACEHOLDER,
+				tls.VersionTLS13,
+				tls.VersionTLS12,
+			}},
+			&tls.SupportedCurvesExtension{Curves: []tls.CurveID{
+				tls.GREASE_PLACEHOLDER,
+				tls.X25519MLKEM768,
+				tls.X25519,
+				tls.CurveP256,
+				tls.CurveP384,
+			}},
+			&tls.StatusRequestExtension{},
+			&tls.SupportedPointsExtension{SupportedPoints: []byte{
+				0x00, // pointFormatUncompressed
+			}},
+			&tls.GREASEEncryptedClientHelloExtension{
+				CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
+					{
+						KdfId:  dicttls.HKDF_SHA256,
+						AeadId: dicttls.AEAD_AES_128_GCM,
+					},
+				},
+				CandidatePayloadLens: []uint16{128, 160, 192, 224}, // +16: 144, 176, 208, 240
+			},
+			&tls.UtlsGREASEExtension{},
+			&tls.UtlsPaddingExtension{GetPaddingLen: tls.BoringPaddingStyle},
+		}),
+	}
+}
+
+func GetLastChromeVersionForHTTP3() *tls.ClientHelloSpec {
+	return &tls.ClientHelloSpec{
+		TLSVersMin: tls.VersionTLS13,
+		TLSVersMax: tls.VersionTLS13,
+		CipherSuites: []uint16{
+			tls.TLS_AES_128_GCM_SHA256,
+			tls.TLS_AES_256_GCM_SHA384,
+			tls.TLS_CHACHA20_POLY1305_SHA256,
+		},
+		CompressionMethods: []uint8{
+			0x0, // no compression
+		},
+		Extensions: tls.ShuffleChromeTLSExtensions([]tls.TLSExtension{
+			quic.ShuffleQUICTransportParameters(&tls.QUICTransportParametersExtension{ // Order of QTPs are always shuffled
+				TransportParameters: tls.TransportParameters{
+					tls.InitialMaxStreamsUni(103),
+					tls.MaxIdleTimeout(30000),
+					tls.InitialMaxData(15728640),
+					tls.InitialMaxStreamDataUni(0x80600000),
+					&tls.VersionInformation{
+						ChoosenVersion: tls.VERSION_1,
+						AvailableVersions: []uint32{
+							tls.VERSION_GREASE,
+							tls.VERSION_1,
+						},
+						LegacyID: true,
+					},
+					&tls.FakeQUICTransportParameter{ // google_quic_version
+						Id:  0x4752,
+						Val: []byte{00, 00, 00, 01}, // Google QUIC version 1
+					},
+					&tls.FakeQUICTransportParameter{ // google_connection_options
+						Id:  0x3127,
+						Val: []byte{0x80, 0x03, 0xe4, 0x2e},
+					},
+					tls.MaxDatagramFrameSize(65536),
+					tls.InitialMaxStreamsBidi(100),
+					tls.InitialMaxStreamDataBidiLocal(0x80600000),
+					quic.VariableLengthGREASEQTP(0x10), // Random length for GREASE QTP
+					tls.InitialSourceConnectionID([]byte{}),
+					tls.MaxUDPPayloadSize(1472),
+					tls.InitialMaxStreamDataBidiRemote(0x80600000),
+				},
+			}),
+			&tls.ApplicationSettingsExtension{
+				SupportedProtocols: []string{
+					http3.NextProtoH3,
+				},
+			},
+			&tls.UtlsCompressCertExtension{
+				Algorithms: []tls.CertCompressionAlgo{
+					tls.CertCompressionBrotli,
+				},
+			},
+			&tls.KeyShareExtension{
+				KeyShares: []tls.KeyShare{
+					//{Group: tls.X25519MLKEM768},
+					{Group: tls.X25519},
+				},
+			},
+			&tls.GREASEEncryptedClientHelloExtension{
+				CandidateCipherSuites: []tls.HPKESymmetricCipherSuite{
+					{
+						KdfId:  dicttls.HKDF_SHA256,
+						AeadId: dicttls.AEAD_AES_128_GCM,
+					},
+				},
+				CandidatePayloadLens: []uint16{128, 160, 192, 224}, // +16: 144, 176, 208, 240
+			},
+			&tls.SignatureAlgorithmsExtension{
+				SupportedSignatureAlgorithms: []tls.SignatureScheme{
+					tls.ECDSAWithP256AndSHA256,
+					tls.PSSWithSHA256,
+					tls.PKCS1WithSHA256,
+					tls.ECDSAWithP384AndSHA384,
+					tls.PSSWithSHA384,
+					tls.PKCS1WithSHA384,
+					tls.PSSWithSHA512,
+					tls.PKCS1WithSHA512,
+					tls.PKCS1WithSHA1,
+				},
+			},
+			&tls.SNIExtension{},
+			&tls.SupportedCurvesExtension{
+				Curves: []tls.CurveID{
+					//tls.X25519MLKEM768,
+					tls.CurveX25519,
+					tls.CurveSECP256R1,
+					tls.CurveSECP384R1,
+				},
+			},
+			&tls.PSKKeyExchangeModesExtension{
+				Modes: []uint8{
+					tls.PskModeDHE,
+				},
+			},
+			&tls.ALPNExtension{
+				AlpnProtocols: []string{
+					http3.NextProtoH3,
+				},
+			},
+			&tls.SupportedVersionsExtension{
+				Versions: []uint16{
+					tls.VersionTLS13,
+				},
+			},
+		}),
 	}
 }
 

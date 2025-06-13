@@ -3,7 +3,7 @@ package azuretls
 import (
 	"bytes"
 	"context"
-	"errors"
+	"fmt"
 	http "github.com/Noooste/fhttp"
 	"io"
 	"strings"
@@ -18,24 +18,22 @@ func (r *Request) CloseBody() {
 
 func (s *Session) prepareRequest(request *Request, args ...any) error {
 	for _, arg := range args {
-		switch arg.(type) {
+		switch i := arg.(type) {
 		case OrderedHeaders:
-			oh := arg.(OrderedHeaders)
-			request.OrderedHeaders = oh.Clone()
+			request.OrderedHeaders = i.Clone()
 		case PHeader:
-			request.PHeader = arg.(PHeader)
+			request.PHeader = i
 		case http.Header:
-			request.Header = arg.(http.Header)
+			request.Header = i
 		case HeaderOrder:
-			request.HeaderOrder = arg.(HeaderOrder)
+			request.HeaderOrder = i
 		case time.Duration:
-			request.TimeOut = arg.(time.Duration)
+			request.TimeOut = i
 		case context.Context:
-			request.ctx = arg.(context.Context)
-
+			request.ctx = i
 		default:
 			if request.Body != nil {
-				return errors.New("ambiguous argument, multiple body detected")
+				return fmt.Errorf("ambiguous argument, multiple body detected, what do you mean by this: %T", arg)
 			}
 			request.Body = arg
 		}

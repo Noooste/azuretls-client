@@ -2,7 +2,8 @@ package azuretls
 
 import (
 	"github.com/Noooste/fhttp/http2"
-	"github.com/Noooste/quic-go/http3"
+	quic "github.com/Noooste/uquic-go"
+	"github.com/Noooste/uquic-go/http3"
 )
 
 const (
@@ -145,5 +146,36 @@ func defaultHTTP3Settings(navigator string) (map[uint64]uint64, []uint64) {
 				http3.SettingsH3Datagram,
 				http3.SettingsGREASE,
 			}
+	}
+}
+
+func getInitialPacket(browser string) quic.InitialPacketSpec {
+	switch browser {
+	case Firefox:
+		return quic.InitialPacketSpec{
+			SrcConnIDLength:        3,
+			DestConnIDLength:       8,
+			InitPacketNumberLength: 1,
+			InitPacketNumber:       0,
+			ClientTokenLength:      0,
+			FrameBuilder:           quic.QUICFrames{}, // empty = single crypto
+		}
+	default: // Chrome, Safari, Edge, Ios
+		return quic.InitialPacketSpec{
+			SrcConnIDLength:        0,
+			DestConnIDLength:       8,
+			InitPacketNumberLength: 1,
+			InitPacketNumber:       1, // Chrome is special that it starts with 1 not 0
+			ClientTokenLength:      0,
+			FrameBuilder: &quic.QUICRandomFrames{ // Chrome randomly inserts padding frames
+				MinPING:    0,
+				MaxPING:    10,
+				MinCRYPTO:  1,
+				MaxCRYPTO:  10,
+				MinPADDING: 3,
+				MaxPADDING: 6,
+				Length:     1231 - 16, // 16-byte for Auth Tag
+			},
+		}
 	}
 }

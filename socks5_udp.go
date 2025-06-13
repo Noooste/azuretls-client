@@ -5,14 +5,13 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/Noooste/uquic-go"
 	"io"
 	"net"
 	"sync"
 	"time"
 
 	tls "github.com/Noooste/utls"
-
-	"github.com/Noooste/quic-go"
 )
 
 const (
