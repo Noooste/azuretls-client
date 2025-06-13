@@ -169,7 +169,7 @@ func GetLastChromeVersionForHTTP3() *tls.ClientHelloSpec {
 					tls.InitialMaxStreamDataBidiRemote(0x80600000),
 				},
 			}),
-			&tls.ApplicationSettingsExtension{
+			&tls.ApplicationSettingsExtensionNew{
 				SupportedProtocols: []string{
 					http3.NextProtoH3,
 				},

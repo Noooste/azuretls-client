@@ -61,25 +61,15 @@ var colorMethodMap = map[string]*color.Color{
 	http.MethodConnect: color.New(color.BgHiWhite, color.FgBlack),
 }
 
-func centerString(s string, width int) string {
-	if len(s) >= width {
-		return s
-	}
-	leftPadding := (width - len(s)) / 2
-	rightPadding := width - len(s) - leftPadding
-	return strings.Repeat(" ", leftPadding) + s + strings.Repeat(" ", rightPadding)
-}
-
 func (s *Session) logRequest(request *Request) {
 	if !s.logging || s.urlMatch(request.parsedUrl, s.loggingIgnore) {
 		return
 	}
 
-	fmt.Printf("[%s] %v |%s | %s | %25s | %#v\n",
+	fmt.Printf("[%s] %v |%s | %25s | %#v\n",
 		color.CyanString("AZURETLS"),
 		request.startTime.Format("01/02/2006 - 15:04:05"),
 		colorMethodMap[request.Method].Sprintf(" %-8s", request.Method),
-		centerString(request.Proto, 8),
 		request.parsedUrl.Host,
 		request.parsedUrl.Path,
 	)
@@ -117,11 +107,12 @@ func (s *Session) logResponse(response *Response, err error) {
 		return
 	}
 
-	fmt.Printf("[%s] %v |%s| %13v | %25s | %#v\n",
+	fmt.Printf("[%s] %v |%s| %13v | %8s | %25s | %#v\n",
 		color.CyanString("AZURETLS"),
 		now.Format("01/02/2006 - 15:04:05"),
 		getColorStatus(response.StatusCode).Sprintf(" %3d ", response.StatusCode),
 		now.Sub(response.Request.startTime),
+		response.HttpResponse.Proto,
 		response.Request.parsedUrl.Host,
 		response.Request.parsedUrl.Path,
 	)
