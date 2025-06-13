@@ -181,7 +181,7 @@ func GetLastChromeVersionForHTTP3() *tls.ClientHelloSpec {
 			},
 			&tls.KeyShareExtension{
 				KeyShares: []tls.KeyShare{
-					//{Group: tls.X25519MLKEM768},
+					{Group: tls.X25519MLKEM768},
 					{Group: tls.X25519},
 				},
 			},
@@ -210,7 +210,7 @@ func GetLastChromeVersionForHTTP3() *tls.ClientHelloSpec {
 			&tls.SNIExtension{},
 			&tls.SupportedCurvesExtension{
 				Curves: []tls.CurveID{
-					//tls.X25519MLKEM768,
+					tls.X25519MLKEM768,
 					tls.CurveX25519,
 					tls.CurveSECP256R1,
 					tls.CurveSECP384R1,

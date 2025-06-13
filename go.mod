@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/Noooste/fhttp v1.0.13
-	github.com/Noooste/uquic-go v0.0.28
+	github.com/Noooste/uquic-go v0.0.29
 	github.com/Noooste/utls v1.3.18
 	github.com/Noooste/websocket v1.0.3
 	github.com/andybalholm/brotli v1.1.1
