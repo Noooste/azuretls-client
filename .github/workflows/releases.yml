@@ -19,7 +19,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.24'
 
       - name: Install dependencies
         run: |
@@ -168,8 +168,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
-
+          go-version: '1.24'
 
       - name: Install dependencies (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
@@ -239,7 +238,10 @@ jobs:
           
           # Build the library with clean naming: azuretls-1.2.3-linux-amd64.so
           LIB_NAME="azuretls-${VERSION_CLEAN}-${{ matrix.name }}${EXT}"
-          CGO_ENABLED=1 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
+          
+          echo "🔨 Building $LIB_NAME for ${{ matrix.goos }}/${{ matrix.goarch }}"
+          echo "Using CC: ${CC:-default}"
+          
           go build -buildmode=c-shared \
           -ldflags="-s -w -X 'main.Version=${{ steps.version.outputs.version }}'" \
           -o "$LIB_NAME" main.go
@@ -250,42 +252,47 @@ jobs:
             exit 1
           fi
           
+          echo "✅ Successfully built $LIB_NAME"
+          ls -lh "$LIB_NAME"
+          
           # Copy header file with same naming pattern
-          if [ -f "azuretls.h" ]; then
+          if [ -f "${LIB_NAME%.*}.h" ]; then
+            cp "${LIB_NAME%.*}.h" "azuretls-${VERSION_CLEAN}-${{ matrix.name }}.h"
+          elif [ -f "azuretls.h" ]; then
             cp azuretls.h "azuretls-${VERSION_CLEAN}-${{ matrix.name }}.h"
           else
-            echo "⚠️ Warning: azuretls.h not found"
+            echo "⚠️ Warning: Header file not found, will be generated"
           fi
           
           # Set environment variables for next steps
           echo "LIB_NAME=$LIB_NAME" >> $GITHUB_ENV
           echo "VERSION_CLEAN=$VERSION_CLEAN" >> $GITHUB_ENV
         shell: bash
-        env:
-          CGO_ENABLED: 1
 
       - name: Verify build
         working-directory: cffi
         run: |
-          # Basic verification that the library was built
-          if [ "${{ matrix.goos }}" = "windows" ]; then
-            EXT=".dll"
-          elif [ "${{ matrix.goos }}" = "darwin" ]; then
-            EXT=".dylib"
-          else
-            EXT=".so"
-          fi
-          
-          LIBRARY="libazuretls_${{ matrix.name }}${EXT}"
-          
-          if [ -f "$LIBRARY" ]; then
-            echo "✅ Library built successfully: $LIBRARY"
-            ls -lh "$LIBRARY"
+          # Verify the library was built correctly
+          if [ -f "${{ env.LIB_NAME }}" ]; then
+            echo "✅ Library built successfully: ${{ env.LIB_NAME }}"
+            ls -lh "${{ env.LIB_NAME }}"
           
             # Check if it's a valid binary (basic check)
-            file "$LIBRARY" || true
+            file "${{ env.LIB_NAME }}" 2>/dev/null || echo "File command not available"
+          
+            # Additional verification for different OS
+            if [ "${{ matrix.goos }}" = "linux" ]; then
+              ldd "${{ env.LIB_NAME }}" 2>/dev/null || echo "ldd not available or static binary"
+            elif [ "${{ matrix.goos }}" = "darwin" ]; then
+              otool -L "${{ env.LIB_NAME }}" 2>/dev/null || echo "otool not available"
+            elif [ "${{ matrix.goos }}" = "windows" ]; then
+              echo "Windows DLL verification skipped"
+            fi
           else
-            echo "❌ Library not found: $LIBRARY"
+            echo "❌ Library not found: ${{ env.LIB_NAME }}"
+            echo "Expected file: ${{ env.LIB_NAME }}"
+            echo "Files in directory:"
+            ls -la
             exit 1
           fi
         shell: bash
@@ -402,3 +409,5 @@ jobs:
           echo "Tag: ${{ steps.version.outputs.version }}"
           echo "Library files uploaded: $(find release-assets -name "azuretls-*.*" | grep -E "\.(so|dll|dylib)$" | wc -l)"
           echo "Release URL: ${{ steps.create_release.outputs.url }}"
+https://claude:
+  ai/chat/69fd814c-0c67-4d02-b704-bd92b3b3ba1e:
