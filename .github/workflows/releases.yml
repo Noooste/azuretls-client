@@ -170,11 +170,31 @@ jobs:
         with:
           go-version: '1.23'
 
+
       - name: Install dependencies (Ubuntu)
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-multilib gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
+          sudo apt-get install -y gcc-multilib
+          
+          # Install cross-compilation toolchains with proper handling
+          if [ "${{ matrix.goarch }}" = "arm64" ] && [ "${{ matrix.goos }}" = "linux" ]; then
+            # Try to install cross-compiler, fallback if not available
+            sudo apt-get install -y gcc-aarch64-linux-gnu || {
+              echo "⚠️ ARM64 cross-compiler not available, will use Docker approach"
+              # Alternative: Use zig as cross-compiler (more reliable)
+              curl -L https://ziglang.org/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz | tar -xJ
+              sudo mv zig-linux-x86_64-0.11.0/zig /usr/local/bin/
+              echo "CC=zig cc -target aarch64-linux-gnu" >> $GITHUB_ENV
+            }
+          elif [ "${{ matrix.goarch }}" = "arm" ] && [ "${{ matrix.goos }}" = "linux" ]; then
+            sudo apt-get install -y gcc-arm-linux-gnueabihf || {
+              echo "⚠️ ARM cross-compiler not available, will use Docker approach"
+              curl -L https://ziglang.org/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz | tar -xJ
+              sudo mv zig-linux-x86_64-0.11.0/zig /usr/local/bin/
+              echo "CC=zig cc -target arm-linux-gnueabihf" >> $GITHUB_ENV
+            }
+          fi
 
       - name: Install dependencies (Windows)
         if: matrix.os == 'windows-latest'
