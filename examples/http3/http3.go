@@ -15,7 +15,11 @@ func main() {
 		panic(fmt.Sprintf("failed to apply HTTP/3 settings: %v", err))
 	}
 
-	resp, err := session.Get("https://fp.impersonate.pro/api/http3")
+	resp, err := session.Do(&azuretls.Request{
+		Method:     "GET",
+		Url:        "https://fp.impersonate.pro/api/http3",
+		ForceHTTP3: true,
+	})
 
 	if err != nil {
 		panic(err)
