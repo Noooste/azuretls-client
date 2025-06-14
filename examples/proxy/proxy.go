@@ -7,8 +7,11 @@ import (
 
 func main() {
 	session := azuretls.NewSession()
+	defer session.Close()
 
-	session.SetProxy("http://username:password@ip:port")
+	if err := session.SetProxy("http://username:password@ip:port"); err != nil {
+		panic(fmt.Sprintf("failed to set proxy: %v", err))
+	}
 
 	response, err := session.Get("https://api.ipify.org")
 
@@ -18,6 +21,4 @@ func main() {
 
 	fmt.Println(response.StatusCode)
 	fmt.Println(string(response.Body))
-
-	session.Close()
 }
