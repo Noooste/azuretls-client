@@ -593,7 +593,15 @@ func (s *Session) dialQUICViaSocks5(ctx context.Context, udpConn *net.UDPConn,
 	}
 
 	// Dial QUIC using the SOCKS5 connection
-	return quic.DialEarly(ctx, packetConn, remoteAddr, tlsConf, quicConf)
+	return (&quic.UTransport{
+		Transport: &quic.Transport{
+			Conn: packetConn,
+		},
+		QUICSpec: &quic.QUICSpec{
+			ClientHelloSpec:   GetBrowserHTTP3ClientHelloFunc(s.Browser)(),
+			InitialPacketSpec: getInitialPacket(s.Browser),
+		},
+	}).DialEarly(ctx, remoteAddr, tlsConf, quicConf)
 }
 
 // socks5PacketConn wraps SOCKS5UDPConn to implement net.PacketConn for QUIC
