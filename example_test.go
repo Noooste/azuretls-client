@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/Noooste/azuretls-client"
+	http "github.com/Noooste/fhttp"
 	"os"
 	"strings"
 	"time"
@@ -145,7 +146,7 @@ func ExampleSession_ApplyJa3() {
 		panic(err)
 	}
 
-	fmt.Println(strings.Contains(string(resp.Body), ja3))
+	fmt.Println(strings.Contains(resp.String(), ja3))
 
 	// Output:
 	// true
@@ -166,7 +167,32 @@ func ExampleSession_ApplyHTTP2() {
 		panic(err)
 	}
 
-	fmt.Println(strings.Contains(string(resp.Body), preset))
+	fmt.Println(strings.Contains(resp.String(), preset))
+
+	// Output:
+	// true
+}
+
+func ExampleSession_ApplyHTTP3() {
+	session := azuretls.NewSession()
+
+	http3 := "1:16383;7:100;GREASE|m,s,a,p"
+
+	if err := session.ApplyHTTP3(http3); err != nil {
+		panic(err)
+	}
+
+	resp, err := session.Do(&azuretls.Request{
+		Method:     http.MethodGet,
+		Url:        "https://tls.peet.ws/api/all",
+		ForceHTTP3: true,
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(strings.Contains(resp.String(), http3))
 
 	// Output:
 	// true

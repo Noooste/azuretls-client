@@ -1,0 +1,393 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  # First: Run tests to ensure everything works
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib
+
+      - name: Run tests
+        run: |
+          # Test main library
+          if [ -d "test" ]; then
+            go test -v ./test
+          else
+            echo "No test directory found, running go test on all packages"
+            go test -v ./...
+          fi
+
+      - name: Test CFFI build
+        working-directory: cffi
+        run: |
+          # Verify CFFI can build
+          if [ -f "Makefile" ]; then
+            make
+          else
+            CGO_ENABLED=1 go build -buildmode=c-shared -o libazuretls.so main.go
+          fi
+          
+          # Test examples if they exist
+          if [ -d "examples" ] && [ -f "examples/Makefile" ]; then
+            cd examples
+            make
+          fi
+          
+          echo "✅ CFFI build test passed!"
+
+  # Second: Generate changelog
+  generate-changelog:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changelog }}
+      tag: ${{ steps.tag.outputs.tag }}
+      previous_tag: ${{ steps.previous_tag.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get current tag
+        id: tag
+        run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Get previous tag
+        id: previous_tag
+        run: |
+          PREVIOUS_TAG=$(git tag --sort=-version:refname | head -2 | tail -1)
+          echo "tag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          CURRENT_TAG="${{ steps.tag.outputs.tag }}"
+          PREVIOUS_TAG="${{ steps.previous_tag.outputs.tag }}"
+          
+          chmod +x .github/scripts/generate-changelog.sh
+          bash .github/scripts/generate-changelog.sh "$PREVIOUS_TAG" "$CURRENT_TAG" > changelog.txt
+          
+          # Set multiline output properly
+          {
+            echo 'changelog<<EOF'
+            cat changelog.txt
+            echo EOF
+          } >> $GITHUB_OUTPUT
+
+      - name: Upload changelog artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog
+          path: changelog.txt
+
+  # Third: Build all platforms (only after tests pass)
+  build-cffi:
+    needs: [test, generate-changelog]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux builds
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            name: linux-amd64
+
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm64
+            name: linux-arm64
+
+          - os: ubuntu-latest
+            goos: linux
+            goarch: 386
+            name: linux-386
+
+          - os: ubuntu-latest
+            goos: linux
+            goarch: arm
+            name: linux-arm
+
+          # Windows builds
+          - os: ubuntu-latest
+            goos: windows
+            goarch: amd64
+            name: windows-amd64
+
+          - os: ubuntu-latest
+            goos: windows
+            goarch: 386
+            name: windows-386
+
+          # macOS builds
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            name: darwin-amd64
+
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            name: darwin-arm64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Install dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib
+          
+          # Install cross-compilation toolchains with proper handling
+          if [ "${{ matrix.goarch }}" = "arm64" ] && [ "${{ matrix.goos }}" = "linux" ]; then
+            sudo apt-get install -y gcc-aarch64-linux-gnu || {
+              echo "⚠️ ARM64 cross-compiler not available, will use Docker approach"
+              # Alternative: Use zig as cross-compiler (more reliable)
+              curl -L https://ziglang.org/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz | tar -xJ
+              sudo mv zig-linux-x86_64-0.11.0/zig /usr/local/bin/
+              echo "CC=zig cc -target aarch64-linux-gnu" >> $GITHUB_ENV
+            }
+          elif [ "${{ matrix.goarch }}" = "arm" ] && [ "${{ matrix.goos }}" = "linux" ]; then
+            sudo apt-get install -y gcc-arm-linux-gnueabihf || {
+              echo "⚠️ ARM cross-compiler not available, will use Docker approach"
+              curl -L https://ziglang.org/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz | tar -xJ
+              sudo mv zig-linux-x86_64-0.11.0/zig /usr/local/bin/
+              echo "CC=zig cc -target arm-linux-gnueabihf" >> $GITHUB_ENV
+            }
+          elif [ "${{ matrix.goos }}" = "windows" ]; then
+            sudo apt-get install -y mingw-w64 || {
+              echo "⚠️ MinGW not available, will use Docker approach"
+              curl -L https://ziglang.org/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz | tar -xJ
+              sudo mv zig-linux-x86_64-0.11.0/zig /usr/local/bin/
+              echo "CC=zig cc -target x86_64-w64-mingw32" >> $GITHUB_ENV
+            }
+          fi
+
+      - name: Install dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          xcode-select --install 2>/dev/null || true
+
+      - name: Set CC for cross-compilation
+        run: |
+          # Only set CC if we successfully installed cross-compilers and avoid conflicts
+          if [ "${{ matrix.goos }}" = "linux" ] && [ "${{ matrix.goarch }}" = "arm64" ]; then
+            if command -v aarch64-linux-gnu-gcc >/dev/null 2>&1; then
+              echo "CC=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+              # Set CGO flags to avoid x86-specific options
+              echo "CGO_CFLAGS=-O2" >> $GITHUB_ENV
+            fi
+          elif [ "${{ matrix.goos }}" = "linux" ] && [ "${{ matrix.goarch }}" = "arm" ]; then
+            if command -v arm-linux-gnueabihf-gcc >/dev/null 2>&1; then
+              echo "CC=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV
+              echo "CGO_CFLAGS=-O2" >> $GITHUB_ENV
+            fi
+          fi
+        shell: bash
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Build CFFI library
+        working-directory: cffi
+        run: |
+          # Clean version string (remove 'v' prefix and any invalid characters)
+          VERSION_CLEAN=$(echo "${{ steps.version.outputs.version }}" | sed 's/^v//' | sed 's/[^a-zA-Z0-9._-]/_/g')
+          
+          # Set library extension based on OS
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            EXT=".dll"
+          elif [ "${{ matrix.goos }}" = "darwin" ]; then
+            EXT=".dylib"
+          else
+            EXT=".so"
+          fi
+          
+          # Build the library with clean naming: azuretls-1.2.3-linux-amd64.so
+          LIB_NAME="azuretls-${VERSION_CLEAN}-${{ matrix.name }}${EXT}"
+          
+          echo "🔨 Building $LIB_NAME for ${{ matrix.goos }}/${{ matrix.goarch }}"
+          echo "Using CC: ${CC:-default}"
+          
+          # Set build environment
+          export CGO_ENABLED=1
+          export GOOS=${{ matrix.goos }}
+          export GOARCH=${{ matrix.goarch }}
+          
+          # Clear any problematic CGO flags that might conflict with cross-compilation
+          if [ "${{ matrix.goarch }}" = "arm64" ] || [ "${{ matrix.goarch }}" = "arm" ]; then
+            export CGO_CFLAGS="${CGO_CFLAGS:-} -w"
+            export CGO_LDFLAGS="${CGO_LDFLAGS:-} -w"
+          fi
+          
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            if [ "${{ matrix.goarch }}" = "386" ]; then
+                export CC="i686-w64-mingw32-gcc";
+            elif [ "${{ matrix.goarch }}" = "amd64" ]; then
+                export CC="x86_64-w64-mingw32-gcc";
+            fi
+          fi
+          
+          go build -buildmode=c-shared \
+          -ldflags="-s -w -X 'main.Version=${{ steps.version.outputs.version }}'" \
+          -o "$LIB_NAME" main.go
+          
+          # Verify the build was successful
+          if [ ! -f "$LIB_NAME" ]; then
+            echo "❌ Build failed: library not created"
+            exit 1
+          fi
+          
+          echo "✅ Successfully built $LIB_NAME"
+          ls -lh "$LIB_NAME"
+          
+          # Always create azuretls.h from the auto-generated header
+          if [ -f "${LIB_NAME%.*}.h" ]; then
+            cp "${LIB_NAME%.*}.h" "azuretls.h"
+            echo "✅ Created azuretls.h from auto-generated header"
+          else
+            echo "⚠️ Warning: Header file not found"
+          fi
+          
+          # Set environment variables for next steps
+          echo "LIB_NAME=$LIB_NAME" >> $GITHUB_ENV
+          echo "VERSION_CLEAN=$VERSION_CLEAN" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Verify build
+        working-directory: cffi
+        run: |
+          # Verify the library was built correctly
+          if [ -f "${{ env.LIB_NAME }}" ]; then
+            echo "✅ Library built successfully: ${{ env.LIB_NAME }}"
+            ls -lh "${{ env.LIB_NAME }}"
+          
+            # Check if it's a valid binary (basic check)
+            file "${{ env.LIB_NAME }}" 2>/dev/null || echo "File command not available"
+          
+            # Additional verification for different OS
+            if [ "${{ matrix.goos }}" = "linux" ]; then
+              ldd "${{ env.LIB_NAME }}" 2>/dev/null || echo "ldd not available or static binary"
+            elif [ "${{ matrix.goos }}" = "darwin" ]; then
+              otool -L "${{ env.LIB_NAME }}" 2>/dev/null || echo "otool not available"
+            elif [ "${{ matrix.goos }}" = "windows" ]; then
+              echo "Windows DLL verification skipped"
+            fi
+          else
+            echo "❌ Library not found: ${{ env.LIB_NAME }}"
+            echo "Expected file: ${{ env.LIB_NAME }}"
+            echo "Files in directory:"
+            ls -la
+            exit 1
+          fi
+        shell: bash
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cffi-${{ matrix.name }}
+          path: |
+            cffi/${{ env.LIB_NAME }}
+            cffi/azuretls.h
+
+  # Fourth: Create release (only after all builds succeed)
+  create-release:
+    needs: [generate-changelog, build-cffi]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          
+          # Find and copy all library files directly (no archives)
+          find artifacts -name "azuretls-*.so" -o -name "azuretls-*.dll" -o -name "azuretls-*.dylib" | while read file; do
+            filename=$(basename "$file")
+            echo "Preparing library: $filename"
+            cp "$file" "release-assets/$filename"
+          done
+          
+          # Copy only one azuretls.h file (they're all the same)
+          find artifacts -name "azuretls.h" | head -1 | while read file; do
+            if [ -f "$file" ]; then
+              echo "Preparing header: azuretls.h"
+              cp "$file" "release-assets/azuretls.h"
+            fi
+          done
+          
+          echo "📦 Release assets prepared:"
+          ls -la release-assets/
+          
+          # Verify we have library files
+          LIB_COUNT=$(find release-assets -name "azuretls-*.*" | grep -E "\.(so|dll|dylib)$" | wc -l)
+          echo "Total library files: $LIB_COUNT"
+          
+          if [ "$LIB_COUNT" -lt 8 ]; then
+            echo "⚠️ Warning: Expected more library files, only found $LIB_COUNT"
+          fi
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
+          body: ${{ needs.generate-changelog.outputs.changelog }}
+          draft: true
+          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
+          files: release-assets/*
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fail_on_unmatched_files: true
+
+      - name: Release Summary
+        run: |
+          echo "🎉 Release created successfully!"
+          echo "Tag: ${{ steps.version.outputs.version }}"
+          echo "Library files uploaded: $(find release-assets -name "azuretls-*.*" | grep -E "\.(so|dll|dylib)$" | wc -l)"
+          echo "Release URL: ${{ steps.create_release.outputs.url }}"
