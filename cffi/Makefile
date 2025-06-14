@@ -123,24 +123,6 @@ build-darwin-arm64: $(BUILD_DIR)
 	-ldflags="$(GO_LDFLAGS)" \
 	-o $(BUILD_DIR)/lib$(LIB_NAME)_darwin_arm64.dylib main.go
 
-# FreeBSD builds
-.PHONY: build-freebsd
-build-freebsd: build-freebsd-amd64 build-freebsd-arm64
-
-.PHONY: build-freebsd-amd64
-build-freebsd-amd64: $(BUILD_DIR)
-	CGO_ENABLED=1 GOOS=freebsd GOARCH=amd64 \
-	go build $(GO_BUILD_FLAGS) \
-	-ldflags="$(GO_LDFLAGS)" \
-	-o $(BUILD_DIR)/lib$(LIB_NAME)_freebsd_amd64.so main.go
-
-.PHONY: build-freebsd-arm64
-build-freebsd-arm64: $(BUILD_DIR)
-	CGO_ENABLED=1 GOOS=freebsd GOARCH=arm64 \
-	go build $(GO_BUILD_FLAGS) \
-	-ldflags="$(GO_LDFLAGS)" \
-	-o $(BUILD_DIR)/lib$(LIB_NAME)_freebsd_arm64.so main.go
-
 # Copy header file to build directory
 .PHONY: copy-headers
 copy-headers: $(BUILD_DIR)
@@ -189,7 +171,6 @@ help:
 	@echo "  build-linux            Build for all Linux architectures"
 	@echo "  build-windows          Build for all Windows architectures"
 	@echo "  build-darwin           Build for all macOS architectures"
-	@echo "  build-freebsd          Build for all FreeBSD architectures"
 	@echo "  copy-headers           Copy header files to build directory"
 	@echo "  test                   Run tests"
 	@echo "  clean                  Remove build artifacts"

@@ -1,4 +1,4 @@
-# AzureTLS Client 
+# AzureTLS Client
 [![GoDoc](https://godoc.org/github.com/Noooste/azuretls-client?status.svg)](https://godoc.org/github.com/Noooste/azuretls-client)
 [![codecov](https://codecov.io/gh/Noooste/azuretls-client/graph/badge.svg?token=XGHX707RK6)](https://codecov.io/gh/Noooste/azuretls-client)
 [![build](https://github.com/Noooste/azuretls-client/actions/workflows/push.yml/badge.svg)](https://github.com/Noooste/azuretls-client/actions/workflows/push.yml)
@@ -98,12 +98,112 @@ if err != nil {
 response, err := session.Get("https://api.example.com")
 ```
 
+## 🌍 Multi-Language Support via CFFI
+
+AzureTLS Client can be used from **any programming language** that supports C Foreign Function Interface (FFI) through our comprehensive CFFI bindings.
+
+### 🔗 Available CFFI Implementation
+
+The core CFFI (C Foreign Function Interface) library is available in the [`cffi/`](./cffi/) directory, providing a C API that can be used from any language supporting C FFI.
+
+**📦 Pre-built libraries available for:**
+- **Linux** (amd64, arm64, 386, arm)
+- **Windows** (amd64, 386, arm64)
+- **macOS** (amd64, arm64)
+
+### 🌐 Community Language Bindings
+
+*Community-maintained repositories for additional languages:*
+
+<!-- Add your language binding repository here via PR -->
+- 🔗 **[Your Language]** - [Your Repository](https://github.com/yourusername/azuretls-yourlang) by [@yourusername](https://github.com/yourusername)
+
+*Want to see your language binding featured here? See the [Contributing Language Bindings](#-contributing-language-bindings) section below!*
+
+### 🚀 Quick CFFI Example (Python)
+
+```python
+from azuretls_cffi import AzureTLSSession
+
+# Create session with browser emulation
+with AzureTLSSession({"browser": "chrome"}) as session:
+    # Simple GET request
+    response = session.get("https://httpbin.org/get")
+    print(f"Status: {response.status_code}")
+    print(f"Body: {response.body}")
+
+    # POST with custom headers
+    response = session.post(
+        "https://httpbin.org/post",
+        body='{"message": "Hello World"}',
+        headers={"Content-Type": "application/json"}
+    )
+```
+
+### 📦 Getting Started with CFFI
+
+1. **Download** pre-built libraries from our [releases](https://github.com/Noooste/azuretls-client/releases)
+2. **Choose** your platform: Linux, Windows, macOS, FreeBSD
+3. **Pick** your architecture: amd64, arm64, 386, arm
+4. **Follow** language-specific examples in [`cffi/examples/`](./cffi/examples/)
+
+### 🛠️ Building CFFI Libraries
+
+```bash
+# Build for current platform
+cd cffi && make
+
+# Build for all platforms
+cd cffi && make build-all
+
+# Build for specific platform
+cd cffi && make build-linux-amd64
+```
+
+### 📚 Comprehensive Documentation
+
+Full CFFI documentation with API reference, examples, and troubleshooting guides is available at [`cffi/README.md`](./cffi/README.md).
+
+### 🤝 Contributing Language Bindings
+
+**We welcome and appreciate contributions for additional language support!**
+
+If you create bindings for a new programming language, we'd love to:
+- 📝 **Feature your repository** in this README
+- 🏆 **Credit you as a contributor**
+- 🔗 **Link to your implementation** for the community
+- 🚀 **Help promote** your language bindings
+
+**Language bindings we'd especially appreciate:**
+- 🐍 **Python** - ctypes/cffi implementation
+- 🟨 **Node.js** - ffi-napi integration
+- 📘 **TypeScript** - Type-safe Node.js bindings
+- ☕ **Java** - JNI bindings
+- 🔷 **C#** - P/Invoke implementation
+- 🦀 **Rust** - libc/bindgen bindings
+- And any others!
+
+**How to contribute language bindings:**
+
+1. 🏗️ **Create your own repository** with language bindings using our CFFI
+2. 🔧 **Implement the core functionality** using our C API from [`cffi/`](./cffi/)
+3. 📖 **Add comprehensive examples and documentation**
+4. 🧪 **Include tests** demonstrating the functionality
+5. 📬 **Submit a pull request** to this repository to **add your repo link** to this README
+
+**Repository Requirements:**
+- Use the AzureTLS CFFI libraries from our releases
+- Include clear installation instructions
+- Provide working examples
+- Add proper documentation
+- Follow your language's best practices
+
 ## 🤝 Community & Support
 
 - **Issues**: [GitHub Issues](https://github.com/Noooste/azuretls-client/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/Noooste/azuretls-client/discussions)
 - **Examples**: [examples/](./examples/)
-- **Shared Libraries**: [cffi/](./cffi/)
+- **CFFI Documentation**: [cffi/README.md](./cffi/README.md)
 
 ## 🙏 Acknowledgments
 
@@ -116,5 +216,7 @@ If AzureTLS Client helps you build something awesome, consider:
 - 🐛 **Report bugs** or suggest features
 - 💡 **Share your use cases** in discussions
 - 🤝 **Contribute** code or documentation
+- 🌍 **Create bindings** for your favorite programming language
+- 💖 **Donate**: [Buy Me a Coffee](https://www.buymeacoffee.com/noste) - Support the project!
 
 *Ready to build powerful HTTP clients with ease? Let's get started! 🚀*

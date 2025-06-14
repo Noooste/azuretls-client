@@ -50,9 +50,12 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 		u, _ = url.Parse(response.Url)
 	}
 
-	cookies := httpResponse.Cookies()
-	s.CookieJar.SetCookies(u, cookies)
-	response.Cookies = GetCookiesMap(cookies)
+	if !response.Request.NoCookie {
+		cookies := httpResponse.Cookies()
+		s.CookieJar.SetCookies(u, cookies)
+		response.Cookies = GetCookiesMap(cookies)
+	}
+
 	response.ContentLength = httpResponse.ContentLength
 
 	wg.Wait()

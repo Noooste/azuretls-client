@@ -123,7 +123,6 @@ with AzureTLSSession({"browser": "chrome"}) as session:
 | Linux | amd64, arm64, 386, arm | `.so` | ✅ Supported |
 | Windows | amd64, 386, arm64 | `.dll` | ✅ Supported |
 | macOS | amd64, arm64 | `.dylib` | ✅ Supported |
-| FreeBSD | amd64, arm64 | `.so` | ✅ Supported |
 
 ## 📚 API Reference
 
