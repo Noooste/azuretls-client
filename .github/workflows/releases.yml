@@ -255,13 +255,12 @@ jobs:
           echo "✅ Successfully built $LIB_NAME"
           ls -lh "$LIB_NAME"
           
-          # Copy header file with same naming pattern
+          # Always create azuretls.h from the auto-generated header
           if [ -f "${LIB_NAME%.*}.h" ]; then
-            cp "${LIB_NAME%.*}.h" "azuretls-${VERSION_CLEAN}-${{ matrix.name }}.h"
-          elif [ -f "azuretls.h" ]; then
-            cp azuretls.h "azuretls-${VERSION_CLEAN}-${{ matrix.name }}.h"
+            cp "${LIB_NAME%.*}.h" "azuretls.h"
+            echo "✅ Created azuretls.h from auto-generated header"
           else
-            echo "⚠️ Warning: Header file not found, will be generated"
+            echo "⚠️ Warning: Header file not found"
           fi
           
           # Set environment variables for next steps
@@ -299,12 +298,7 @@ jobs:
 
       - name: Create archive
         working-directory: cffi
-        run: |        
-          # Copy header file to standard name for easier usage
-          if [ -f "azuretls-${{ env.VERSION_CLEAN }}-${{ matrix.name }}.h" ]; then
-            cp "azuretls-${{ env.VERSION_CLEAN }}-${{ matrix.name }}.h" "azuretls.h"
-          fi
-          
+        run: |
           # Create a simple info file
           cat > "azuretls-${{ env.VERSION_CLEAN }}-${{ matrix.name }}.txt" << 'EOF'
           AzureTLS HTTP Client Library
@@ -364,7 +358,7 @@ jobs:
             cp "$file" "release-assets/$filename"
           done
           
-          # Copy one header file (they're all the same)
+          # Copy only one azuretls.h file (they're all the same)
           find artifacts -name "azuretls.h" | head -1 | while read file; do
             if [ -f "$file" ]; then
               echo "Preparing header: azuretls.h"
