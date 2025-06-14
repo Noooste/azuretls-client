@@ -102,7 +102,7 @@ response, err := session.Get("https://api.example.com")
 
 - **Issues**: [GitHub Issues](https://github.com/Noooste/azuretls-client/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/Noooste/azuretls-client/discussions)
-- **Examples**: [examples/](./examples/)
+- **Examples**: [examples/](./example/)
 
 ## 🙏 Acknowledgments
 
