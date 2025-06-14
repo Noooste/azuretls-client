@@ -120,26 +120,6 @@ The core CFFI (C Foreign Function Interface) library is available in the [`cffi/
 
 *Want to see your language binding featured here? See the [Contributing Language Bindings](#-contributing-language-bindings) section below!*
 
-### 🚀 Quick CFFI Example (Python)
-
-```python
-from azuretls_cffi import AzureTLSSession
-
-# Create session with browser emulation
-with AzureTLSSession({"browser": "chrome"}) as session:
-    # Simple GET request
-    response = session.get("https://httpbin.org/get")
-    print(f"Status: {response.status_code}")
-    print(f"Body: {response.body}")
-
-    # POST with custom headers
-    response = session.post(
-        "https://httpbin.org/post",
-        body='{"message": "Hello World"}',
-        headers={"Content-Type": "application/json"}
-    )
-```
-
 ### 📦 Getting Started with CFFI
 
 1. **Download** pre-built libraries from our [releases](https://github.com/Noooste/azuretls-client/releases)
