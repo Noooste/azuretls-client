@@ -409,5 +409,3 @@ jobs:
           echo "Tag: ${{ steps.version.outputs.version }}"
           echo "Library files uploaded: $(find release-assets -name "azuretls-*.*" | grep -E "\.(so|dll|dylib)$" | wc -l)"
           echo "Release URL: ${{ steps.create_release.outputs.url }}"
-https://claude:
-  ai/chat/69fd814c-0c67-4d02-b704-bd92b3b3ba1e:
