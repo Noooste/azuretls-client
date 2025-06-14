@@ -315,29 +315,6 @@ jobs:
           fi
         shell: bash
 
-      - name: Create archive
-        working-directory: cffi
-        run: |
-          # Create a simple info file
-          cat > "azuretls-${{ env.VERSION_CLEAN }}-${{ matrix.name }}.txt" << 'EOF'
-          AzureTLS HTTP Client Library
-          Version: ${{ steps.version.outputs.version }}
-          Platform: ${{ matrix.goos }}/${{ matrix.goarch }}
-          Built: $(date -u)
-          Library: ${{ env.LIB_NAME }}
-          
-          Usage:
-          1. Download both the library file and azuretls.h
-          2. Link against the library in your C/C++ project
-          3. Include azuretls.h in your source code
-          
-          For examples and documentation, see: https://github.com/${{ github.repository }}
-          EOF
-          
-          echo "✅ Prepared library files for direct upload"
-          ls -la azuretls-${{ env.VERSION_CLEAN }}-${{ matrix.name }}.*
-        shell: bash
-
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -345,7 +322,6 @@ jobs:
           path: |
             cffi/${{ env.LIB_NAME }}
             cffi/azuretls.h
-            cffi/azuretls-${{ env.VERSION_CLEAN }}-${{ matrix.name }}.txt
 
   # Fourth: Create release (only after all builds succeed)
   create-release:
@@ -385,13 +361,6 @@ jobs:
             fi
           done
           
-          # Copy info files
-          find artifacts -name "azuretls-*.txt" | while read file; do
-            filename=$(basename "$file")
-            echo "Preparing info: $filename"
-            cp "$file" "release-assets/$filename"
-          done
-          
           echo "📦 Release assets prepared:"
           ls -la release-assets/
           
@@ -399,7 +368,7 @@ jobs:
           LIB_COUNT=$(find release-assets -name "azuretls-*.*" | grep -E "\.(so|dll|dylib)$" | wc -l)
           echo "Total library files: $LIB_COUNT"
           
-          if [ "$LIB_COUNT" -lt 10 ]; then
+          if [ "$LIB_COUNT" -lt 8 ]; then
             echo "⚠️ Warning: Expected more library files, only found $LIB_COUNT"
           fi
 
