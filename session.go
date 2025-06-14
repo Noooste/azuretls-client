@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	http "github.com/Noooste/fhttp"
-	"github.com/Noooste/fhttp/cookiejar"
 	"io"
 	"net/url"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	http "github.com/Noooste/fhttp"
+	"github.com/Noooste/fhttp/cookiejar"
 )
 
 // NewSession creates a new session
@@ -217,6 +218,9 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Process Alt-SVC header to enable HTTP/3 for future requests, if possible.
+	s.handleAltSvc(response)
 
 	return response, err
 }
