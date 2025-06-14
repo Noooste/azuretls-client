@@ -108,58 +108,38 @@ jobs:
       matrix:
         include:
           # Linux builds
-          - os: ubuntu-latest
-            goos: linux
+          - goos: linux
             goarch: amd64
             name: linux-amd64
-          - os: ubuntu-latest
-            goos: linux
+          - goos: linux
             goarch: arm64
             name: linux-arm64
-          - os: ubuntu-latest
-            goos: linux
+          - goos: linux
             goarch: 386
             name: linux-386
-          - os: ubuntu-latest
-            goos: linux
+          - goos: linux
             goarch: arm
             name: linux-arm
 
-          # Windows builds
-          - os: windows-latest
-            goos: windows
+          # Windows builds (cross-compiled from Linux)
+          - goos: windows
             goarch: amd64
             name: windows-amd64
-          - os: windows-latest
-            goos: windows
-            goarch: 386
-            name: windows-386
-          - os: windows-latest
-            goos: windows
-            goarch: arm64
-            name: windows-arm64
 
-          # macOS builds
-          - os: macos-latest
-            goos: darwin
+          # macOS builds (cross-compiled from Linux)
+          - goos: darwin
             goarch: amd64
             name: darwin-amd64
-          - os: macos-latest
-            goos: darwin
+          - goos: darwin
             goarch: arm64
             name: darwin-arm64
 
           # FreeBSD builds
-          - os: ubuntu-latest
-            goos: freebsd
+          - goos: freebsd
             goarch: amd64
             name: freebsd-amd64
-          - os: ubuntu-latest
-            goos: freebsd
-            goarch: arm64
-            name: freebsd-arm64
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
@@ -170,60 +150,64 @@ jobs:
         with:
           go-version: '1.24'
 
-      - name: Install dependencies (Ubuntu)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install cross-compilation dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-multilib
           
-          # Install cross-compilation toolchains with proper handling
-          if [ "${{ matrix.goarch }}" = "arm64" ] && [ "${{ matrix.goos }}" = "linux" ]; then
-            # Try to install cross-compiler, fallback if not available
-            sudo apt-get install -y gcc-aarch64-linux-gnu || {
-              echo "⚠️ ARM64 cross-compiler not available, will use Docker approach"
-              # Alternative: Use zig as cross-compiler (more reliable)
-              curl -L https://ziglang.org/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz | tar -xJ
-              sudo mv zig-linux-x86_64-0.11.0/zig /usr/local/bin/
-              echo "CC=zig cc -target aarch64-linux-gnu" >> $GITHUB_ENV
-            }
-          elif [ "${{ matrix.goarch }}" = "arm" ] && [ "${{ matrix.goos }}" = "linux" ]; then
-            sudo apt-get install -y gcc-arm-linux-gnueabihf || {
-              echo "⚠️ ARM cross-compiler not available, will use Docker approach"
-              curl -L https://ziglang.org/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz | tar -xJ
-              sudo mv zig-linux-x86_64-0.11.0/zig /usr/local/bin/
-              echo "CC=zig cc -target arm-linux-gnueabihf" >> $GITHUB_ENV
-            }
-          fi
+          # Install MinGW for Windows cross-compilation
+          sudo apt-get install -y gcc-mingw-w64-x86-64 gcc-mingw-w64-i686
+          
+          # Install cross-compilers for ARM (with fallback)
+          sudo apt-get install -y gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf || {
+            echo "⚠️ ARM cross-compilers not available, will try alternative approach"
+          }
+          
+          # Install macOS cross-compilation tools
+          sudo apt-get install -y clang || echo "Clang already installed"
 
-      - name: Install dependencies (Windows)
-        if: matrix.os == 'windows-latest'
+      - name: Set cross-compilation environment
         run: |
-          # Use built-in MinGW-w64 from MSYS2 which is more reliable
-          choco install msys2 -y
-          C:\tools\msys64\usr\bin\pacman.exe -S --noconfirm mingw-w64-x86_64-gcc mingw-w64-i686-gcc
-          echo "C:\tools\msys64\mingw64\bin" >> $GITHUB_PATH
-
-      - name: Install dependencies (macOS)
-        if: matrix.os == 'macos-latest'
-        run: |
-          xcode-select --install 2>/dev/null || true
-
-      - name: Set CC for cross-compilation
-        run: |
-          # Only set CC if we successfully installed cross-compilers and avoid conflicts
-          if [ "${{ matrix.goos }}" = "linux" ] && [ "${{ matrix.goarch }}" = "arm64" ]; then
-            if command -v aarch64-linux-gnu-gcc >/dev/null 2>&1; then
-              echo "CC=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-              # Set CGO flags to avoid x86-specific options
-              echo "CGO_CFLAGS=-O2" >> $GITHUB_ENV
-            fi
-          elif [ "${{ matrix.goos }}" = "linux" ] && [ "${{ matrix.goarch }}" = "arm" ]; then
-            if command -v arm-linux-gnueabihf-gcc >/dev/null 2>&1; then
-              echo "CC=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV
-              echo "CGO_CFLAGS=-O2" >> $GITHUB_ENV
-            fi
-          fi
-        shell: bash
+          # Set up cross-compilation environment based on target
+          case "${{ matrix.goos }}-${{ matrix.goarch }}" in
+            "linux-amd64")
+              echo "CC=gcc" >> $GITHUB_ENV
+              ;;
+            "linux-386")
+              echo "CC=gcc -m32" >> $GITHUB_ENV
+              ;;
+            "linux-arm64")
+              if command -v aarch64-linux-gnu-gcc >/dev/null 2>&1; then
+                echo "CC=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+              else
+                echo "CC=clang --target=aarch64-linux-gnu" >> $GITHUB_ENV
+              fi
+              ;;
+            "linux-arm")
+              if command -v arm-linux-gnueabihf-gcc >/dev/null 2>&1; then
+                echo "CC=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV
+              else
+                echo "CC=clang --target=arm-linux-gnueabihf" >> $GITHUB_ENV
+              fi
+              ;;
+            "windows-amd64")
+              echo "CC=x86_64-w64-mingw32-gcc" >> $GITHUB_ENV
+              ;;
+            "darwin-amd64")
+              echo "CC=clang --target=x86_64-apple-darwin" >> $GITHUB_ENV
+              echo "CGO_CFLAGS=-mmacosx-version-min=10.12" >> $GITHUB_ENV
+              ;;
+            "darwin-arm64")
+              echo "CC=clang --target=arm64-apple-darwin" >> $GITHUB_ENV
+              echo "CGO_CFLAGS=-mmacosx-version-min=11.0" >> $GITHUB_ENV
+              ;;
+            "freebsd-amd64")
+              echo "CGO_ENABLED=0" >> $GITHUB_ENV
+              ;;
+          esac
+          
+          echo "GOOS=${{ matrix.goos }}" >> $GITHUB_ENV
+          echo "GOARCH=${{ matrix.goarch }}" >> $GITHUB_ENV
 
       - name: Get version
         id: version
@@ -252,30 +236,38 @@ jobs:
           
           echo "🔨 Building $LIB_NAME for ${{ matrix.goos }}/${{ matrix.goarch }}"
           echo "Using CC: ${CC:-default}"
+          echo "CGO_ENABLED: ${CGO_ENABLED:-1}"
           
-          # Set build environment
-          export CGO_ENABLED=1
-          export GOOS=${{ matrix.goos }}
-          export GOARCH=${{ matrix.goarch }}
+          # Set CGO_ENABLED (default to 1, except for FreeBSD which is set to 0)
+          export CGO_ENABLED=${CGO_ENABLED:-1}
           
-          # Clear any problematic CGO flags that might conflict with cross-compilation
-          if [ "${{ matrix.goarch }}" = "arm64" ] || [ "${{ matrix.goarch }}" = "arm" ]; then
-            export CGO_CFLAGS="${CGO_CFLAGS:-} -w"
-            export CGO_LDFLAGS="${CGO_LDFLAGS:-} -w"
-          fi
+          # Additional flags for specific targets
+          case "${{ matrix.goos }}-${{ matrix.goarch }}" in
+            "windows-amd64")
+              export CGO_LDFLAGS="-static-libgcc -static-libstdc++"
+              ;;
+            "darwin-"*)
+              export CGO_LDFLAGS="-framework CoreFoundation -framework Security"
+              ;;
+          esac
           
+          # Build with cross-compilation
           go build -buildmode=c-shared \
           -ldflags="-s -w -X 'main.Version=${{ steps.version.outputs.version }}'" \
+          -trimpath \
           -o "$LIB_NAME" main.go
           
           # Verify the build was successful
           if [ ! -f "$LIB_NAME" ]; then
             echo "❌ Build failed: library not created"
+            echo "Checking for any generated files:"
+            ls -la
             exit 1
           fi
           
           echo "✅ Successfully built $LIB_NAME"
           ls -lh "$LIB_NAME"
+          file "$LIB_NAME" || echo "file command not available"
           
           # Always create azuretls.h from the auto-generated header
           if [ -f "${LIB_NAME%.*}.h" ]; then
@@ -288,7 +280,6 @@ jobs:
           # Set environment variables for next steps
           echo "LIB_NAME=$LIB_NAME" >> $GITHUB_ENV
           echo "VERSION_CLEAN=$VERSION_CLEAN" >> $GITHUB_ENV
-        shell: bash
 
       - name: Verify build
         working-directory: cffi
@@ -402,7 +393,7 @@ jobs:
           LIB_COUNT=$(find release-assets -name "azuretls-*.*" | grep -E "\.(so|dll|dylib)$" | wc -l)
           echo "Total library files: $LIB_COUNT"
           
-          if [ "$LIB_COUNT" -lt 10 ]; then
+          if [ "$LIB_COUNT" -lt 6 ]; then
             echo "⚠️ Warning: Expected more library files, only found $LIB_COUNT"
           fi
 
