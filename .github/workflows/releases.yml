@@ -198,7 +198,10 @@ jobs:
       - name: Install dependencies (Windows)
         if: matrix.os == 'windows-latest'
         run: |
-          choco install tdm-gcc-64 -y
+          # Use built-in MinGW-w64 from MSYS2 which is more reliable
+          choco install msys2 -y
+          C:\tools\msys64\usr\bin\pacman.exe -S --noconfirm mingw-w64-x86_64-gcc mingw-w64-i686-gcc
+          echo "C:\tools\msys64\mingw64\bin" >> $GITHUB_PATH
 
       - name: Install dependencies (macOS)
         if: matrix.os == 'macos-latest'
@@ -207,10 +210,18 @@ jobs:
 
       - name: Set CC for cross-compilation
         run: |
+          # Only set CC if we successfully installed cross-compilers and avoid conflicts
           if [ "${{ matrix.goos }}" = "linux" ] && [ "${{ matrix.goarch }}" = "arm64" ]; then
-            echo "CC=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+            if command -v aarch64-linux-gnu-gcc >/dev/null 2>&1; then
+              echo "CC=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+              # Set CGO flags to avoid x86-specific options
+              echo "CGO_CFLAGS=-O2" >> $GITHUB_ENV
+            fi
           elif [ "${{ matrix.goos }}" = "linux" ] && [ "${{ matrix.goarch }}" = "arm" ]; then
-            echo "CC=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV
+            if command -v arm-linux-gnueabihf-gcc >/dev/null 2>&1; then
+              echo "CC=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV
+              echo "CGO_CFLAGS=-O2" >> $GITHUB_ENV
+            fi
           fi
         shell: bash
 
@@ -241,6 +252,17 @@ jobs:
           
           echo "🔨 Building $LIB_NAME for ${{ matrix.goos }}/${{ matrix.goarch }}"
           echo "Using CC: ${CC:-default}"
+          
+          # Set build environment
+          export CGO_ENABLED=1
+          export GOOS=${{ matrix.goos }}
+          export GOARCH=${{ matrix.goarch }}
+          
+          # Clear any problematic CGO flags that might conflict with cross-compilation
+          if [ "${{ matrix.goarch }}" = "arm64" ] || [ "${{ matrix.goarch }}" = "arm" ]; then
+            export CGO_CFLAGS="${CGO_CFLAGS:-} -w"
+            export CGO_LDFLAGS="${CGO_LDFLAGS:-} -w"
+          fi
           
           go build -buildmode=c-shared \
           -ldflags="-s -w -X 'main.Version=${{ steps.version.outputs.version }}'" \
