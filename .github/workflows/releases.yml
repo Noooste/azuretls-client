@@ -134,6 +134,11 @@ jobs:
             goarch: amd64
             name: windows-amd64
 
+          - os: ubuntu-latest
+            goos: windows
+            goarch: 386
+            name: windows-386
+
           # macOS builds
           - os: macos-latest
             goos: darwin
@@ -144,12 +149,6 @@ jobs:
             goos: darwin
             goarch: arm64
             name: darwin-arm64
-
-          # FreeBSD builds
-          - os: ubuntu-latest
-            goos: freebsd
-            goarch: amd64
-            name: freebsd-amd64
 
     runs-on: ${{ matrix.os }}
 
@@ -184,6 +183,14 @@ jobs:
               curl -L https://ziglang.org/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz | tar -xJ
               sudo mv zig-linux-x86_64-0.11.0/zig /usr/local/bin/
               echo "CC=zig cc -target arm-linux-gnueabihf" >> $GITHUB_ENV
+            }
+          elif [ "${{ matrix.goos }}" = "windows" ]; then
+            # Install MinGW for Windows cross-compilation
+            sudo apt-get install -y mingw-w64 || {
+              echo "⚠️ MinGW not available, will use Docker approach"
+              curl -L https://ziglang.org/download/0.11.0/zig-linux-x86_64-0.11.0.tar.xz | tar -xJ
+              sudo mv zig-linux-x86_64-0.11.0/zig /usr/local/bin/
+              echo "CC=zig cc -target x86_64-w64-mingw32" >> $GITHUB_ENV
             }
           fi
 
@@ -246,6 +253,14 @@ jobs:
           if [ "${{ matrix.goarch }}" = "arm64" ] || [ "${{ matrix.goarch }}" = "arm" ]; then
             export CGO_CFLAGS="${CGO_CFLAGS:-} -w"
             export CGO_LDFLAGS="${CGO_LDFLAGS:-} -w"
+          fi
+          
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            if [ "${{ matrix.goarch }}" = "386" ]
+                export CC="i686-w64-mingw32-gcc";
+            elif [ "${{ matrix.goarch }}" = "amd64" ]; then
+                export CC="x86_64-w64-mingw32-gcc";
+            fi
           fi
           
           go build -buildmode=c-shared \
