@@ -115,8 +115,13 @@ func (s *Session) ClearProxy() {
 		s.Transport.Proxy = nil
 		s.Transport.CloseIdleConnections()
 	}
+
 	if s.HTTP2Transport != nil {
 		s.HTTP2Transport.CloseIdleConnections()
+	}
+
+	if s.HTTP3Config != nil && s.HTTP3Config.transport != nil {
+		s.HTTP3Config.transport.CloseIdleConnections()
 	}
 
 	s.Proxy = ""
