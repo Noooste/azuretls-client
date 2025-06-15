@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -43,6 +44,8 @@ func NewSessionWithContext(ctx context.Context) *Session {
 		TimeOut: 30 * time.Second,
 		ctx:     ctx,
 	}
+
+	s.setupFinalizer()
 
 	return s
 }
@@ -124,6 +127,9 @@ func (s *Session) ClearProxy() {
 	if s.HTTP3Config != nil && s.HTTP3Config.transport != nil {
 		s.HTTP3Config.transport.CloseIdleConnections()
 		_ = s.HTTP3Config.transport.Close()
+
+		// Recreate transport on next use
+		s.HTTP3Config.transport = nil
 	}
 
 	s.Proxy = ""
@@ -504,15 +510,51 @@ func (c *Context) Context() context.Context {
 //
 // After calling this function, the session is no longer usable.
 func (s *Session) Close() {
+	s.mu.Lock()
 	s.closed = true
-	s.mu = nil
+	s.mu.Unlock()
 
 	s.ClearProxy()
+
+	// Close HTTP/3 transport properly
+	if s.HTTP3Config != nil && s.HTTP3Config.transport != nil {
+		// First close idle connections
+		s.HTTP3Config.transport.CloseIdleConnections()
+
+		// Then close the transport completely
+		_ = s.HTTP3Config.transport.Close()
+
+		// Clear the transport reference
+		s.HTTP3Config.transport = nil
+		s.HTTP3Config = nil
+	}
+
+	// Close HTTP/2 transport
+	if s.HTTP2Transport != nil {
+		s.HTTP2Transport.CloseIdleConnections()
+		s.HTTP2Transport = nil
+	}
+
+	// Close HTTP/1 transport
+	if s.Transport != nil {
+		s.Transport.CloseIdleConnections()
+		s.Transport = nil
+	}
 
 	s.dumpIgnore = nil
 	s.loggingIgnore = nil
 	s.CookieJar = nil
-	s.HTTP2Transport = nil
-	s.Transport = nil
 	s.ctx = nil
+
+	// Don't set s.mu = nil as it may cause race conditions
+}
+
+func (s *Session) setupFinalizer() {
+	runtime.SetFinalizer(s, (*Session).finalize)
+}
+
+func (s *Session) finalize() {
+	if !s.closed {
+		s.Close()
+	}
 }

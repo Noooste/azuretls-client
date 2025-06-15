@@ -501,19 +501,31 @@ func (c *SOCKS5UDPConn) RemoteAddr() net.Addr {
 
 // Close closes the SOCKS5 UDP connection
 func (c *SOCKS5UDPConn) Close() error {
-	c.cancel()
+	// Prevent multiple closes
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	var err error
-	if c.controlConn != nil {
-		if e := c.controlConn.Close(); e != nil {
-			err = e
-		}
+	if c.cancel != nil {
+		c.cancel()
+		c.cancel = nil
 	}
 
+	var err error
+
+	// Close UDP connection first (most important for socket exhaustion)
 	if c.udpConn != nil {
 		if e := c.udpConn.Close(); e != nil {
 			err = e
 		}
+		c.udpConn = nil
+	}
+
+	// Then close control connection
+	if c.controlConn != nil {
+		if e := c.controlConn.Close(); e != nil && err == nil {
+			err = e
+		}
+		c.controlConn = nil
 	}
 
 	return err
@@ -554,14 +566,8 @@ func (c *SOCKS5UDPConn) monitorControlConnection() {
 	}
 }
 
-// Integration with AzureTLS Session
-
 // dialQUICViaSocks5 establishes a QUIC connection through SOCKS5 proxy
-func (s *Session) dialQUICViaSocks5(ctx context.Context, udpConn *net.UDPConn,
-	remoteAddr *net.UDPAddr, tlsConf *tls.Config, quicConf *quic.Config) (quic.EarlyConnection, error) {
-
-	// Close the original UDP connection as we'll use SOCKS5
-	_ = udpConn.Close()
+func (s *Session) dialQUICViaSocks5(ctx context.Context, remoteAddr *net.UDPAddr, tlsConf *tls.Config, quicConf *quic.Config) (quic.EarlyConnection, error) {
 
 	// Create SOCKS5 UDP dialer
 	proxyURL := s.ProxyDialer.ProxyURL
@@ -575,14 +581,19 @@ func (s *Session) dialQUICViaSocks5(ctx context.Context, udpConn *net.UDPConn,
 
 	dialer := NewSOCKS5UDPDialer(proxyURL.Host, username, password)
 
-	// Establish SOCKS5 UDP connection
+	// Establish SOCKS5 UDP connection with timeout context
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+
 	socks5Conn, err := dialer.DialUDP(ctx, "udp", remoteAddr.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to establish SOCKS5 UDP connection: %w", err)
 	}
 
+	// Test the connection first
 	_, err = socks5Conn.WriteTo([]byte("probe"), remoteAddr.String())
 	if err != nil {
+		socks5Conn.Close()
 		return nil, fmt.Errorf("SOCKS5 probe packet failed: %w", err)
 	}
 
@@ -592,8 +603,7 @@ func (s *Session) dialQUICViaSocks5(ctx context.Context, udpConn *net.UDPConn,
 		remoteAddr: remoteAddr,
 	}
 
-	// Dial QUIC using the SOCKS5 connection
-	return (&quic.UTransport{
+	transport := &quic.UTransport{
 		Transport: &quic.Transport{
 			Conn: packetConn,
 		},
@@ -601,7 +611,23 @@ func (s *Session) dialQUICViaSocks5(ctx context.Context, udpConn *net.UDPConn,
 			ClientHelloSpec:   GetBrowserHTTP3ClientHelloFunc(s.Browser)(),
 			InitialPacketSpec: getInitialPacket(s.Browser),
 		},
-	}).DialEarly(ctx, remoteAddr, tlsConf, quicConf)
+	}
+
+	s.HTTP3Config.transport.transportsPoolLock.Lock()
+	s.HTTP3Config.transport.transportsPool = append(s.HTTP3Config.transport.transportsPool, transport)
+	s.HTTP3Config.transport.transportsPoolLock.Unlock()
+
+	// Dial QUIC using the SOCKS5 connection
+	quicConn, err := transport.DialEarly(ctx, remoteAddr, tlsConf, quicConf)
+
+	if err != nil {
+		// Ensure cleanup on failure
+		_ = packetConn.Close()
+		_ = transport.Close()
+		return nil, err
+	}
+
+	return quicConn, nil
 }
 
 // socks5PacketConn wraps SOCKS5UDPConn to implement net.PacketConn for QUIC

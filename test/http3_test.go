@@ -111,55 +111,6 @@ func TestHTTP3WithSOCKS5(t *testing.T) {
 	t.Logf("Response body: %s", string(resp.Body))
 }
 
-//func TestSOCKS5UDPDirect(t *testing.T) {
-//	// Start a local SOCKS5 server
-//	server, err := socks5.NewClassicServer("127.0.0.1:1081", "127.0.0.1", "", "", 0, 0)
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//
-//	go func() {
-//		if err := server.ListenAndServe(nil); err != nil {
-//			log.Printf("SOCKS5 server error: %v", err)
-//		}
-//	}()
-//
-//	time.Sleep(time.Second)
-//
-//	// Test direct SOCKS5 UDP connection
-//	dialer := azuretls.NewSOCKS5UDPDialer("127.0.0.1:1081", "", "")
-//
-//	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-//	defer cancel()
-//
-//	conn, err := dialer.DialUDP(ctx, "udp", "8.8.8.8:53")
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//	defer conn.Close()
-//
-//	// Build a simple DNS query
-//	query := buildDNSQuery("example.com")
-//
-//	_, err = conn.Write(query)
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//
-//	// Read response
-//	response := make([]byte, 512)
-//	n, err := conn.Read(response)
-//	if err != nil {
-//		t.Fatal(err)
-//	}
-//
-//	if n < 12 {
-//		t.Fatal("DNS response too short")
-//	}
-//
-//	t.Logf("Successfully received DNS response of %d bytes", n)
-//}
-
 func TestHTTP3MultipleRequests(t *testing.T) {
 	// Start SOCKS5 server
 	server, err := socks5.NewClassicServer("127.0.0.1:1082", "127.0.0.1", "", "", 0, 0)
@@ -454,4 +405,49 @@ func TestHTTP3AndHTTP2(t *testing.T) {
 //			b.Fatal(err)
 //		}
 //	}
+//}
+
+//func makeRequest(t *testing.T, url string) {
+//	session := azuretls.NewSession()
+//	defer session.Close()
+//
+//	for i := 0; i < 10; i++ {
+//		resp, err := session.Do(&azuretls.Request{
+//			Method:     "GET",
+//			Url:        url,
+//			ForceHTTP3: true,
+//			TimeOut:    10 * time.Second,
+//		})
+//
+//		if err != nil {
+//			t.Errorf("Failed to fetch %s: %v", url, err)
+//			return
+//		}
+//
+//		if resp.StatusCode != 200 {
+//			t.Errorf("Expected status 200 for %s, got %d", url, resp.StatusCode)
+//			return
+//		}
+//
+//		t.Logf("%s - Protocol: %s, Status: %d", url, resp.HttpResponse.Proto, resp.StatusCode)
+//	}
+//
+//}
+//
+//func worker(t *testing.T, wg *sync.WaitGroup) {
+//	defer wg.Done()
+//	for range 10000 {
+//		makeRequest(t, "https://cloudflare.com/cdn-cgi/trace")
+//		time.Sleep(1 * time.Second) // Simulate some delay between requests
+//	}
+//}
+//
+//func TestConstantRequests(t *testing.T) {
+//	workers := 2
+//	wg := &sync.WaitGroup{}
+//	wg.Add(workers)
+//	for i := 0; i < workers; i++ {
+//		go worker(t, wg)
+//	}
+//	wg.Wait()
 //}

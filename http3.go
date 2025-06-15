@@ -21,7 +21,8 @@ type HTTP3Transport struct {
 	*http3.Transport
 
 	// Connection pool for proxy connections
-	proxyConnPool sync.Map
+	transportsPool     []*quic.UTransport
+	transportsPoolLock sync.Mutex
 
 	// Session reference
 	sess *Session
@@ -67,10 +68,32 @@ func (s *Session) NewHTTP3Transport() (*HTTP3Transport, error) {
 			QUICConfig:              quicConfig,
 			Dial:                    s.dialQUIC,
 		},
-		sess: s,
+		transportsPool: make([]*quic.UTransport, 0, 100), // Preallocate pool size for performance
+		sess:           s,
 	}
 
 	return transport, nil
+}
+
+func (t *HTTP3Transport) Close() error {
+	var err error
+
+	t.transportsPoolLock.Lock()
+	for _, tr := range t.transportsPool {
+		tr.Close()
+	}
+	t.transportsPool = nil
+	t.transportsPoolLock.Unlock()
+
+	// Close the underlying HTTP/3 transport
+	if t.Transport != nil {
+		if e := t.Transport.Close(); e != nil {
+			err = e
+		}
+		t.Transport.CloseIdleConnections()
+	}
+
+	return err
 }
 
 // RoundTrip implements the http.RoundTripper interface with proxy support
@@ -209,19 +232,18 @@ func (s *Session) dialQUIC(ctx context.Context, addr string, tlsConf *tls.Config
 		// This is a limitation of the current design
 	}
 
+	// Handle proxy if configured
+	if s.ProxyDialer != nil {
+		return s.dialQUICViaProxy(ctx, udpAddr, tlsConf, quicConf)
+	}
+
 	// Create UDP connection
 	udpConn, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.IPv4zero, Port: 0})
 	if err != nil {
 		return nil, err
 	}
 
-	// Handle proxy if configured
-	if s.ProxyDialer != nil {
-		return s.dialQUICViaProxy(ctx, udpConn, udpAddr, tlsConf, quicConf)
-	}
-
-	// Direct QUIC connection
-	return (&quic.UTransport{
+	transport := &quic.UTransport{
 		Transport: &quic.Transport{
 			Conn: udpConn,
 		},
@@ -229,17 +251,31 @@ func (s *Session) dialQUIC(ctx context.Context, addr string, tlsConf *tls.Config
 			ClientHelloSpec:   GetBrowserHTTP3ClientHelloFunc(s.Browser)(),
 			InitialPacketSpec: getInitialPacket(s.Browser),
 		},
-	}).DialEarly(ctx, udpAddr, tlsConf, quicConf)
+	}
+
+	s.HTTP3Config.transport.transportsPoolLock.Lock()
+	s.HTTP3Config.transport.transportsPool = append(s.HTTP3Config.transport.transportsPool, transport)
+	s.HTTP3Config.transport.transportsPoolLock.Unlock()
+
+	// Direct QUIC connection
+	conn, err := transport.DialEarly(ctx, udpAddr, tlsConf, quicConf)
+	if err != nil {
+		_ = udpConn.Close()
+		_ = transport.Close()
+		return nil, fmt.Errorf("failed to dial QUIC: %w", err)
+	}
+
+	return conn, nil
 }
 
 // dialQUICViaProxy establishes a QUIC connection through a proxy
-func (s *Session) dialQUICViaProxy(ctx context.Context, udpConn *net.UDPConn,
+func (s *Session) dialQUICViaProxy(ctx context.Context,
 	remoteAddr *net.UDPAddr, tlsConf *tls.Config, quicConf *quic.Config) (quic.EarlyConnection, error) {
 
 	switch s.ProxyDialer.ProxyURL.Scheme {
 	case "socks5", "socks5h":
 		// SOCKS5 UDP ASSOCIATE implementation
-		return s.dialQUICViaSocks5(ctx, udpConn, remoteAddr, tlsConf, quicConf)
+		return s.dialQUICViaSocks5(ctx, remoteAddr, tlsConf, quicConf)
 
 	case "http", "https":
 		// HTTP proxy doesn't support UDP directly
