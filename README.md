@@ -197,6 +197,7 @@ If AzureTLS Client helps you build something awesome, consider:
 - 💡 **Share your use cases** in discussions
 - 🤝 **Contribute** code or documentation
 - 🌍 **Create bindings** for your favorite programming language
-- 💖 **Donate**: [Buy Me a Coffee](https://www.buymeacoffee.com/noste) - Support the project!
+
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/noste)
 
 *Ready to build powerful HTTP clients with ease? Let's get started! 🚀*
