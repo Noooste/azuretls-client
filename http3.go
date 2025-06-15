@@ -272,18 +272,23 @@ func (s *Session) dialQUIC(ctx context.Context, addr string, tlsConf *tls.Config
 func (s *Session) dialQUICViaProxy(ctx context.Context,
 	remoteAddr *net.UDPAddr, tlsConf *tls.Config, quicConf *quic.Config) (quic.EarlyConnection, error) {
 
-	switch s.ProxyDialer.ProxyURL.Scheme {
-	case "socks5", "socks5h":
-		// SOCKS5 UDP ASSOCIATE implementation
-		return s.dialQUICViaSocks5(ctx, remoteAddr, tlsConf, quicConf)
+	switch dialer := s.ProxyDialer.(type) {
+	case *proxyDialer:
+		switch dialer.ProxyURL.Scheme {
+		case "socks5", "socks5h":
+			// SOCKS5 UDP ASSOCIATE implementation
+			return s.dialQUICViaSocks5(ctx, remoteAddr, tlsConf, quicConf)
 
-	case "http", "https":
-		// HTTP proxy doesn't support UDP directly
-		// Would need CONNECT-UDP or MASQUE protocol
-		return nil, errors.New("HTTP proxy not supported for direct QUIC connections")
+		case "http", "https":
+			// HTTP proxy doesn't support UDP directly
+			// Would need CONNECT-UDP or MASQUE protocol
+			return nil, errors.New("HTTP proxy not supported for direct QUIC connections")
 
+		default:
+			return nil, errors.New("unsupported proxy type for QUIC")
+		}
 	default:
-		return nil, errors.New("unsupported proxy type for QUIC")
+		return nil, fmt.Errorf("unsupported proxy dialer type: %T", s.ProxyDialer)
 	}
 }
 

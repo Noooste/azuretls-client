@@ -17,6 +17,12 @@ import (
 	"sync"
 )
 
+// ProxyDialer interface for both single and chain proxy dialers
+type ProxyDialer interface {
+	Dial(userAgent, network, address string) (net.Conn, error)
+	DialContext(ctx context.Context, userAgent, network, address string) (net.Conn, error)
+}
+
 type proxyDialer struct {
 	ProxyURL      *url.URL
 	DefaultHeader http.Header
@@ -35,6 +41,32 @@ type proxyDialer struct {
 const (
 	invalidProxy = "invalid proxy `%s`, %s"
 )
+
+// SetProxy sets a single proxy for the session (original functionality)
+func (s *Session) SetProxy(proxy string) error {
+	if proxy == "" {
+		return fmt.Errorf("proxy is empty")
+	}
+
+	proxy = strings.Trim(proxy, " \n\r")
+
+	switch {
+	case strings.Contains(proxy, "://"):
+		s.Proxy = proxy
+
+	default:
+		s.Proxy = formatProxy(proxy)
+	}
+
+	if err := s.assignProxy(s.Proxy); err != nil {
+		return err
+	}
+
+	if s.Transport != nil {
+		s.Transport.CloseIdleConnections()
+	}
+	return nil
+}
 
 func (s *Session) assignProxy(proxy string) error {
 	parsed, err := url.Parse(proxy)
@@ -76,7 +108,7 @@ func (s *Session) assignProxy(proxy string) error {
 			} else {
 				auth := parsed.User.Username() + ":" + password
 				basicAuth := "Basic " + base64.StdEncoding.EncodeToString([]byte(auth))
-				s.ProxyDialer.DefaultHeader.Add("Proxy-Authorization", basicAuth)
+				s.ProxyDialer.(*proxyDialer).DefaultHeader.Add("Proxy-Authorization", basicAuth)
 			}
 		}
 	}

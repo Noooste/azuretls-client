@@ -569,8 +569,16 @@ func (c *SOCKS5UDPConn) monitorControlConnection() {
 // dialQUICViaSocks5 establishes a QUIC connection through SOCKS5 proxy
 func (s *Session) dialQUICViaSocks5(ctx context.Context, remoteAddr *net.UDPAddr, tlsConf *tls.Config, quicConf *quic.Config) (quic.EarlyConnection, error) {
 
+	var proxy *proxyDialer
 	// Create SOCKS5 UDP dialer
-	proxyURL := s.ProxyDialer.ProxyURL
+	switch dialer := s.ProxyDialer.(type) {
+	case *proxyDialer:
+		proxy = dialer
+	default:
+		return nil, fmt.Errorf("unsupported proxy dialer type: %T", s.ProxyDialer)
+	}
+
+	proxyURL := proxy.ProxyURL
 	username := ""
 	password := ""
 
