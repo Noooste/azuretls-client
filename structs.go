@@ -56,7 +56,7 @@ type Session struct {
 	// If true, use HTTP2 for proxy connections.
 	H2Proxy bool
 	// Updated to use ProxyDialer interface for both single and chain proxies
-	ProxyDialer ProxyDialer
+	ProxyDialer *proxyDialer
 
 	// If true, print detailed logs or debugging information. Deprecated: Use Dump instead.
 	Verbose bool

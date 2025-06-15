@@ -25,6 +25,7 @@ fmt.Println(response.String())
 - Full TLS fingerprint control (JA3/JA4)
 - HTTP/2 and HTTP/3 support with custom settings
 - Advanced proxy support (HTTP/HTTPS/SOCKS5)
+- Proxy chain support for multi-hop connections
 - Precise header ordering and control
 
 ## 🌟 Key Features
@@ -32,7 +33,8 @@ fmt.Println(response.String())
 - **🌐 Modern Protocols** - HTTP/1.1, HTTP/2, and HTTP/3 support
 - **🔧 TLS Fingerprinting** - Full control over ClientHello (JA3/JA4)
 - **🎭 Browser Emulation** - Chrome, Firefox, Safari, Edge presets
-- **🔗 Advanced Proxy Support** - HTTP, HTTPS, SOCKS5 with authentication
+- **🔗 Advanced Proxy Support** - HTTP, HTTPS, SOCKS5 with authentication.
+- **⛓️ Proxy Chaining** - Multi-hop proxy connections for enhanced anonymity
 - **📋 Header Control** - Precise ordering and custom headers
 - **🍪 Cookie Management** - Automatic handling with persistent jar
 - **🔒 SSL Pinning** - Enhanced security with certificate validation

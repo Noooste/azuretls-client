@@ -76,49 +76,6 @@ func (s *Session) Ip() (ip string, err error) {
 	return string(r.Body), nil
 }
 
-// ClearProxy removes the proxy from the session (updated to handle chain proxies)
-func (s *Session) ClearProxy() {
-	if s.ProxyDialer != nil {
-		// Handle both single proxy and chain proxy
-		switch dialer := s.ProxyDialer.(type) {
-		case *proxyDialer:
-			if dialer.conn != nil {
-				_ = dialer.conn.Close()
-			}
-			if dialer.H2Conn != nil {
-				_ = dialer.H2Conn.Close()
-			}
-		case *ChainProxyDialer:
-			if dialer.conn != nil {
-				_ = dialer.conn.Close()
-			}
-			if dialer.H2Conn != nil {
-				_ = dialer.H2Conn.Close()
-			}
-		}
-		s.ProxyDialer = nil
-	}
-
-	if s.Transport != nil {
-		s.Transport.Proxy = nil
-		s.Transport.CloseIdleConnections()
-	}
-
-	if s.HTTP2Transport != nil {
-		s.HTTP2Transport.CloseIdleConnections()
-	}
-
-	if s.HTTP3Config != nil && s.HTTP3Config.transport != nil {
-		s.HTTP3Config.transport.CloseIdleConnections()
-		_ = s.HTTP3Config.transport.Close()
-
-		// Recreate transport on next use
-		s.HTTP3Config.transport = nil
-	}
-
-	s.Proxy = ""
-}
-
 func (s *Session) send(request *Request) (response *Response, err error) {
 	var (
 		httpResponse *http.Response

@@ -269,27 +269,8 @@ func (s *Session) dialQUIC(ctx context.Context, addr string, tlsConf *tls.Config
 }
 
 // dialQUICViaProxy establishes a QUIC connection through a proxy
-func (s *Session) dialQUICViaProxy(ctx context.Context,
-	remoteAddr *net.UDPAddr, tlsConf *tls.Config, quicConf *quic.Config) (quic.EarlyConnection, error) {
-
-	switch dialer := s.ProxyDialer.(type) {
-	case *proxyDialer:
-		switch dialer.ProxyURL.Scheme {
-		case "socks5", "socks5h":
-			// SOCKS5 UDP ASSOCIATE implementation
-			return s.dialQUICViaSocks5(ctx, remoteAddr, tlsConf, quicConf)
-
-		case "http", "https":
-			// HTTP proxy doesn't support UDP directly
-			// Would need CONNECT-UDP or MASQUE protocol
-			return nil, errors.New("HTTP proxy not supported for direct QUIC connections")
-
-		default:
-			return nil, errors.New("unsupported proxy type for QUIC")
-		}
-	default:
-		return nil, fmt.Errorf("unsupported proxy dialer type: %T", s.ProxyDialer)
-	}
+func (s *Session) dialQUICViaProxy(ctx context.Context, remoteAddr *net.UDPAddr, tlsConf *tls.Config, quicConf *quic.Config) (quic.EarlyConnection, error) {
+	return s.dialQUICViaSocks5(ctx, remoteAddr, tlsConf, quicConf)
 }
 
 // ApplyHTTP3 applies HTTP3 settings to the session from a fingerprint.
