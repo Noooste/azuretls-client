@@ -23,6 +23,8 @@ const (
 
 var ErrUseLastResponse = errors.New("azuretls: use last response")
 
+// Update the Session struct in structs.go to use ProxyDialer interface
+
 // Session represents the core structure for managing and conducting HTTP(S)
 // sessions. It holds configuration settings, headers, cookie storage,
 // connection pool, and other attributes necessary to perform and customize
@@ -52,8 +54,9 @@ type Session struct {
 	// Proxy address.
 	Proxy string
 	// If true, use HTTP2 for proxy connections.
-	H2Proxy     bool
-	ProxyDialer *proxyDialer
+	H2Proxy bool
+	// Updated to use ProxyDialer interface for both single and chain proxies
+	ProxyDialer ProxyDialer
 
 	// If true, print detailed logs or debugging information. Deprecated: Use Dump instead.
 	Verbose bool

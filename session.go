@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"runtime"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -77,40 +76,25 @@ func (s *Session) Ip() (ip string, err error) {
 	return string(r.Body), nil
 }
 
-// SetProxy sets the proxy for the session
-func (s *Session) SetProxy(proxy string) error {
-	if proxy == "" {
-		return fmt.Errorf("proxy is empty")
-	}
-
-	proxy = strings.Trim(proxy, " \n\r")
-
-	switch {
-	case strings.Contains(proxy, "://"):
-		s.Proxy = proxy
-
-	default:
-		s.Proxy = formatProxy(proxy)
-	}
-
-	if err := s.assignProxy(s.Proxy); err != nil {
-		return err
-	}
-
-	if s.Transport != nil {
-		s.Transport.CloseIdleConnections()
-	}
-	return nil
-}
-
-// ClearProxy removes the proxy from the session
+// ClearProxy removes the proxy from the session (updated to handle chain proxies)
 func (s *Session) ClearProxy() {
 	if s.ProxyDialer != nil {
-		if s.ProxyDialer.conn != nil {
-			_ = s.ProxyDialer.conn.Close()
-		}
-		if s.ProxyDialer.H2Conn != nil {
-			_ = s.ProxyDialer.H2Conn.Close()
+		// Handle both single proxy and chain proxy
+		switch dialer := s.ProxyDialer.(type) {
+		case *proxyDialer:
+			if dialer.conn != nil {
+				_ = dialer.conn.Close()
+			}
+			if dialer.H2Conn != nil {
+				_ = dialer.H2Conn.Close()
+			}
+		case *ChainProxyDialer:
+			if dialer.conn != nil {
+				_ = dialer.conn.Close()
+			}
+			if dialer.H2Conn != nil {
+				_ = dialer.H2Conn.Close()
+			}
 		}
 		s.ProxyDialer = nil
 	}
