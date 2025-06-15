@@ -517,7 +517,6 @@ func (c *SOCKS5UDPConn) Close() error {
 		if e := c.udpConn.Close(); e != nil {
 			err = e
 		}
-		c.udpConn = nil
 	}
 
 	// Then close control connection
@@ -525,7 +524,6 @@ func (c *SOCKS5UDPConn) Close() error {
 		if e := c.controlConn.Close(); e != nil && err == nil {
 			err = e
 		}
-		c.controlConn = nil
 	}
 
 	return err
