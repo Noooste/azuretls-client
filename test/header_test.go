@@ -2,6 +2,7 @@ package azuretls_test
 
 import (
 	"github.com/Noooste/azuretls-client"
+	"github.com/Noooste/azuretls-client/test/utils"
 	http "github.com/Noooste/fhttp"
 	"regexp"
 	"testing"
@@ -282,4 +283,132 @@ func TestContentTypeInGetRequest(t *testing.T) {
 	if contentTypeReg.FindIndex(response.Body) == nil {
 		t.Fatal("TestContentTypeInGetRequest failed, Content-Type should be present")
 	}
+}
+
+func TestHeaderOrderHTTP1(t *testing.T) {
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	expectedOrder := []string{"user-agent", "gg", "befor", "content-type", "accept", "after"}
+
+	session.OrderedHeaders = azuretls.OrderedHeaders{
+		{"user-agent", "test"},
+		{"gG", "me"},
+		{"befor", "content"},
+		{"content-type", "application/json"},
+		{"accept", "application/json"},
+		{"after", "accept"},
+	}
+
+	req := &azuretls.Request{
+		Method:     http.MethodGet,
+		Url:        "https://tls.peet.ws/api/all",
+		ForceHTTP1: true,
+	}
+
+	response, err := session.Do(req)
+	if err != nil {
+		t.Fatalf("TestHeaderOrderHTTP1 failed, expected: nil, got: %v", err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Fatalf("TestHeaderOrderHTTP1 failed, expected status: 200, got: %d", response.StatusCode)
+	}
+
+	var peet utils.PeetResponse
+	if err = response.JSON(&peet); err != nil {
+		t.Fatalf("TestHeaderOrderHTTP1 failed to parse JSON, expected: nil, got: %v", err)
+	}
+
+	// Validate header order for HTTP/1
+	if err := utils.ValidateHTTP1HeaderOrder(expectedOrder, peet.Http1.Headers); err != nil {
+		t.Fatalf("TestHeaderOrderHTTP1 header order validation failed: %v", err)
+	}
+
+	t.Logf("TestHeaderOrderHTTP1 passed - headers are in correct order")
+}
+
+func TestHeaderOrderHTTP2(t *testing.T) {
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	expectedOrder := []string{"user-agent", "gg", "befor", "content-type", "accept", "after"}
+
+	session.OrderedHeaders = azuretls.OrderedHeaders{
+		{"user-agent", "test"},
+		{"gG", "me"},
+		{"befor", "content"},
+		{"content-type", "application/json"},
+		{"accept", "application/json"},
+		{"after", "accept"},
+	}
+
+	req := &azuretls.Request{
+		Method: "GET",
+		Url:    "https://tls.peet.ws/api/all",
+	}
+
+	response, err := session.Do(req)
+	if err != nil {
+		t.Fatalf("TestHeaderOrderHTTP2 failed, expected: nil, got: %v", err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Fatalf("TestHeaderOrderHTTP2 failed, expected status: 200, got: %d", response.StatusCode)
+	}
+
+	var peet utils.PeetResponse
+	if err = response.JSON(&peet); err != nil {
+		t.Fatalf("TestHeaderOrderHTTP2 failed to parse JSON, expected: nil, got: %v", err)
+	}
+
+	// Validate header order for HTTP/2
+	if err := utils.ValidateHTTP2HeaderOrder(expectedOrder, &peet); err != nil {
+		t.Fatalf("TestHeaderOrderHTTP2 header order validation failed: %v", err)
+	}
+
+	t.Logf("TestHeaderOrderHTTP2 passed - headers are in correct order")
+}
+
+func TestHeaderOrderHTTP3(t *testing.T) {
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	expectedOrder := []string{"user-agent", "gg", "befor", "content-type", "accept", "after"}
+
+	session.OrderedHeaders = azuretls.OrderedHeaders{
+		{"user-agent", "test"},
+		{"gG", "me"},
+		{"befor", "content"},
+		{"content-type", "application/json"},
+		{"accept", "application/json"},
+		{"after", "accept"},
+	}
+
+	req := &azuretls.Request{
+		Method:     "GET",
+		Url:        "https://fp.impersonate.pro/api/http3",
+		ForceHTTP3: true,
+	}
+
+	response, err := session.Do(req)
+	if err != nil {
+		t.Fatalf("TestHeaderOrderHTTP3 failed, expected: nil, got: %v", err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Fatalf("TestHeaderOrderHTTP3 failed, expected status: 200, got: %d", response.StatusCode)
+	}
+
+	var impersonate utils.ImpersonateResponse
+	if err = response.JSON(&impersonate); err != nil {
+		t.Fatalf("TestHeaderOrderHTTP3 failed to parse JSON, expected: nil, got: %v", err)
+	}
+
+	// Validate header order for HTTP/3
+	if err := utils.ValidateHTTP3HeaderOrder(expectedOrder, &impersonate); err != nil {
+		t.Fatalf("TestHeaderOrderHTTP3 header order validation failed: %v", err)
+	}
+
+	t.Logf("TestHeaderOrderHTTP3 passed - headers are in correct order")
 }

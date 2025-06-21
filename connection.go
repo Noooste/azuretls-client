@@ -4,8 +4,6 @@ import (
 	"context"
 	"crypto/x509"
 	"errors"
-	"github.com/Noooste/fhttp"
-	"github.com/Noooste/fhttp/http2"
 	"github.com/Noooste/utls"
 	"net"
 	"time"
@@ -127,12 +125,6 @@ func (s *Session) upgradeTLS(ctx context.Context, conn net.Conn, addr string) (n
 
 	if err = tlsConn.Handshake(); err != nil {
 		return nil, errors.New("failed to handshake: " + err.Error())
-	}
-
-	req := ctx.Value("request").(*Request)
-	if tlsConn.ConnectionState().NegotiatedProtocol != http2.NextProtoTLS {
-		req.HttpRequest.Header.Del(http.PHeaderOrderKey)
-		req.HttpRequest.Header.Del(http.HeaderOrderKey)
 	}
 
 	return tlsConn.Conn, nil
