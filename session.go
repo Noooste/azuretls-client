@@ -128,8 +128,6 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 
 	s.logRequest(request)
 
-	request.ctx = context.WithValue(request.ctx, "request", request)
-
 	if request.ForceHTTP1 {
 		request.ctx = context.WithValue(request.ctx, forceHTTP1Key, true)
 	}

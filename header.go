@@ -142,27 +142,32 @@ func (r *Request) formatHeader() {
 		r.HttpRequest.Header[http.HeaderOrderKey] = make([]string, 0, len(r.OrderedHeaders))
 
 		for _, el := range r.OrderedHeaders {
+			r.HttpRequest.Header[http.HeaderOrderKey] = append(r.HttpRequest.Header[http.HeaderOrderKey], strings.ToLower(el[0]))
+		}
+
+		for _, el := range r.OrderedHeaders {
 			if len(el) == 0 || !shouldCopyHeaderOnRedirect(el[0], r.HttpRequest.URL, r.HttpRequest.URL) {
 				continue
 			}
 
 			var key = el[0]
 
-			r.HttpRequest.Header[http.HeaderOrderKey] = append(r.HttpRequest.Header[http.HeaderOrderKey], strings.ToLower(key))
+			if strings.ToLower(key) == "content-length" {
+				continue
+			}
 
 			if len(el) == 1 {
 				// skip empty header value, the key indicates the order
 				continue
 			}
 
-			if _, ok := r.HttpRequest.Header[key]; !ok {
+			if v := r.HttpRequest.Header.Get(key); v == "" {
 				if setUserAgent && strings.ToLower(key) == "user-agent" {
 					setUserAgent = false
 				}
 			}
 
-			r.HttpRequest.Header[key] = make([]string, 0, len(el)-1)
-			r.HttpRequest.Header[key] = append(r.HttpRequest.Header[key], el[1])
+			r.HttpRequest.Header.Add(key, el[1])
 
 			for _, v := range el[2:] {
 				r.HttpRequest.Header.Add(key, v)
@@ -195,6 +200,10 @@ func (r *Request) formatHeader() {
 		}
 
 		r.HttpRequest.Header.Set("User-Agent", r.ua)
+	}
+
+	if r.ForceHTTP1 {
+		return
 	}
 
 	if r.PHeader != nil {
