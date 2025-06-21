@@ -152,6 +152,10 @@ func (r *Request) formatHeader() {
 
 			var key = el[0]
 
+			if strings.ToLower(key) == "content-length" {
+				continue
+			}
+
 			if len(el) == 1 {
 				// skip empty header value, the key indicates the order
 				continue
