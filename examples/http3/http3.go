@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Noooste/azuretls-client"
 )
@@ -18,7 +19,7 @@ func main() {
 
 	resp, err := session.Do(&azuretls.Request{
 		Method:     "GET",
-		Url:        "https://fp.impersonate.pro/api/http3",
+		Url:        "https://cloudflare-quic.com",
 		ForceHTTP3: true,
 	})
 
@@ -26,6 +27,8 @@ func main() {
 		panic(err)
 	}
 
+	body := string(resp.Body)
+
 	fmt.Println(resp.StatusCode)
-	fmt.Println(string(resp.Body))
+	fmt.Println("HTTP/3:", strings.Contains(body, "your browser used <strong>HTTP/3</strong>"))
 }
