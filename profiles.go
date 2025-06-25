@@ -2,6 +2,7 @@ package azuretls
 
 import (
 	"fmt"
+
 	"github.com/Noooste/fhttp/http2"
 	quic "github.com/Noooste/uquic-go"
 	"github.com/Noooste/uquic-go/http3"
@@ -143,30 +144,30 @@ func GetLastChromeVersionForHTTP3() *tls.ClientHelloSpec {
 					tls.InitialMaxStreamsUni(103),
 					tls.MaxIdleTimeout(30000),
 					tls.InitialMaxData(15728640),
-					tls.InitialMaxStreamDataUni(0x80600000),
+					tls.InitialMaxStreamDataUni(6291456),
 					&tls.VersionInformation{
 						ChoosenVersion: tls.VERSION_1,
 						AvailableVersions: []uint32{
 							tls.VERSION_GREASE,
 							tls.VERSION_1,
 						},
-						LegacyID: true,
+						LegacyID: false,
 					},
 					&tls.FakeQUICTransportParameter{ // google_quic_version
 						Id:  0x4752,
 						Val: []byte{00, 00, 00, 01}, // Google QUIC version 1
 					},
 					&tls.FakeQUICTransportParameter{ // google_connection_options
-						Id:  0x3127,
-						Val: []byte{0x80, 0x03, 0xe4, 0x2e},
+						Id:  0x3128,
+						Val: []byte{0x42, 0x32, 0x4f, 0x4e}, // = B2ON
 					},
 					tls.MaxDatagramFrameSize(65536),
 					tls.InitialMaxStreamsBidi(100),
-					tls.InitialMaxStreamDataBidiLocal(0x80600000),
+					tls.InitialMaxStreamDataBidiLocal(6291456),
 					quic.VariableLengthGREASEQTP(0x10), // Random length for GREASE QTP
 					tls.InitialSourceConnectionID([]byte{}),
 					tls.MaxUDPPayloadSize(1472),
-					tls.InitialMaxStreamDataBidiRemote(0x80600000),
+					tls.InitialMaxStreamDataBidiRemote(6291456),
 				},
 			}),
 			&tls.ApplicationSettingsExtensionNew{
