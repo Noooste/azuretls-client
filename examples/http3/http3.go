@@ -18,7 +18,7 @@ func main() {
 
 	resp, err := session.Do(&azuretls.Request{
 		Method:     "GET",
-		Url:        "https://fp.impersonate.pro/api/http3",
+		Url:        "https://cloudflare-quic.com",
 		ForceHTTP3: true,
 	})
 
@@ -27,5 +27,5 @@ func main() {
 	}
 
 	fmt.Println(resp.StatusCode)
-	fmt.Println(string(resp.Body))
+	fmt.Println("Proto:", resp.HttpResponse.Proto)
 }
