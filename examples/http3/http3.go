@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/Noooste/azuretls-client"
 )
@@ -27,8 +26,6 @@ func main() {
 		panic(err)
 	}
 
-	body := string(resp.Body)
-
 	fmt.Println(resp.StatusCode)
-	fmt.Println("HTTP/3:", strings.Contains(body, "your browser used <strong>HTTP/3</strong>"))
+	fmt.Println("Proto:", resp.HttpResponse.Proto)
 }
