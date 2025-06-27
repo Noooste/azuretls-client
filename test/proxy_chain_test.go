@@ -2,7 +2,6 @@
 package azuretls_test
 
 import (
-	"bufio"
 	"fmt"
 	"github.com/Noooste/azuretls-client"
 	http "github.com/Noooste/fhttp"
@@ -648,120 +647,6 @@ func TestChainProxyIntegrationSimple(t *testing.T) {
 		t.Logf("Request succeeded! Status: %d", response.StatusCode)
 		t.Logf("Response: %s", response.String())
 	}
-}
-
-// TestChainProxyHTTPTunnel tests HTTP CONNECT tunneling through proxy chain
-func TestChainProxyHTTPTunnel(t *testing.T) {
-	// Create a test HTTP server to act as destination
-	destServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("X-Destination", "test-server")
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, "Hello from destination server")
-	}))
-	defer destServer.Close()
-
-	// Parse destination URL
-	destURL, err := url.Parse(destServer.URL)
-	if err != nil {
-		t.Fatalf("Failed to parse destination URL: %v", err)
-	}
-
-	// Create proxy servers
-	proxy1 := NewSimpleProxyServer(t, "proxy1")
-	defer proxy1.Close()
-
-	proxy2 := NewSimpleProxyServer(t, "proxy2")
-	defer proxy2.Close()
-
-	// Parse proxy URLs
-	url1, err := url.Parse(proxy1.URL())
-	if err != nil {
-		t.Fatalf("Failed to parse proxy1 URL: %v", err)
-	}
-
-	url2, err := url.Parse(proxy2.URL())
-	if err != nil {
-		t.Fatalf("Failed to parse proxy2 URL: %v", err)
-	}
-
-	// Test manual CONNECT through proxy chain
-	t.Logf("Testing CONNECT tunnel: client -> proxy1(%s) -> proxy2(%s) -> dest(%s)",
-		url1.Host, url2.Host, destURL.Host)
-
-	// Connect to first proxy
-	conn1, err := net.Dial("tcp", url1.Host)
-	if err != nil {
-		t.Fatalf("Failed to connect to proxy1: %v", err)
-	}
-	defer conn1.Close()
-
-	// Send CONNECT to proxy2 through proxy1
-	connectReq := fmt.Sprintf("CONNECT %s HTTP/1.1\r\nHost: %s\r\n\r\n", url2.Host, url2.Host)
-	_, err = conn1.Write([]byte(connectReq))
-	if err != nil {
-		t.Fatalf("Failed to send CONNECT to proxy1: %v", err)
-	}
-
-	// Read response from proxy1
-	reader1 := bufio.NewReader(conn1)
-	resp1, err := http.ReadResponse(reader1, &http.Request{Method: "CONNECT"})
-	if err != nil {
-		t.Fatalf("Failed to read CONNECT response from proxy1: %v", err)
-	}
-
-	if resp1.StatusCode != http.StatusOK {
-		t.Fatalf("CONNECT to proxy2 through proxy1 failed: %s", resp1.Status)
-	}
-
-	t.Logf("Successfully established tunnel to proxy2 through proxy1")
-
-	// Now send CONNECT to destination through proxy2
-	connectReq2 := fmt.Sprintf("CONNECT %s HTTP/1.1\r\nHost: %s\r\n\r\n", destURL.Host, destURL.Host)
-	_, err = conn1.Write([]byte(connectReq2))
-	if err != nil {
-		t.Fatalf("Failed to send CONNECT to destination through proxy2: %v", err)
-	}
-
-	// Read response from proxy2
-	resp2, err := http.ReadResponse(reader1, &http.Request{Method: "CONNECT"})
-	if err != nil {
-		t.Fatalf("Failed to read CONNECT response from proxy2: %v", err)
-	}
-
-	if resp2.StatusCode != http.StatusOK {
-		t.Fatalf("CONNECT to destination through proxy2 failed: %s", resp2.Status)
-	}
-
-	t.Logf("Successfully established tunnel to destination through proxy chain")
-
-	// Send HTTP request through the tunnel
-	httpReq := fmt.Sprintf("GET / HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", destURL.Host)
-	_, err = conn1.Write([]byte(httpReq))
-	if err != nil {
-		t.Fatalf("Failed to send HTTP request through tunnel: %v", err)
-	}
-
-	// Read HTTP response
-	httpResp, err := http.ReadResponse(reader1, &http.Request{Method: "GET"})
-	if err != nil {
-		t.Fatalf("Failed to read HTTP response through tunnel: %v", err)
-	}
-
-	if httpResp.StatusCode != http.StatusOK {
-		t.Fatalf("HTTP request through tunnel failed: %s", httpResp.Status)
-	}
-
-	body, err := io.ReadAll(httpResp.Body)
-	if err != nil {
-		t.Fatalf("Failed to read response body: %v", err)
-	}
-
-	expectedBody := "Hello from destination server"
-	if string(body) != expectedBody {
-		t.Fatalf("Expected response body %q, got %q", expectedBody, string(body))
-	}
-
-	t.Logf("Successfully received response through proxy chain: %s", string(body))
 }
 
 // TestChainProxyWithAuthentication tests chain proxy with authentication

@@ -3,11 +3,11 @@ module github.com/Noooste/azuretls-client
 go 1.24.0
 
 require (
-	github.com/Noooste/fhttp v1.0.13
+	github.com/Noooste/fhttp v1.0.15
 	github.com/Noooste/uquic-go v0.0.29
-	github.com/Noooste/utls v1.3.18
+	github.com/Noooste/utls v1.3.19
 	github.com/Noooste/websocket v1.0.3
-	github.com/andybalholm/brotli v1.1.1
+	github.com/andybalholm/brotli v1.2.0
 	github.com/fatih/color v1.18.0
 	github.com/klauspost/compress v1.18.0
 	github.com/txthinking/socks5 v0.0.0-20230325130024-4230056ae301
