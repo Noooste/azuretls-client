@@ -16,6 +16,13 @@ type PHeader []string
 // HeaderOrder is a slice of header names.
 type HeaderOrder []string
 
+const SensitiveHeaders = "Sensitive-Headers:"
+
+var defaultSensitiveHeaders = []string{
+	"Authorization",
+	"Cookie", "Cookie2", "Set-Cookie", "Set-Cookie2",
+}
+
 // GetDefaultPseudoHeaders returns the default pseudo headers.
 func GetDefaultPseudoHeaders() PHeader {
 	return []string{Method, Authority, Scheme, Path}
@@ -135,13 +142,19 @@ func (oh *OrderedHeaders) ToHeader() http.Header {
 
 //gocyclo:ignore
 func (r *Request) formatHeader() {
-	var setUserAgent = true
+	var (
+		setUserAgent        = true
+		setSensitiveHeaders = true
+	)
 
 	if r.OrderedHeaders != nil && len(r.OrderedHeaders) > 0 {
 		r.HttpRequest.Header = make(http.Header, len(r.OrderedHeaders)+2) // +2 for http.HeaderOrderKey and http.PHeaderOrderKey
 		r.HttpRequest.Header[http.HeaderOrderKey] = make([]string, 0, len(r.OrderedHeaders))
 
 		for _, el := range r.OrderedHeaders {
+			if len(el) == 0 {
+				continue
+			}
 			r.HttpRequest.Header[http.HeaderOrderKey] = append(r.HttpRequest.Header[http.HeaderOrderKey], strings.ToLower(el[0]))
 		}
 
@@ -151,6 +164,14 @@ func (r *Request) formatHeader() {
 			}
 
 			var key = el[0]
+
+			if key == SensitiveHeaders {
+				if len(el) > 1 {
+					r.HttpRequest.SensitiveHeaders = el[1:]
+					setSensitiveHeaders = false
+				}
+				continue
+			}
 
 			if strings.ToLower(key) == "content-length" {
 				continue
@@ -190,6 +211,12 @@ func (r *Request) formatHeader() {
 				break
 			}
 		}
+
+		if v := r.HttpRequest.Header[SensitiveHeaders]; v != nil {
+			r.HttpRequest.SensitiveHeaders = v
+			delete(r.HttpRequest.Header, SensitiveHeaders)
+			setSensitiveHeaders = false
+		}
 	} else {
 		r.HttpRequest.Header = make(http.Header, 4)
 	}
@@ -200,6 +227,10 @@ func (r *Request) formatHeader() {
 		}
 
 		r.HttpRequest.Header.Set("User-Agent", r.ua)
+	}
+
+	if setSensitiveHeaders {
+		r.HttpRequest.SensitiveHeaders = defaultSensitiveHeaders
 	}
 
 	if r.ForceHTTP1 {
