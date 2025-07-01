@@ -91,7 +91,7 @@ func GetLastChromeVersion() *tls.ClientHelloSpec {
 			&tls.PSKKeyExchangeModesExtension{Modes: []uint8{
 				tls.PskModeDHE,
 			}},
-			&tls.ApplicationSettingsExtension{SupportedProtocols: []string{http2.NextProtoTLS}},
+			&tls.ApplicationSettingsExtensionNew{SupportedProtocols: []string{http2.NextProtoTLS}},
 			&tls.UtlsCompressCertExtension{Algorithms: []tls.CertCompressionAlgo{
 				tls.CertCompressionBrotli,
 			}},
