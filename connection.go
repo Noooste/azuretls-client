@@ -99,6 +99,12 @@ func (s *Session) upgradeTLS(ctx context.Context, conn net.Conn, addr string) (n
 		},
 	}
 
+	if s.ModifyConfig != nil {
+		if err := s.ModifyConfig(&config); err != nil {
+			return nil, err
+		}
+	}
+
 	tlsConn := tls.UClient(conn, &config, tls.HelloCustom)
 
 	var fn = s.GetClientHelloSpec
