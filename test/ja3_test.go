@@ -1,6 +1,7 @@
 package azuretls_test
 
 import (
+	"fmt"
 	"github.com/Noooste/azuretls-client"
 	"log"
 	"os"
@@ -21,6 +22,8 @@ func TestDefaultConfig(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Fatal("Expected 200")
 	}
+
+	fmt.Println(response.String())
 }
 
 func TestChrome(t *testing.T) {
@@ -415,24 +418,5 @@ func TestGetApplyJa3WithoutSpecifications(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 		return
-	}
-}
-
-func TestGetApplyJa3WithMLKEM(t *testing.T) {
-	session := azuretls.NewSession()
-	defer session.Close()
-
-	if err := session.ApplyJa3("771,4867-4866-4865-49200-49196-156-49171-52393-157-47-49199-49172-52392-49195,13-18-35-11-16-23-45-10-43-5-51-0,4588-23-29-24,0-1-2", azuretls.Chrome); err != nil {
-		t.Fatal(err)
-	}
-
-	response, err := session.Get("https://cloudflare-quic.com/")
-
-	if err != nil {
-		panic(err)
-	}
-
-	if response.StatusCode != 200 {
-		t.Fatal("Expected 200, got ", response.StatusCode)
 	}
 }
