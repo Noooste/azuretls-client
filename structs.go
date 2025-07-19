@@ -87,6 +87,9 @@ type Session struct {
 	// Function to modify the dialer used for establishing connections.
 	ModifyDialer func(dialer *net.Dialer) error
 
+	// Function to modify the TLS configuration before establishing a connection.
+	ModifyConfig func(config *tls.Config) error
+
 	// CheckRedirect specifies the policy for handling redirects.
 	// If CheckRedirect is not nil, the client calls it before
 	// following an HTTP redirect. The arguments req and via are

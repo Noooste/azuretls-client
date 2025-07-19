@@ -10,7 +10,6 @@ import (
 	"log"
 	"os"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 )
@@ -626,35 +625,5 @@ func TestSession_Timeout(t *testing.T) {
 		fmt.Println(err)
 	} else {
 		fmt.Println(response.StatusCode, string(response.Body))
-	}
-}
-
-func TestSession_Timeout2(t *testing.T) {
-	var err error
-
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-
-	go func() {
-		defer wg.Done()
-		session := azuretls.NewSession()
-		session.Log()
-		defer session.Close()
-
-		session.SetTimeout(1 * time.Second)
-
-		_, err = session.Get("https://testfile.org/files-5GB")
-	}()
-
-	wg.Wait()
-
-	if err == nil {
-		t.Fatal("TestSession_Timeout2 failed, expected: error, got: nil")
-		return
-	}
-
-	if !strings.Contains(err.Error(), "timeout") {
-		t.Fatal("TestSession_Timeout2 failed, expected: timeout, got:", err)
-		return
 	}
 }

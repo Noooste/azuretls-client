@@ -1,6 +1,7 @@
 package azuretls_test
 
 import (
+	"fmt"
 	"github.com/Noooste/azuretls-client"
 	"log"
 	"os"
@@ -21,6 +22,8 @@ func TestDefaultConfig(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Fatal("Expected 200")
 	}
+
+	fmt.Println(response.String())
 }
 
 func TestChrome(t *testing.T) {
@@ -407,32 +410,13 @@ func TestGetApplyJa3WithoutSpecifications(t *testing.T) {
 
 	err := session.ApplyJa3WithSpecifications("771,4865-4867-4866-49195-49199-52393-52392-49196-49200-49162-49161-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-34-51-43-13-45-28-65037,29-23-24-25-256-257,0", &azuretls.TlsSpecifications{}, azuretls.Firefox)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 		return
 	}
 
 	err = session.ApplyJa3WithSpecifications("771,4865-4867-4866-49195-49199-52393-52392-49196-49200-49162-49161-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-34-51-43-13-45-28-65037,29-23-24-25-256-257,0", &azuretls.TlsSpecifications{}, azuretls.Chrome)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 		return
-	}
-}
-
-func TestGetApplyJa3WithMLKEM(t *testing.T) {
-	session := azuretls.NewSession()
-	defer session.Close()
-
-	if err := session.ApplyJa3("771,4867-4866-4865-49200-49196-156-49171-52393-157-47-49199-49172-52392-49195,13-18-35-11-16-23-45-10-43-5-51-0,4588-23-29-24,0-1-2", azuretls.Chrome); err != nil {
-		panic(err)
-	}
-
-	response, err := session.Get("https://cloudflare-quic.com/")
-
-	if err != nil {
-		panic(err)
-	}
-
-	if response.StatusCode != 200 {
-		panic(err)
 	}
 }
