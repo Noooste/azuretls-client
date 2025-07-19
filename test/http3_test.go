@@ -2,6 +2,7 @@
 package azuretls_test
 
 import (
+	"fmt"
 	"github.com/txthinking/socks5"
 	"log"
 	"testing"
@@ -451,3 +452,27 @@ func TestHTTP3AndHTTP2(t *testing.T) {
 //	}
 //	wg.Wait()
 //}
+
+func TestHTTP3Google(t *testing.T) {
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	//http3 := "1:16383;7:100;GREASE|m,s,a,p"
+	//
+	//if err := session.ApplyHTTP3(http3); err != nil {
+	//	t.Fatalf("failed to apply HTTP/3 settings: %v", err)
+	//}
+
+	resp, err := session.Do(&azuretls.Request{
+		Method:     "GET",
+		Url:        "https://www.google.com/",
+		ForceHTTP3: true,
+	})
+
+	if err != nil {
+		t.Fatalf("failed to fetch google: %v", err)
+	}
+
+	fmt.Println(resp.StatusCode)
+	fmt.Println("Proto:", resp.HttpResponse.Proto)
+}

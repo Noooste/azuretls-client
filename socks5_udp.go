@@ -565,7 +565,7 @@ func (c *SOCKS5UDPConn) monitorControlConnection() {
 }
 
 // dialQUICViaSocks5 establishes a QUIC connection through SOCKS5 proxy
-func (s *Session) dialQUICViaSocks5(ctx context.Context, remoteAddr *net.UDPAddr, tlsConf *tls.Config, quicConf *quic.Config) (quic.EarlyConnection, error) {
+func (s *Session) dialQUICViaSocks5(ctx context.Context, remoteAddr *net.UDPAddr, tlsConf *tls.Config, quicConf *quic.Config) (*quic.Conn, error) {
 	if s.IsChainProxy() {
 		return nil, errors.New("QUIC over SOCKS5 is not supported with chained proxies")
 	}
