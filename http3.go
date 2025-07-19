@@ -219,7 +219,7 @@ func contains(str, substr string) bool {
 }
 
 // dialQUIC establishes a QUIC connection
-func (s *Session) dialQUIC(ctx context.Context, addr string, tlsConf *tls.Config, quicConf *quic.Config) (quic.EarlyConnection, error) {
+func (s *Session) dialQUIC(ctx context.Context, addr string, tlsConf *tls.Config, quicConf *quic.Config) (*quic.Conn, error) {
 	// Resolve address
 	udpAddr, err := net.ResolveUDPAddr("udp", addr)
 	if err != nil {
@@ -269,7 +269,7 @@ func (s *Session) dialQUIC(ctx context.Context, addr string, tlsConf *tls.Config
 }
 
 // dialQUICViaProxy establishes a QUIC connection through a proxy
-func (s *Session) dialQUICViaProxy(ctx context.Context, remoteAddr *net.UDPAddr, tlsConf *tls.Config, quicConf *quic.Config) (quic.EarlyConnection, error) {
+func (s *Session) dialQUICViaProxy(ctx context.Context, remoteAddr *net.UDPAddr, tlsConf *tls.Config, quicConf *quic.Config) (*quic.Conn, error) {
 	return s.dialQUICViaSocks5(ctx, remoteAddr, tlsConf, quicConf)
 }
 
