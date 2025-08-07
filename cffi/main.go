@@ -49,6 +49,7 @@ import (
 	"fmt"
 	"net/url"
 	"runtime"
+	"sync"
 	"time"
 	"unsafe"
 
@@ -58,8 +59,9 @@ import (
 // Version information - will be set during build
 var Version = "dev"
 
-// SessionManager manages active sessions
+// SessionManager manages active sessions with thread safety
 type SessionManager struct {
+	mu       sync.RWMutex
 	sessions map[uintptr]*azuretls.Session
 	nextID   uintptr
 }
@@ -157,6 +159,45 @@ func createCResponse(resp *azuretls.Response, err error) *C.CFfiResponse {
 	return cResp
 }
 
+// Thread-safe method to get a session
+func (sm *SessionManager) getSession(sessionID uintptr) (*azuretls.Session, bool) {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+	session, exists := sm.sessions[sessionID]
+	return session, exists
+}
+
+// Thread-safe method to add a session
+func (sm *SessionManager) addSession(session *azuretls.Session) uintptr {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+	sessionID := sm.nextID
+	sm.sessions[sessionID] = session
+	sm.nextID++
+	return sessionID
+}
+
+// Thread-safe method to remove a session
+func (sm *SessionManager) removeSession(sessionID uintptr) *azuretls.Session {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+	if session, exists := sm.sessions[sessionID]; exists {
+		delete(sm.sessions, sessionID)
+		return session
+	}
+	return nil
+}
+
+// Thread-safe method to close all sessions
+func (sm *SessionManager) closeAllSessions() {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+	for id, session := range sm.sessions {
+		session.Close()
+		delete(sm.sessions, id)
+	}
+}
+
 //export azuretls_session_new
 func azuretls_session_new(configJSON *C.char) uintptr {
 	session := azuretls.NewSession()
@@ -198,9 +239,7 @@ func azuretls_session_new(configJSON *C.char) uintptr {
 		}
 	}
 
-	sessionID := sessionManager.nextID
-	sessionManager.sessions[sessionID] = session
-	sessionManager.nextID++
+	sessionID := sessionManager.addSession(session)
 
 	// Prevent session from being garbage collected
 	runtime.SetFinalizer(session, nil)
@@ -210,15 +249,14 @@ func azuretls_session_new(configJSON *C.char) uintptr {
 
 //export azuretls_session_close
 func azuretls_session_close(sessionID uintptr) {
-	if session, exists := sessionManager.sessions[sessionID]; exists {
+	if session := sessionManager.removeSession(sessionID); session != nil {
 		session.Close()
-		delete(sessionManager.sessions, sessionID)
 	}
 }
 
 //export azuretls_session_do
 func azuretls_session_do(sessionID uintptr, requestJSON *C.char) *C.CFfiResponse {
-	session, exists := sessionManager.sessions[sessionID]
+	session, exists := sessionManager.getSession(sessionID)
 	if !exists {
 		return createCResponse(nil, fmt.Errorf("session not found"))
 	}
@@ -275,7 +313,7 @@ func azuretls_session_do(sessionID uintptr, requestJSON *C.char) *C.CFfiResponse
 
 //export azuretls_session_apply_ja3
 func azuretls_session_apply_ja3(sessionID uintptr, ja3 *C.char, navigator *C.char) *C.char {
-	session, exists := sessionManager.sessions[sessionID]
+	session, exists := sessionManager.getSession(sessionID)
 	if !exists {
 		return goStringToCString("session not found")
 	}
@@ -296,7 +334,7 @@ func azuretls_session_apply_ja3(sessionID uintptr, ja3 *C.char, navigator *C.cha
 
 //export azuretls_session_apply_http2
 func azuretls_session_apply_http2(sessionID uintptr, fingerprint *C.char) *C.char {
-	session, exists := sessionManager.sessions[sessionID]
+	session, exists := sessionManager.getSession(sessionID)
 	if !exists {
 		return goStringToCString("session not found")
 	}
@@ -311,7 +349,7 @@ func azuretls_session_apply_http2(sessionID uintptr, fingerprint *C.char) *C.cha
 
 //export azuretls_session_apply_http3
 func azuretls_session_apply_http3(sessionID uintptr, fingerprint *C.char) *C.char {
-	session, exists := sessionManager.sessions[sessionID]
+	session, exists := sessionManager.getSession(sessionID)
 	if !exists {
 		return goStringToCString("session not found")
 	}
@@ -326,7 +364,7 @@ func azuretls_session_apply_http3(sessionID uintptr, fingerprint *C.char) *C.cha
 
 //export azuretls_session_set_proxy
 func azuretls_session_set_proxy(sessionID uintptr, proxy *C.char) *C.char {
-	session, exists := sessionManager.sessions[sessionID]
+	session, exists := sessionManager.getSession(sessionID)
 	if !exists {
 		return goStringToCString("session not found")
 	}
@@ -341,7 +379,7 @@ func azuretls_session_set_proxy(sessionID uintptr, proxy *C.char) *C.char {
 
 //export azuretls_session_clear_proxy
 func azuretls_session_clear_proxy(sessionID uintptr) {
-	session, exists := sessionManager.sessions[sessionID]
+	session, exists := sessionManager.getSession(sessionID)
 	if exists {
 		session.ClearProxy()
 	}
@@ -349,7 +387,7 @@ func azuretls_session_clear_proxy(sessionID uintptr) {
 
 //export azuretls_session_add_pins
 func azuretls_session_add_pins(sessionID uintptr, urlStr *C.char, pinsJSON *C.char) *C.char {
-	session, exists := sessionManager.sessions[sessionID]
+	session, exists := sessionManager.getSession(sessionID)
 	if !exists {
 		return goStringToCString("session not found")
 	}
@@ -376,7 +414,7 @@ func azuretls_session_add_pins(sessionID uintptr, urlStr *C.char, pinsJSON *C.ch
 
 //export azuretls_session_clear_pins
 func azuretls_session_clear_pins(sessionID uintptr, urlStr *C.char) *C.char {
-	session, exists := sessionManager.sessions[sessionID]
+	session, exists := sessionManager.getSession(sessionID)
 	if !exists {
 		return goStringToCString("session not found")
 	}
@@ -396,7 +434,7 @@ func azuretls_session_clear_pins(sessionID uintptr, urlStr *C.char) *C.char {
 
 //export azuretls_session_get_ip
 func azuretls_session_get_ip(sessionID uintptr) *C.char {
-	session, exists := sessionManager.sessions[sessionID]
+	session, exists := sessionManager.getSession(sessionID)
 	if !exists {
 		return goStringToCString("session not found")
 	}
@@ -447,11 +485,8 @@ func azuretls_init() {
 
 //export azuretls_cleanup
 func azuretls_cleanup() {
-	// Close all active sessions
-	for id, session := range sessionManager.sessions {
-		session.Close()
-		delete(sessionManager.sessions, id)
-	}
+	// Close all active sessions using thread-safe method
+	sessionManager.closeAllSessions()
 }
 
 func main() {
