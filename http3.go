@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	http "github.com/Noooste/fhttp"
-	"github.com/Noooste/uquic-go"
-	tls "github.com/Noooste/utls"
 	"net"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	http "github.com/Noooste/fhttp"
+	"github.com/Noooste/uquic-go"
+	tls "github.com/Noooste/utls"
 
 	"github.com/Noooste/uquic-go/http3"
 )
@@ -151,6 +152,10 @@ func (s *Session) DisableHTTP3() {
 // selectTransport chooses the appropriate transport for a request
 func (s *Session) selectTransport(req *Request) (rt http.RoundTripper, isHTTP3 bool, err error) {
 	// Check if HTTP/3 is forced for this request
+	if req.ForceHTTP1 {
+		return s.Transport, false, nil
+	}
+
 	if req.ForceHTTP3 {
 		if s.HTTP3Config == nil {
 			if err = s.EnableHTTP3(); err != nil {
@@ -160,16 +165,12 @@ func (s *Session) selectTransport(req *Request) (rt http.RoundTripper, isHTTP3 b
 			return nil, false, errors.New("HTTP/3 is not enabled for this session")
 		}
 
-		rt = s.HTTP3Config.transport
-		return rt, true, nil
+		return s.HTTP3Config.transport, true, nil
 	}
 
 	// Check if HTTP/3 is available for this host
-	if s.HTTP3Config != nil && s.HTTP3Config.Enabled {
-		if s.shouldUseHTTP3(req.parsedUrl.Host) {
-			rt = s.HTTP3Config.transport
-			return rt, true, nil
-		}
+	if s.shouldUseHTTP3(req.parsedUrl.Host) {
+		return s.HTTP3Config.transport, true, nil
 	}
 
 	// Fall back to HTTP/2 or HTTP/1.1
