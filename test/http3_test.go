@@ -2,10 +2,11 @@
 package azuretls_test
 
 import (
-	"github.com/txthinking/socks5"
 	"log"
 	"testing"
 	"time"
+
+	"github.com/txthinking/socks5"
 
 	"github.com/Noooste/azuretls-client"
 )
@@ -14,6 +15,7 @@ func TestHTTP3Direct(t *testing.T) {
 	// Create session
 	session := azuretls.NewSession()
 	defer session.Close()
+	session.InsecureSkipVerify = true
 
 	if err := session.ApplyHTTP3("1:16383;7:100;GREASE|m,s,a,p"); err != nil {
 		t.Fatalf("Failed to apply HTTP/3 settings: %v", err)
@@ -189,6 +191,7 @@ func TestHTTP3AndHTTP2(t *testing.T) {
 
 	// Create session
 	session := azuretls.NewSession()
+	session.InsecureSkipVerify = true
 	defer session.Close()
 
 	// Set SOCKS5 proxy
