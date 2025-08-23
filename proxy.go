@@ -6,15 +6,18 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	http "github.com/Noooste/fhttp"
-	"github.com/Noooste/fhttp/http2"
-	tls "github.com/Noooste/utls"
-	"golang.org/x/net/proxy"
 	"io"
 	"net"
 	"net/url"
 	"strings"
 	"sync"
+
+	http "github.com/Noooste/fhttp"
+	"github.com/Noooste/fhttp/http2"
+	tls "github.com/Noooste/utls"
+	"golang.org/x/net/proxy"
+
+	_ "github.com/bdandy/go-socks4"
 )
 
 // ProxyDialer interface for both single and chain proxy dialers
