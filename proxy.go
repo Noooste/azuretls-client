@@ -153,6 +153,10 @@ func validateAndSetProxyPort(parsed *url.URL, index int) error {
 		if parsed.Port() == "" {
 			parsed.Host = net.JoinHostPort(parsed.Host, "1080")
 		}
+	case Socks4:
+		if parsed.Port() == "" {
+			parsed.Host = net.JoinHostPort(parsed.Host, "1080")
+		}
 	default:
 		return fmt.Errorf("unsupported proxy scheme %s for proxy %d", parsed.Scheme, index)
 	}
