@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	http "github.com/Noooste/fhttp"
-	"github.com/Noooste/uquic-go"
-	tls "github.com/Noooste/utls"
 	"net"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	http "github.com/Noooste/fhttp"
+	"github.com/Noooste/uquic-go"
+	tls "github.com/Noooste/utls"
 
 	"github.com/Noooste/uquic-go/http3"
 )
@@ -67,6 +68,7 @@ func (s *Session) NewHTTP3Transport() (*HTTP3Transport, error) {
 			TLSClientConfig:         tlsConfig,
 			QUICConfig:              quicConfig,
 			Dial:                    s.dialQUIC,
+			DisableCompression:      true,
 		},
 		transportsPool: make([]*quic.UTransport, 0, 100), // Preallocate pool size for performance
 		sess:           s,

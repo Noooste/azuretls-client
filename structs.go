@@ -3,15 +3,16 @@ package azuretls
 import (
 	"context"
 	"errors"
-	http "github.com/Noooste/fhttp"
-	"github.com/Noooste/fhttp/http2"
-	tls "github.com/Noooste/utls"
 	"io"
 	"net"
 	"net/url"
 	"regexp"
 	"sync"
 	"time"
+
+	http "github.com/Noooste/fhttp"
+	"github.com/Noooste/fhttp/http2"
+	tls "github.com/Noooste/utls"
 )
 
 const (
@@ -116,6 +117,10 @@ type Session struct {
 
 	// If true, server's certificate is not verified (insecure: this may facilitate attack from middleman).
 	InsecureSkipVerify bool
+
+	// If true, automatic decompression of response bodies is disabled.
+	// When disabled, compressed responses (gzip, deflate, brotli, zstd) are returned as-is.
+	DisableAutoDecompression bool
 
 	// Headers for User-Agent and Sec-Ch-Ua, respectively.
 	UserAgent string

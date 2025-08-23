@@ -1,9 +1,10 @@
 package azuretls
 
 import (
+	"time"
+
 	http "github.com/Noooste/fhttp"
 	"github.com/Noooste/fhttp/http2"
-	"time"
 )
 
 func (s *Session) initTransport(browser string) (err error) {
@@ -32,6 +33,7 @@ func (s *Session) initHTTP1() {
 		MaxIdleConns:          1e3,
 		IdleConnTimeout:       90 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
+		DisableCompression:    true,
 	}
 }
 

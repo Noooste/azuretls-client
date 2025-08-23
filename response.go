@@ -3,10 +3,11 @@ package azuretls
 import (
 	"encoding/json"
 	"fmt"
-	http "github.com/Noooste/fhttp"
 	"io"
 	"net/url"
 	"sync"
+
+	http "github.com/Noooste/fhttp"
 )
 
 func (s *Session) buildResponse(response *Response, httpResponse *http.Response) (err error) {
@@ -67,10 +68,19 @@ func (r *Response) ReadBody() (body []byte, err error) {
 	defer func() {
 		_ = r.HttpResponse.Body.Close()
 	}()
+
 	if r.isHTTP3 {
+		if r.Session.DisableAutoDecompression {
+			return io.ReadAll(r.HttpResponse.Body)
+		}
+
 		return DecodeResponseBody(r.HttpResponse.Body, r.HttpResponse.Header.Get("Content-Encoding"))
 	}
-	return io.ReadAll(r.HttpResponse.Body)
+
+	body, _ = io.ReadAll(r.HttpResponse.Body)
+	fmt.Println(r.Session.Transport.DisableCompression)
+
+	return body, nil
 }
 
 func (r *Response) CloseBody() error {

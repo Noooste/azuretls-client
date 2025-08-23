@@ -3,9 +3,10 @@ package azuretls
 import (
 	"compress/gzip"
 	"errors"
+	"io"
+
 	"github.com/andybalholm/brotli"
 	"github.com/klauspost/compress/zstd"
-	"io"
 )
 
 func DecodeResponseBody(body io.Reader, encoding string) ([]byte, error) {
