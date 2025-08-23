@@ -1,9 +1,10 @@
 package azuretls
 
 import (
+	"time"
+
 	http "github.com/Noooste/fhttp"
 	"github.com/Noooste/fhttp/http2"
-	"time"
 )
 
 func (s *Session) initTransport(browser string) (err error) {
