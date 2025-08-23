@@ -149,11 +149,7 @@ func validateAndSetProxyPort(parsed *url.URL, index int) error {
 		if parsed.Port() == "" {
 			parsed.Host = net.JoinHostPort(parsed.Host, "443")
 		}
-	case Socks5, Socks5H:
-		if parsed.Port() == "" {
-			parsed.Host = net.JoinHostPort(parsed.Host, "1080")
-		}
-	case Socks4:
+	case Socks4, Socks4A, Socks5, Socks5H:
 		if parsed.Port() == "" {
 			parsed.Host = net.JoinHostPort(parsed.Host, "1080")
 		}

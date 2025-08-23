@@ -24,7 +24,8 @@ const (
 	Socks5      = "socks5"
 	Socks5H     = "socks5h"
 
-	Socks4 = "socks4"
+	Socks4  = "socks4"
+	Socks4A = "socks4a"
 
 	defaultUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"
 
