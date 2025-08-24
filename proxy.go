@@ -17,7 +17,7 @@ import (
 	tls "github.com/Noooste/utls"
 	"golang.org/x/net/proxy"
 
-	_ "github.com/bdandy/go-socks4"
+	_ "github.com/Noooste/go-socks4"
 )
 
 // ProxyDialer interface for both single and chain proxy dialers
@@ -237,7 +237,13 @@ func (c *proxyDialer) handleSOCKSProxy(ctx context.Context, network, address str
 	if err != nil {
 		return nil, err
 	}
-	return dial.(proxy.ContextDialer).DialContext(ctx, network, address)
+
+	if fn, ok := dial.(proxy.ContextDialer); ok {
+		return fn.DialContext(ctx, network, address)
+	}
+
+	// in case the dialer does not support context
+	return dial.Dial(network, address)
 }
 
 // establishChainConnection establishes connection through all proxies in the chain

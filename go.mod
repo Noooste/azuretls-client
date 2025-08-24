@@ -4,15 +4,15 @@ go 1.24.0
 
 require (
 	github.com/Noooste/fhttp v1.0.15
+	github.com/Noooste/go-socks4 v0.0.2
 	github.com/Noooste/uquic-go v0.0.31
 	github.com/Noooste/utls v1.3.19
 	github.com/Noooste/websocket v1.0.3
 	github.com/andybalholm/brotli v1.2.0
-	github.com/bdandy/go-socks4 v1.2.3
 	github.com/fatih/color v1.18.0
 	github.com/klauspost/compress v1.18.0
 	github.com/txthinking/socks5 v0.0.0-20230325130024-4230056ae301
-	golang.org/x/net v0.42.0
+	golang.org/x/net v0.43.0
 )
 
 require (
@@ -34,11 +34,11 @@ require (
 	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/txthinking/runnergroup v0.0.0-20250224021307-5864ffeb65ae // indirect
 	go.uber.org/mock v0.5.2 // indirect
-	golang.org/x/crypto v0.40.0 // indirect
+	golang.org/x/crypto v0.41.0 // indirect
 	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6 // indirect
-	golang.org/x/mod v0.25.0 // indirect
+	golang.org/x/mod v0.26.0 // indirect
 	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
-	golang.org/x/text v0.27.0 // indirect
-	golang.org/x/tools v0.34.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
+	golang.org/x/tools v0.35.0 // indirect
 )
