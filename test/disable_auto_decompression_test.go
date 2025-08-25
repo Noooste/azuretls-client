@@ -3,7 +3,6 @@ package azuretls
 import (
 	"bytes"
 	"compress/gzip"
-	"fmt"
 	"strings"
 	"testing"
 
@@ -29,7 +28,6 @@ func TestDisableAutoDecompression_Enabled(t *testing.T) {
 		t.Fatal("TestDisableAutoDecompression_Enabled failed, expected Content-Encoding: gzip, got:", contentEncoding)
 	}
 
-	fmt.Println(response.String())
 	// The body should be compressed (gzip format starts with 0x1f, 0x8b)
 	if len(response.Body) < 2 || response.Body[0] != 0x1f || response.Body[1] != 0x8b {
 		t.Fatal("TestDisableAutoDecompression_Enabled failed, expected compressed gzip data, got non-gzip data")

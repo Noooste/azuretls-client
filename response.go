@@ -2,6 +2,7 @@ package azuretls
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -69,18 +70,17 @@ func (r *Response) ReadBody() (body []byte, err error) {
 		_ = r.HttpResponse.Body.Close()
 	}()
 
-	if r.isHTTP3 {
-		if r.Session.DisableAutoDecompression {
-			return io.ReadAll(r.HttpResponse.Body)
-		}
-
-		return DecodeResponseBody(r.HttpResponse.Body, r.HttpResponse.Header.Get("Content-Encoding"))
+	if r.Session.DisableAutoDecompression {
+		return io.ReadAll(r.HttpResponse.Body)
 	}
 
-	body, _ = io.ReadAll(r.HttpResponse.Body)
-	fmt.Println(r.Session.Transport.DisableCompression)
+	reader := http.DecompressBody(r.HttpResponse)
 
-	return body, nil
+	if reader == nil {
+		return nil, errors.New("failed to create decompression reader")
+	}
+
+	return io.ReadAll(reader)
 }
 
 func (r *Response) CloseBody() error {

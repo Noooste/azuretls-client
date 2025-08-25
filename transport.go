@@ -47,6 +47,7 @@ func (s *Session) initHTTP2(browser string) error {
 	tr.Priorities = defaultStreamPriorities(browser)
 	tr.Settings, tr.SettingsOrder = defaultHeaderSettings(browser)
 	tr.ConnectionFlow = defaultWindowsUpdate(browser)
+	tr.DisableCompression = s.Transport.DisableCompression
 
 	if s.HeaderPriority != nil {
 		tr.HeaderPriority = s.HeaderPriority
