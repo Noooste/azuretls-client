@@ -6,15 +6,18 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	http "github.com/Noooste/fhttp"
-	"github.com/Noooste/fhttp/http2"
-	tls "github.com/Noooste/utls"
-	"golang.org/x/net/proxy"
 	"io"
 	"net"
 	"net/url"
 	"strings"
 	"sync"
+
+	http "github.com/Noooste/fhttp"
+	"github.com/Noooste/fhttp/http2"
+	tls "github.com/Noooste/utls"
+	"golang.org/x/net/proxy"
+
+	_ "github.com/Noooste/go-socks4"
 )
 
 // ProxyDialer interface for both single and chain proxy dialers
@@ -146,7 +149,7 @@ func validateAndSetProxyPort(parsed *url.URL, index int) error {
 		if parsed.Port() == "" {
 			parsed.Host = net.JoinHostPort(parsed.Host, "443")
 		}
-	case Socks5, Socks5H:
+	case Socks4, Socks4A, Socks5, Socks5H:
 		if parsed.Port() == "" {
 			parsed.Host = net.JoinHostPort(parsed.Host, "1080")
 		}
@@ -234,7 +237,13 @@ func (c *proxyDialer) handleSOCKSProxy(ctx context.Context, network, address str
 	if err != nil {
 		return nil, err
 	}
-	return dial.(proxy.ContextDialer).DialContext(ctx, network, address)
+
+	if fn, ok := dial.(proxy.ContextDialer); ok {
+		return fn.DialContext(ctx, network, address)
+	}
+
+	// in case the dialer does not support context
+	return dial.Dial(network, address)
 }
 
 // establishChainConnection establishes connection through all proxies in the chain

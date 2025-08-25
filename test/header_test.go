@@ -1,11 +1,12 @@
 package azuretls_test
 
 import (
+	"regexp"
+	"testing"
+
 	"github.com/Noooste/azuretls-client"
 	"github.com/Noooste/azuretls-client/test/utils"
 	http "github.com/Noooste/fhttp"
-	"regexp"
-	"testing"
 )
 
 var userAgentReg = regexp.MustCompile(`user-agent`)
@@ -373,6 +374,7 @@ func TestHeaderOrderHTTP2(t *testing.T) {
 func TestHeaderOrderHTTP3(t *testing.T) {
 	session := azuretls.NewSession()
 	defer session.Close()
+	session.InsecureSkipVerify = true
 
 	expectedOrder := []string{"user-agent", "gg", "befor", "content-type", "accept", "after"}
 

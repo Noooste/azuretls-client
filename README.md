@@ -33,7 +33,7 @@ fmt.Println(response.String())
 - **🌐 Modern Protocols** - HTTP/1.1, HTTP/2, and HTTP/3 support
 - **🔧 TLS Fingerprinting** - Full control over ClientHello (JA3/JA4)
 - **🎭 Browser Emulation** - Chrome, Firefox, Safari, Edge presets
-- **🔗 Advanced Proxy Support** - HTTP, HTTPS, SOCKS5 with authentication.
+- **🔗 Advanced Proxy Support** - HTTP, HTTPS, SOCKS4, SOCKS5 with authentication.
 - **⛓️ Proxy Chaining** - Multi-hop proxy connections for enhanced anonymity
 - **📋 Header Control** - Precise ordering and custom headers
 - **🍪 Cookie Management** - Automatic handling with persistent jar
