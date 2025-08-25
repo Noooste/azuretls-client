@@ -1,9 +1,10 @@
 package azuretls
 
 import (
-	"github.com/Noooste/azuretls-client"
 	"strings"
 	"testing"
+
+	"github.com/Noooste/azuretls-client"
 )
 
 func TestDecompressBody_Gzip(t *testing.T) {
@@ -24,11 +25,11 @@ func TestDecompressBody_Gzip(t *testing.T) {
 	}
 }
 
-func tTestDecompressBody_Deflate(t *testing.T) {
+func TestDecompressBody_Deflate(t *testing.T) {
 	session := azuretls.NewSession()
 
 	session.OrderedHeaders = azuretls.OrderedHeaders{
-		{"Accept-Encoding", "gzip, deflate, br"},
+		{"Accept-Encoding", "deflate"},
 	}
 
 	response, err := session.Get("https://httpbin.org/deflate")

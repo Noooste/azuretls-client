@@ -2,11 +2,13 @@ package azuretls
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	http "github.com/Noooste/fhttp"
 	"io"
 	"net/url"
 	"sync"
+
+	http "github.com/Noooste/fhttp"
 )
 
 func (s *Session) buildResponse(response *Response, httpResponse *http.Response) (err error) {
@@ -67,10 +69,18 @@ func (r *Response) ReadBody() (body []byte, err error) {
 	defer func() {
 		_ = r.HttpResponse.Body.Close()
 	}()
-	if r.isHTTP3 {
-		return DecodeResponseBody(r.HttpResponse.Body, r.HttpResponse.Header.Get("Content-Encoding"))
+
+	if r.Session.DisableAutoDecompression {
+		return io.ReadAll(r.HttpResponse.Body)
 	}
-	return io.ReadAll(r.HttpResponse.Body)
+
+	reader := http.DecompressBody(r.HttpResponse)
+
+	if reader == nil {
+		return nil, errors.New("failed to create decompression reader")
+	}
+
+	return io.ReadAll(reader)
 }
 
 func (r *Response) CloseBody() error {

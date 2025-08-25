@@ -68,6 +68,7 @@ func (s *Session) NewHTTP3Transport() (*HTTP3Transport, error) {
 			TLSClientConfig:         tlsConfig,
 			QUICConfig:              quicConfig,
 			Dial:                    s.dialQUIC,
+			DisableCompression:      true,
 		},
 		transportsPool: make([]*quic.UTransport, 0, 100), // Preallocate pool size for performance
 		sess:           s,

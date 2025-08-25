@@ -33,6 +33,7 @@ func (s *Session) initHTTP1() {
 		MaxIdleConns:          1e3,
 		IdleConnTimeout:       90 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
+		DisableCompression:    true,
 	}
 }
 
@@ -46,6 +47,7 @@ func (s *Session) initHTTP2(browser string) error {
 	tr.Priorities = defaultStreamPriorities(browser)
 	tr.Settings, tr.SettingsOrder = defaultHeaderSettings(browser)
 	tr.ConnectionFlow = defaultWindowsUpdate(browser)
+	tr.DisableCompression = s.Transport.DisableCompression
 
 	if s.HeaderPriority != nil {
 		tr.HeaderPriority = s.HeaderPriority
