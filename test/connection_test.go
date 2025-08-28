@@ -1,13 +1,13 @@
 package azuretls_test
 
 import (
-	"fmt"
-	"github.com/Noooste/azuretls-client"
 	"net"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/Noooste/azuretls-client"
 )
 
 func TestHTTP1Conn(t *testing.T) {
@@ -45,7 +45,6 @@ func concurrency(session *azuretls.Session, wg *sync.WaitGroup, ok *int64) bool 
 		})
 
 		if err2 != nil {
-			fmt.Println(err2)
 			return false
 		}
 	}

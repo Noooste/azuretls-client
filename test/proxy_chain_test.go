@@ -3,9 +3,6 @@ package azuretls_test
 
 import (
 	"fmt"
-	"github.com/Noooste/azuretls-client"
-	http "github.com/Noooste/fhttp"
-	"github.com/Noooste/fhttp/httptest"
 	"io"
 	"net"
 	"net/url"
@@ -13,6 +10,10 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/Noooste/azuretls-client"
+	http "github.com/Noooste/fhttp"
+	"github.com/Noooste/fhttp/httptest"
 )
 
 // mockProxyServer creates a mock HTTP proxy server for testing
@@ -237,7 +238,7 @@ func TestChainProxyHTTP1(t *testing.T) {
 	// Force HTTP/1.1
 	response, err := session.Do(&azuretls.Request{
 		Method:     "GET",
-		Url:        "https://httpbin.org/ip",
+		Url:        "https://httpbingo.org/ip",
 		ForceHTTP1: true,
 	})
 
@@ -273,7 +274,7 @@ func TestChainProxyHTTP2(t *testing.T) {
 	}
 
 	// Use HTTP/2
-	response, err := session.Get("https://httpbin.org/ip")
+	response, err := session.Get("https://httpbingo.org/ip")
 
 	if err != nil {
 		t.Fatalf("Request failed: %v", err)
@@ -639,7 +640,7 @@ func TestChainProxyIntegrationSimple(t *testing.T) {
 	// but it demonstrates the chain proxy setup
 	session.SetTimeout(10 * time.Second)
 
-	response, err := session.Get("http://httpbin.org/ip")
+	response, err := session.Get("http://httpbingo.org/ip")
 	if err != nil {
 		// Log the error but don't fail the test since it might be network-related
 		t.Logf("Request through chain proxy failed (expected in restricted environments): %v", err)
@@ -753,7 +754,7 @@ func TestChainProxyErrorHandling(t *testing.T) {
 	// Test that requests fail appropriately
 	session.SetTimeout(5 * time.Second)
 
-	resp, err := session.Get("https://httpbin.org/ip")
+	resp, err := session.Get("https://httpbingo.org/ip")
 
 	// The test should expect either an error OR a 502 status code
 	if err == nil && resp.StatusCode == http.StatusOK {
@@ -812,7 +813,7 @@ func TestChainProxyConnectionReuse(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		t.Logf("Making request %d through proxy chain", i+1)
 
-		_, err := session.Get("http://httpbin.org/ip")
+		_, err := session.Get("http://httpbingo.org/ip")
 		if err != nil {
 			t.Logf("Request %d failed (expected in restricted environments): %v", i+1, err)
 		} else {

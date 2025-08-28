@@ -210,6 +210,8 @@ type Request struct {
 	startTime time.Time
 
 	deadline time.Time
+
+	disableDecompression bool
 }
 
 // Response encapsulates the received data and metadata from an HTTP(S)

@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
-	"github.com/Noooste/azuretls-client"
-	http "github.com/Noooste/fhttp"
 	"net/url"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Noooste/azuretls-client"
+	http "github.com/Noooste/fhttp"
 )
 
 func TestRequest_SetContext(t *testing.T) {
@@ -18,7 +18,7 @@ func TestRequest_SetContext(t *testing.T) {
 
 	req := &azuretls.Request{
 		Method: http.MethodGet,
-		Url:    "https://httpbin.org/delay/5",
+		Url:    "https://httpbingo.org/delay/5",
 	}
 
 	ctx := context.Background()
@@ -43,7 +43,7 @@ func TestRequest_NoCookies(t *testing.T) {
 
 	session.CookieJar.SetCookies(&url.URL{
 		Scheme: "https",
-		Host:   "httpbin.org",
+		Host:   "httpbingo.org",
 	}, []*http.Cookie{
 		{
 			Name:  "test",
@@ -53,7 +53,7 @@ func TestRequest_NoCookies(t *testing.T) {
 
 	req := &azuretls.Request{
 		Method:   http.MethodGet,
-		Url:      "https://httpbin.org/cookies",
+		Url:      "https://httpbingo.org/cookies",
 		NoCookie: true,
 	}
 
@@ -80,7 +80,7 @@ func TestRequest_TooManyRedirects(t *testing.T) {
 
 	req := &azuretls.Request{
 		Method:       http.MethodGet,
-		Url:          "https://httpbin.org/redirect/5",
+		Url:          "https://httpbingo.org/redirect/5",
 		MaxRedirects: 1,
 	}
 
@@ -116,7 +116,7 @@ func TestRequestBody(t *testing.T) {
 	for _, v := range m {
 		req := &azuretls.Request{
 			Method: http.MethodPost,
-			Url:    "https://httpbin.org/post",
+			Url:    "https://httpbingo.org/post",
 			Body:   v,
 		}
 
@@ -132,7 +132,7 @@ func TestRequestBody(t *testing.T) {
 			return
 		}
 
-		if !strings.Contains(string(resp.Body), "test") {
+		if !bytes.Contains(resp.Body, testB64) {
 			t.Fatal("TestRequestBody failed, expected: true, got: false")
 			return
 		}
@@ -142,7 +142,7 @@ func TestRequestBody(t *testing.T) {
 func TestRequest_BadBody(t *testing.T) {
 	req := &azuretls.Request{
 		Method: http.MethodPost,
-		Url:    "https://httpbin.org/post",
+		Url:    "https://httpbingo.org/post",
 		Body:   make(chan int),
 	}
 
@@ -164,7 +164,7 @@ func TestRequest_NoCookies2(t *testing.T) {
 
 	session.CookieJar.SetCookies(&url.URL{
 		Scheme: "https",
-		Host:   "httpbin.org",
+		Host:   "httpbingo.org",
 	}, []*http.Cookie{
 		{
 			Name:  "test",
@@ -174,7 +174,7 @@ func TestRequest_NoCookies2(t *testing.T) {
 
 	req := &azuretls.Request{
 		Method:   http.MethodGet,
-		Url:      "https://httpbin.org/cookies",
+		Url:      "https://httpbingo.org/cookies",
 		NoCookie: true,
 	}
 
@@ -202,16 +202,14 @@ func TestRequest_InsecureSkipVerify(t *testing.T) {
 	// commenting out this line will make the code work
 	session.InsecureSkipVerify = true
 
-	response, err := session.Get("https://www.google.com")
+	_, err := session.Get("https://www.google.com")
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(response.StatusCode)
-	response, err = session.Get("https://www.google.com")
+	_, err = session.Get("https://www.google.com")
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(response.StatusCode)
 }
 
 func TestHTTP1Request(t *testing.T) {
@@ -241,7 +239,7 @@ func TestRequestNoDuplicateContentLength(t *testing.T) {
 
 	req := &azuretls.Request{
 		Method: http.MethodPost,
-		Url:    "https://httpbin.org/post",
+		Url:    "https://httpbingo.org/post",
 		Body:   "test",
 		OrderedHeaders: azuretls.OrderedHeaders{
 			{"content-length", "4"},
@@ -260,12 +258,10 @@ func TestRequestNoDuplicateContentLength(t *testing.T) {
 		return
 	}
 
-	if !strings.Contains(string(resp.Body), "test") {
+	if !bytes.Contains(resp.Body, testB64) {
 		t.Fatal("TestRequestNoDuplicateContentLength failed, expected: true, got: false")
 		return
 	}
-
-	fmt.Println(resp.String())
 }
 
 func TestRequestDuplicateHeaders(t *testing.T) {

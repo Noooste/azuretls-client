@@ -1,17 +1,18 @@
 package azuretls_test
 
 import (
-	"github.com/Noooste/azuretls-client"
-	http "github.com/Noooste/fhttp"
 	"net/url"
 	"strings"
 	"testing"
+
+	"github.com/Noooste/azuretls-client"
+	http "github.com/Noooste/fhttp"
 )
 
 func TestRedirect(t *testing.T) {
 	session := azuretls.NewSession()
 
-	response, err := session.Get("https://httpbin.org/redirect/1")
+	response, err := session.Get("https://httpbingo.org/redirect/1")
 
 	if err != nil {
 		t.Fatal(err)
@@ -21,15 +22,15 @@ func TestRedirect(t *testing.T) {
 		t.Fatal("TestRedirect failed, expected: 200, got: ", response.StatusCode)
 	}
 
-	if response.Url != "https://httpbin.org/get" {
-		t.Fatal("TestRedirect failed, expected: https://httpbin.org/get, got: ", response.Url)
+	if response.Url != "https://httpbingo.org/get" {
+		t.Fatal("TestRedirect failed, expected: https://httpbingo.org/get, got: ", response.Url)
 	}
 }
 
 func TestRedirect2_307(t *testing.T) {
 	session := azuretls.NewSession()
 
-	response, err := session.Get("https://httpbin.org/status/307")
+	response, err := session.Get("https://httpbingo.org/status/307")
 
 	if err != nil {
 		t.Fatal(err)
@@ -39,8 +40,8 @@ func TestRedirect2_307(t *testing.T) {
 		t.Fatal("TestRedirect2_307 failed, expected: 200, got: ", response.StatusCode)
 	}
 
-	if response.Url != "https://httpbin.org/get" {
-		t.Fatal("TestRedirect2_307 failed, expected: https://httpbin.org/get, got: ", response.Url)
+	if response.Url != "https://httpbingo.org/get" {
+		t.Fatal("TestRedirect2_307 failed, expected: https://httpbingo.org/get, got: ", response.Url)
 	}
 }
 
@@ -93,7 +94,7 @@ func TestRedirectWithCheckRedirect(t *testing.T) {
 		return azuretls.ErrUseLastResponse
 	}
 
-	response, err := session.Get("https://httpbin.org/redirect/1")
+	response, err := session.Get("https://httpbingo.org/redirect/1")
 
 	if err != nil {
 		t.Fatal(err)

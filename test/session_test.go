@@ -5,13 +5,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/Noooste/azuretls-client"
-	http "github.com/Noooste/fhttp"
 	"log"
 	"os"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Noooste/azuretls-client"
+	http "github.com/Noooste/fhttp"
 )
 
 func TestNewSession(t *testing.T) {
@@ -97,9 +98,7 @@ func TestSession_SetTimeout(t *testing.T) {
 
 	session.SetTimeout(500 * time.Millisecond)
 
-	now := time.Now()
-	_, err := session.Get("https://httpbin.org/delay/5")
-	fmt.Println(time.Since(now))
+	_, err := session.Get("https://httpbingo.org/delay/5")
 
 	if err == nil || (err.Error() != "timeout" && !strings.Contains(err.Error(), "timeout")) {
 		t.Fatal("TestSession_SetTimeout failed, expected: timeout, got: ", err)
@@ -117,7 +116,7 @@ func TestSession_SetTimeout(t *testing.T) {
 func TestNewSessionWithContext(t *testing.T) {
 	req := &azuretls.Request{
 		Method: http.MethodGet,
-		Url:    "https://httpbin.org/delay/5",
+		Url:    "https://httpbingo.org/delay/5",
 	}
 
 	ctx := context.Background()
@@ -140,7 +139,7 @@ func TestNewSessionWithContext(t *testing.T) {
 func TestNewSessionWithContext2(t *testing.T) {
 	req := &azuretls.Request{
 		Method: http.MethodGet,
-		Url:    "https://httpbin.org/delay/5",
+		Url:    "https://httpbingo.org/delay/5",
 	}
 
 	ctx := context.Background()
@@ -171,7 +170,7 @@ func TestSession_Post(t *testing.T) {
 
 	req := &azuretls.Request{
 		Method: http.MethodPost,
-		Url:    "https://httpbin.org/post",
+		Url:    "https://httpbingo.org/post",
 		Body:   "test",
 	}
 
@@ -191,7 +190,7 @@ func TestSession_Post(t *testing.T) {
 		return
 	}
 
-	if !bytes.Contains(resp.Body, []byte("test")) {
+	if !bytes.Contains(resp.Body, testB64) {
 		t.Fatal("TestSession_Post failed, expected: not contains, got: ", resp.Body)
 		return
 	}
@@ -203,7 +202,7 @@ func TestSessionPreHook(t *testing.T) {
 
 	req := &azuretls.Request{
 		Method: http.MethodPost,
-		Url:    "https://httpbin.org/post",
+		Url:    "https://httpbingo.org/post",
 		Body:   "test",
 	}
 
@@ -228,7 +227,7 @@ func TestSessionPreHook(t *testing.T) {
 		return
 	}
 
-	if !bytes.Contains(resp.Body, []byte("test")) {
+	if !bytes.Contains(resp.Body, testB64) {
 		t.Fatal("TestSessionPreHook failed, expected: not contains, got: ", resp.Body)
 		return
 	}
@@ -245,7 +244,7 @@ func TestSessionPrehookError(t *testing.T) {
 
 	req := &azuretls.Request{
 		Method: http.MethodPost,
-		Url:    "https://httpbin.org/post",
+		Url:    "https://httpbingo.org/post",
 		Body:   "test",
 	}
 
@@ -291,7 +290,7 @@ func TestSessionCallback(t *testing.T) {
 	session.CallbackWithContext = func(ctx *azuretls.Context) {
 		withContextCalled = true
 		if ctx.Response.Url == "https://www.google.com" {
-			response, _ := session.Get("https://httpbin.org/get")
+			response, _ := session.Get("https://httpbingo.org/get")
 			ctx.Response = response
 		}
 	}
@@ -302,8 +301,8 @@ func TestSessionCallback(t *testing.T) {
 		return
 	}
 
-	if response.Url != "https://httpbin.org/get" {
-		t.Fatal("TestSessionCallback failed, expected: https://httpbin.org/get, got: ", response.Url)
+	if response.Url != "https://httpbingo.org/get" {
+		t.Fatal("TestSessionCallback failed, expected: https://httpbingo.org/get, got: ", response.Url)
 		return
 	}
 
@@ -329,28 +328,30 @@ func TestSessionCallback(t *testing.T) {
 	}
 }
 
+var testB64 = []byte("dGVzd")
+
 func TestSession_Put(t *testing.T) {
 	session := azuretls.NewSession()
 	session.Browser = azuretls.Firefox
 
-	resp, err := session.Put("https://httpbin.org/put", "test")
+	resp, err := session.Put("https://httpbingo.org/put", "test")
 	if err != nil {
-		t.Fatal("TestSession_Put failed, expected: nil, got: ", err)
+		t.Fatalf("TestSession_Put failed, expected: nil, got: %s", err)
 		return
 	}
 
 	if resp.StatusCode != 200 {
-		t.Fatal("TestSession_Put failed, expected: 200, got: ", resp.StatusCode)
+		t.Fatalf("TestSession_Put failed, expected: 200, got: %d", resp.StatusCode)
 		return
 	}
 
 	if resp.Body == nil {
-		t.Fatal("TestSession_Put failed, expected: not nil, got: ", resp.Body)
+		t.Fatalf("TestSession_Put failed, expected: not nil, got: %s", resp.Body)
 		return
 	}
 
-	if !bytes.Contains(resp.Body, []byte("test")) {
-		t.Fatal("TestSession_Put failed, expected: not contains, got: ", resp.Body)
+	if !bytes.Contains(resp.Body, testB64) {
+		t.Fatalf("TestSession_Put failed, expected: not contains, got: %s", resp.Body)
 		return
 	}
 }
@@ -359,7 +360,7 @@ func TestSession_Delete(t *testing.T) {
 	session := azuretls.NewSession()
 	session.Browser = azuretls.Firefox
 
-	resp, err := session.Delete("https://httpbin.org/delete", "test")
+	resp, err := session.Delete("https://httpbingo.org/delete", "test")
 	if err != nil {
 		t.Fatal("TestSession_Delete failed, expected: nil, got: ", err)
 		return
@@ -375,7 +376,7 @@ func TestSession_Delete(t *testing.T) {
 		return
 	}
 
-	if !bytes.Contains(resp.Body, []byte("test")) {
+	if !bytes.Contains(resp.Body, testB64) {
 		t.Fatal("TestSession_Delete failed, expected: not contains, got: ", resp.Body)
 		return
 	}
@@ -385,7 +386,7 @@ func TestSession_Patch(t *testing.T) {
 	session := azuretls.NewSession()
 	session.Browser = azuretls.Firefox
 
-	resp, err := session.Patch("https://httpbin.org/patch", "test")
+	resp, err := session.Patch("https://httpbingo.org/patch", "test")
 	if err != nil {
 		t.Fatal("TestSession_Patch failed, expected: nil, got: ", err)
 		return
@@ -401,7 +402,7 @@ func TestSession_Patch(t *testing.T) {
 		return
 	}
 
-	if !bytes.Contains(resp.Body, []byte("test")) {
+	if !bytes.Contains(resp.Body, testB64) {
 		t.Fatal("TestSession_Patch failed, expected: not contains, got: ", resp.Body)
 		return
 	}
@@ -411,7 +412,7 @@ func TestSession_Head(t *testing.T) {
 	session := azuretls.NewSession()
 	session.Browser = azuretls.Firefox
 
-	resp, err := session.Head("https://httpbin.org/get")
+	resp, err := session.Head("https://httpbingo.org/get")
 	if err != nil {
 		t.Fatal("TestSession_Head failed, expected: nil, got: ", err)
 		return
@@ -432,7 +433,7 @@ func TestSession_Options(t *testing.T) {
 	session := azuretls.NewSession()
 	session.Browser = azuretls.Firefox
 
-	resp, err := session.Options("https://httpbin.org/get", "test")
+	resp, err := session.Options("https://httpbingo.org/get", "test")
 	if err != nil {
 		t.Fatal("TestSession_Options failed, expected: nil, got: ", err)
 		return
@@ -454,7 +455,7 @@ func TestSession_Connect(t *testing.T) {
 		session := azuretls.NewSession()
 		session.Browser = azuretls.Firefox
 
-		err := session.Connect("https://httpbin.org/get")
+		err := session.Connect("https://httpbingo.org/get")
 
 		if err != nil {
 			t.Fatal("TestSession_Connect failed, expected: nil, got: ", err)
@@ -463,7 +464,7 @@ func TestSession_Connect(t *testing.T) {
 
 		conn := session.Connections.Get(&url.URL{
 			Scheme: "https",
-			Host:   "httpbin.org",
+			Host:   "httpbingo.org",
 		})
 
 		if conn == nil {
@@ -471,7 +472,7 @@ func TestSession_Connect(t *testing.T) {
 			return
 		}
 
-		resp, err := session.Get("https://httpbin.org/get")
+		resp, err := session.Get("https://httpbingo.org/get")
 
 		if err != nil {
 			t.Fatal("TestSession_Options failed, expected: nil, got: ", err)
@@ -490,7 +491,7 @@ func TestSession_Connect(t *testing.T) {
 
 		conn2 := session.Connections.Get(&url.URL{
 			Scheme: "https",
-			Host:   "httpbin.org",
+			Host:   "httpbingo.org",
 		})
 
 		if conn2 != conn {
@@ -507,7 +508,7 @@ func TestSession_TooManyRedirects(t *testing.T) {
 
 	session.MaxRedirects = 1
 
-	resp, err := session.Get("https://httpbin.org/redirect/2")
+	resp, err := session.Get("https://httpbingo.org/redirect/2")
 
 	if err == nil || !errors.Is(err, azuretls.ErrTooManyRedirects) {
 		t.Fatal("TestSession_TooManyRedirects failed, expected: too many Redirects, got: ", err)
@@ -523,11 +524,11 @@ func TestSession_TooManyRedirects(t *testing.T) {
 func TestSession_SetContext(t *testing.T) {
 	/*
 		session := azuretls.NewSession()
-		session.Get("https://httpbin.org/get")
+		session.Get("https://httpbingo.org/get")
 
 		conn := session.Connections.Get(&url.URL{
 			Scheme: "https",
-			Host:   "httpbin.org",
+			Host:   "httpbingo.org",
 		})
 
 		if conn == nil {
@@ -546,12 +547,12 @@ func TestSession_SetContext(t *testing.T) {
 
 		session.Connections.Remove(&url.URL{
 			Scheme: "https",
-			Host:   "httpbin.org",
+			Host:   "httpbingo.org",
 		})
 
 		if session.Connections.Get(&url.URL{
 			Scheme: "https",
-			Host:   "httpbin.org",
+			Host:   "httpbingo.org",
 		}) == conn {
 			t.Fatal("TestSession_SetContext failed, expected: nil, got: not nil")
 			return
@@ -559,18 +560,18 @@ func TestSession_SetContext(t *testing.T) {
 
 		session.Connections.Set(&url.URL{
 			Scheme: "https",
-			Host:   "httpbin.org",
+			Host:   "httpbingo.org",
 		}, conn)
 
 		if getConn := session.Connections.Get(&url.URL{
 			Scheme: "https",
-			Host:   "httpbin.org",
+			Host:   "httpbingo.org",
 		}); getConn != conn {
 			t.Fatal("TestSession_SetContext failed, expected: ", conn, ", got: ", getConn)
 			return
 		}
 
-		session.Get("https://httpbin.org/get")
+		session.Get("https://httpbingo.org/get")
 
 		if conn.GetContext() != ctx {
 			t.Fatal("TestSession_SetContext failed, expected: ", ctx, ", got: ", conn.GetContext())
@@ -592,7 +593,7 @@ func TestSession_ContextError(t *testing.T) {
 		} else {
 			fmt.Println("no match")
 			session1 := azuretls.NewSessionWithContext(exampleContextFromCtx)
-			_, err := session1.Get("https://httpbin.org/headers")
+			_, err := session1.Get("https://httpbingo.org/headers")
 
 			if err != nil {
 				log.Fatal(err)
@@ -600,7 +601,7 @@ func TestSession_ContextError(t *testing.T) {
 		}
 	}
 
-	_, _ = session.Get("https://httpbin.org/headers")
+	_, _ = session.Get("https://httpbingo.org/headers")
 }
 
 func TestSession_Timeout(t *testing.T) {
@@ -619,11 +620,9 @@ func TestSession_Timeout(t *testing.T) {
 		return
 	}
 
-	response, err := session.Get("https://www.cloudflare.com/cdn-cgi/trace")
+	_, err = session.Get("https://www.cloudflare.com/cdn-cgi/trace")
 
 	if err != nil {
 		fmt.Println(err)
-	} else {
-		fmt.Println(response.StatusCode, string(response.Body))
 	}
 }
