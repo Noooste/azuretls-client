@@ -1,13 +1,13 @@
 package azuretls_test
 
 import (
-	"fmt"
-	"github.com/Noooste/azuretls-client"
 	"log"
 	"os"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/Noooste/azuretls-client"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -22,8 +22,6 @@ func TestDefaultConfig(t *testing.T) {
 	if response.StatusCode != 200 {
 		t.Fatal("Expected 200")
 	}
-
-	fmt.Println(response.String())
 }
 
 func TestChrome(t *testing.T) {

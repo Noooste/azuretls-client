@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"net/url"
 	"strings"
 	"testing"
@@ -203,16 +202,14 @@ func TestRequest_InsecureSkipVerify(t *testing.T) {
 	// commenting out this line will make the code work
 	session.InsecureSkipVerify = true
 
-	response, err := session.Get("https://www.google.com")
+	_, err := session.Get("https://www.google.com")
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(response.StatusCode)
 	response, err = session.Get("https://www.google.com")
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(response.StatusCode)
 }
 
 func TestHTTP1Request(t *testing.T) {
@@ -265,8 +262,6 @@ func TestRequestNoDuplicateContentLength(t *testing.T) {
 		t.Fatal("TestRequestNoDuplicateContentLength failed, expected: true, got: false")
 		return
 	}
-
-	fmt.Println(resp.String())
 }
 
 func TestRequestDuplicateHeaders(t *testing.T) {

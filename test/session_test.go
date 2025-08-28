@@ -98,9 +98,7 @@ func TestSession_SetTimeout(t *testing.T) {
 
 	session.SetTimeout(500 * time.Millisecond)
 
-	now := time.Now()
 	_, err := session.Get("https://httpbingo.org/delay/5")
-	fmt.Println(time.Since(now))
 
 	if err == nil || (err.Error() != "timeout" && !strings.Contains(err.Error(), "timeout")) {
 		t.Fatal("TestSession_SetTimeout failed, expected: timeout, got: ", err)
@@ -622,11 +620,9 @@ func TestSession_Timeout(t *testing.T) {
 		return
 	}
 
-	response, err := session.Get("https://www.cloudflare.com/cdn-cgi/trace")
+	_, err = session.Get("https://www.cloudflare.com/cdn-cgi/trace")
 
 	if err != nil {
 		fmt.Println(err)
-	} else {
-		fmt.Println(response.StatusCode, string(response.Body))
 	}
 }

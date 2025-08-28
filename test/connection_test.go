@@ -1,7 +1,6 @@
 package azuretls_test
 
 import (
-	"fmt"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -46,7 +45,6 @@ func concurrency(session *azuretls.Session, wg *sync.WaitGroup, ok *int64) bool 
 		})
 
 		if err2 != nil {
-			fmt.Println(err2)
 			return false
 		}
 	}
