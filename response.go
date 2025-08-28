@@ -2,7 +2,6 @@ package azuretls
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -19,6 +18,7 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 	var (
 		wg      sync.WaitGroup
 		headers = make(http.Header, len(httpResponse.Header))
+		body    []byte
 	)
 
 	if !response.IgnoreBody {
@@ -27,10 +27,12 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 		go func() {
 			defer wg.Done()
 
-			if readBody, readErr := response.ReadBody(); readErr == nil {
-				response.Body = readBody
-			} else {
+			var readErr error
+			body, readErr = response.ReadBody(httpResponse.Body)
+
+			if readErr != nil {
 				err = readErr
+				return
 			}
 		}()
 	}
@@ -62,25 +64,26 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 
 	wg.Wait()
 
+	if err != nil {
+		return err
+	}
+
+	response.Body = body
+
 	return
 }
 
-func (r *Response) ReadBody() (body []byte, err error) {
+func (r *Response) ReadBody(in io.ReadCloser) (out []byte, err error) {
 	defer func() {
-		_ = r.HttpResponse.Body.Close()
+		_ = in.Close()
 	}()
 
 	if r.Session.DisableAutoDecompression {
-		return io.ReadAll(r.HttpResponse.Body)
+		return io.ReadAll(in)
 	}
 
-	reader := http.DecompressBody(r.HttpResponse)
-
-	if reader == nil {
-		return nil, errors.New("failed to create decompression reader")
-	}
-
-	return io.ReadAll(reader)
+	ce := r.Header.Get("Content-Encoding")
+	return DecodeResponseBody(in, ce)
 }
 
 func (r *Response) CloseBody() error {

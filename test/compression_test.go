@@ -14,7 +14,7 @@ func TestDecompressBody_Gzip(t *testing.T) {
 		{"Accept-Encoding", "gzip"},
 	}
 
-	response, err := session.Get("https://httpbin.org/gzip")
+	response, err := session.Get("https://httpbingo.org/gzip")
 
 	if err != nil {
 		t.Fatal(err)
@@ -32,7 +32,7 @@ func TestDecompressBody_Deflate(t *testing.T) {
 		{"Accept-Encoding", "deflate"},
 	}
 
-	response, err := session.Get("https://httpbin.org/deflate")
+	response, err := session.Get("https://httpbingo.org/deflate")
 
 	if err != nil {
 		t.Fatal(err)
