@@ -14,6 +14,16 @@ import (
 
 func DecodeResponseBody(body io.ReadCloser, encoding string) ([]byte, error) {
 	var reader io.Reader
+	defer func() {
+		if reader != nil {
+			if closer, ok := reader.(io.Closer); ok {
+				_ = closer.Close()
+			}
+		} else {
+			_ = body.Close()
+		}
+	}()
+
 	switch encoding {
 	case "gzip":
 		reader = &gzipReader{
