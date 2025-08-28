@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	http "github.com/Noooste/fhttp"
 	"io"
 	"strings"
 	"time"
+
+	http "github.com/Noooste/fhttp"
 )
 
 func (r *Request) CloseBody() {
@@ -118,6 +119,7 @@ func (s *Session) buildRequest(ctx context.Context, req *Request) (err error) {
 		req.PHeader = s.PHeader
 	}
 
+	req.disableDecompression = s.DisableAutoDecompression
 	req.formatHeader()
 
 	if !req.NoCookie {

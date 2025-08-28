@@ -1,10 +1,11 @@
 package azuretls
 
 import (
-	http "github.com/Noooste/fhttp"
 	"net/url"
 	"sort"
 	"strings"
+
+	http "github.com/Noooste/fhttp"
 )
 
 // OrderedHeaders is a slice of headers.
@@ -144,6 +145,7 @@ func (oh *OrderedHeaders) ToHeader() http.Header {
 func (r *Request) formatHeader() {
 	var (
 		setUserAgent        = true
+		setAcceptEncoding   = true
 		setSensitiveHeaders = true
 	)
 
@@ -175,6 +177,10 @@ func (r *Request) formatHeader() {
 
 			if strings.ToLower(key) == "content-length" {
 				continue
+			}
+
+			if strings.ToLower(key) == "accept-encoding" {
+				setAcceptEncoding = false
 			}
 
 			if len(el) == 1 {
@@ -227,6 +233,10 @@ func (r *Request) formatHeader() {
 		}
 
 		r.HttpRequest.Header.Set("User-Agent", r.ua)
+	}
+
+	if setAcceptEncoding && !r.disableDecompression {
+		r.HttpRequest.Header.Set("Accept-Encoding", "gzip, deflate, br")
 	}
 
 	if setSensitiveHeaders {
