@@ -1,10 +1,16 @@
-package azuretls
+package azuretls_test
 
 import (
+	"bytes"
+	"compress/gzip"
+	"compress/zlib"
+	"io"
 	"strings"
 	"testing"
 
 	"github.com/Noooste/azuretls-client"
+	"github.com/andybalholm/brotli"
+	"github.com/klauspost/compress/zstd"
 )
 
 func TestDecompressBody_Gzip(t *testing.T) {
@@ -58,5 +64,168 @@ func TestDecompressBody_Brotli(t *testing.T) {
 
 	if !strings.Contains(string(response.Body), "\"brotli\": true") {
 		t.Fatal("TestDecompressBody_Brotli failed, expected: ", "\"brotli\": true", ", got: ", string(response.Body))
+	}
+}
+
+// Local compression tests
+func createGzipData(data []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	gzipWriter := gzip.NewWriter(&buf)
+	if _, err := gzipWriter.Write(data); err != nil {
+		return nil, err
+	}
+	if err := gzipWriter.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func createBrotliData(data []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	brotliWriter := brotli.NewWriter(&buf)
+	if _, err := brotliWriter.Write(data); err != nil {
+		return nil, err
+	}
+	if err := brotliWriter.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func createZlibData(data []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	zlibWriter := zlib.NewWriter(&buf)
+	if _, err := zlibWriter.Write(data); err != nil {
+		return nil, err
+	}
+	if err := zlibWriter.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func createZstdData(data []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	zstdWriter, err := zstd.NewWriter(&buf)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := zstdWriter.Write(data); err != nil {
+		return nil, err
+	}
+	if err := zstdWriter.Close(); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func TestDecodeResponseBody_Local_Gzip(t *testing.T) {
+	testData := []byte("Hello, World! This is a test message for gzip compression.")
+
+	compressedData, err := createGzipData(testData)
+	if err != nil {
+		t.Fatalf("Failed to create gzip data: %v", err)
+	}
+
+	body := io.NopCloser(bytes.NewReader(compressedData))
+	result, err := azuretls.DecodeResponseBody(body, "gzip")
+
+	if err != nil {
+		t.Fatalf("DecodeResponseBody failed: %v", err)
+	}
+
+	if !bytes.Equal(result, testData) {
+		t.Fatalf("Expected %s, got %s", string(testData), string(result))
+	}
+}
+
+func TestDecodeResponseBody_Local_Brotli(t *testing.T) {
+	testData := []byte("Hello, World! This is a test message for brotli compression.")
+
+	compressedData, err := createBrotliData(testData)
+	if err != nil {
+		t.Fatalf("Failed to create brotli data: %v", err)
+	}
+
+	body := io.NopCloser(bytes.NewReader(compressedData))
+	result, err := azuretls.DecodeResponseBody(body, "br")
+
+	if err != nil {
+		t.Fatalf("DecodeResponseBody failed: %v", err)
+	}
+
+	if !bytes.Equal(result, testData) {
+		t.Fatalf("Expected %s, got %s", string(testData), string(result))
+	}
+}
+
+func TestDecodeResponseBody_Local_Deflate(t *testing.T) {
+	testData := []byte("Hello, World! This is a test message for deflate compression.")
+
+	compressedData, err := createZlibData(testData)
+	if err != nil {
+		t.Fatalf("Failed to create zlib data: %v", err)
+	}
+
+	body := io.NopCloser(bytes.NewReader(compressedData))
+	result, err := azuretls.DecodeResponseBody(body, "deflate")
+
+	if err != nil {
+		t.Fatalf("DecodeResponseBody failed: %v", err)
+	}
+
+	if !bytes.Equal(result, testData) {
+		t.Fatalf("Expected %s, got %s", string(testData), string(result))
+	}
+}
+
+func TestDecodeResponseBody_Local_Zstd(t *testing.T) {
+	testData := []byte("Hello, World! This is a test message for zstd compression.")
+
+	compressedData, err := createZstdData(testData)
+	if err != nil {
+		t.Fatalf("Failed to create zstd data: %v", err)
+	}
+
+	body := io.NopCloser(bytes.NewReader(compressedData))
+	result, err := azuretls.DecodeResponseBody(body, "zstd")
+
+	if err != nil {
+		t.Fatalf("DecodeResponseBody failed: %v", err)
+	}
+
+	if !bytes.Equal(result, testData) {
+		t.Fatalf("Expected %s, got %s", string(testData), string(result))
+	}
+}
+
+func TestDecodeResponseBody_Local_NoEncoding(t *testing.T) {
+	testData := []byte("Hello, World! No compression here.")
+
+	body := io.NopCloser(bytes.NewReader(testData))
+	result, err := azuretls.DecodeResponseBody(body, "")
+
+	if err != nil {
+		t.Fatalf("DecodeResponseBody failed: %v", err)
+	}
+
+	if !bytes.Equal(result, testData) {
+		t.Fatalf("Expected %s, got %s", string(testData), string(result))
+	}
+}
+
+func TestDecodeResponseBody_Local_UnsupportedEncoding(t *testing.T) {
+	testData := []byte("Hello, World!")
+
+	body := io.NopCloser(bytes.NewReader(testData))
+	_, err := azuretls.DecodeResponseBody(body, "unsupported")
+
+	if err == nil {
+		t.Fatal("Expected error for unsupported encoding")
+	}
+
+	expectedError := "Unsupported encoding: unsupported"
+	if err.Error() != expectedError {
+		t.Fatalf("Expected error %q, got %q", expectedError, err.Error())
 	}
 }
