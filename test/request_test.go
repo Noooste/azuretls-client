@@ -206,7 +206,7 @@ func TestRequest_InsecureSkipVerify(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	response, err = session.Get("https://www.google.com")
+	_, err = session.Get("https://www.google.com")
 	if err != nil {
 		panic(err)
 	}
