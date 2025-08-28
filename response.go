@@ -83,6 +83,7 @@ func (r *Response) ReadBody(in io.ReadCloser) (out []byte, err error) {
 	}
 
 	ce := r.Header.Get("Content-Encoding")
+
 	return DecodeResponseBody(in, ce)
 }
 

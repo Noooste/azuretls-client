@@ -14,6 +14,7 @@ import (
 
 func DecodeResponseBody(body io.ReadCloser, encoding string) ([]byte, error) {
 	var reader io.Reader
+
 	defer func() {
 		if reader != nil {
 			if closer, ok := reader.(io.Closer); ok {
@@ -26,9 +27,7 @@ func DecodeResponseBody(body io.ReadCloser, encoding string) ([]byte, error) {
 
 	switch encoding {
 	case "gzip":
-		reader = &gzipReader{
-			body: body,
-		}
+		return decodeGzip(body)
 	case "br":
 		return decodeBrotli(body)
 	case "deflate":
@@ -61,6 +60,16 @@ func decodeBrotli(body io.Reader) ([]byte, error) {
 	return data, nil
 }
 
+func decodeGzip(body io.Reader) ([]byte, error) {
+	gzipReader, err := gzip.NewReader(body)
+	if err != nil {
+		return nil, err
+	}
+	defer gzipReader.Close()
+
+	return io.ReadAll(gzipReader)
+}
+
 // zstdReader wraps a response body so it can lazily
 // call zstd.NewReader on the first call to Read
 type zstdReader struct {
@@ -90,32 +99,6 @@ func (zs *zstdReader) Close() error {
 
 	// Close body and return error
 	return zs.body.Close()
-}
-
-// gzipReader wraps a response body so it can lazily
-// call gzip.NewReader on the first call to Read
-type gzipReader struct {
-	body io.ReadCloser // underlying Response.Body
-	zr   *gzip.Reader  // lazily-initialized gzip reader
-	zerr error         // sticky error
-}
-
-func (gz *gzipReader) Read(p []byte) (n int, err error) {
-	if gz.zerr != nil {
-		return 0, gz.zerr
-	}
-	if gz.zr == nil {
-		gz.zr, err = gzip.NewReader(gz.body)
-		if err != nil {
-			gz.zerr = err
-			return 0, err
-		}
-	}
-	return gz.zr.Read(p)
-}
-
-func (gz *gzipReader) Close() error {
-	return gz.body.Close()
 }
 
 // brReader lazily wraps a response body into an
