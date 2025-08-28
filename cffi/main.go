@@ -45,6 +45,7 @@ typedef struct {
 import "C"
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -76,6 +77,7 @@ type RequestData struct {
 	Method             string            `json:"method,omitempty"`
 	URL                string            `json:"url"`
 	Body               interface{}       `json:"body,omitempty"`
+	BodyB64            string            `json:"body_b64,omitempty"` // Base64 encoded binary body
 	Headers            map[string]string `json:"headers,omitempty"`
 	OrderedHeaders     [][]string        `json:"ordered_headers,omitempty"`
 	Proxy              string            `json:"proxy,omitempty"`
@@ -303,6 +305,58 @@ func azuretls_session_do(sessionID uintptr, requestJSON *C.char) *C.CFfiResponse
 		req.Header = make(map[string][]string)
 		for k, v := range reqData.Headers {
 			req.Header[k] = []string{v}
+		}
+	}
+
+	// Decode Base64 body if present
+	if reqData.BodyB64 != "" {
+		bodyBytes, err := base64.StdEncoding.DecodeString(reqData.BodyB64)
+		if err == nil {
+			req.Body = bodyBytes
+		}
+	}
+
+	// Execute request
+	resp, err := session.Do(req)
+	return createCResponse(resp, err)
+}
+
+//export azuretls_session_do_bytes
+func azuretls_session_do_bytes(sessionID uintptr, method *C.char, url *C.char, headersJSON *C.char, body *C.uchar, bodyLen C.size_t) *C.CFfiResponse {
+	session, exists := sessionManager.getSession(sessionID)
+	if !exists {
+		return createCResponse(nil, fmt.Errorf("session not found"))
+	}
+
+	if method == nil || url == nil {
+		return createCResponse(nil, fmt.Errorf("method and URL are required"))
+	}
+
+	methodStr := cStringToGoString(method)
+	urlStr := cStringToGoString(url)
+
+	// Create request
+	req := &azuretls.Request{
+		Method: methodStr,
+		Url:    urlStr,
+	}
+
+	// Handle binary body
+	if body != nil && bodyLen > 0 {
+		// Convert C bytes to Go slice
+		bodyBytes := C.GoBytes(unsafe.Pointer(body), C.int(bodyLen))
+		req.Body = bodyBytes
+	}
+
+	// Parse headers if provided
+	if headersJSON != nil {
+		headersStr := cStringToGoString(headersJSON)
+		var headers map[string]string
+		if err := json.Unmarshal([]byte(headersStr), &headers); err == nil {
+			req.Header = make(map[string][]string)
+			for k, v := range headers {
+				req.Header[k] = []string{v}
+			}
 		}
 	}
 
