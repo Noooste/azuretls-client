@@ -281,8 +281,9 @@ func TestRequestDuplicateHeaders(t *testing.T) {
 			Body:    "hello",
 			TimeOut: 3 * time.Second,
 		})
+
 		if err != nil {
-			panic(err)
+			t.Fatalf("TestRequestDuplicateHeaders failed, expected: nil, got: %v", err)
 		}
 	}
 }
