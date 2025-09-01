@@ -19,7 +19,7 @@ jobs:
         run: |
           go test -v ./test -covermode=count -coverpkg=./... -coverprofile=coverage.txt
         env:
-        SECURE_PROXY: ${{ secrets.SECURE_PROXY }}
+          SECURE_PROXY: ${{ secrets.SECURE_PROXY }}
           NON_SECURE_PROXY: ${{ secrets.NON_SECURE_PROXY }}
           SOCKS5_PROXY: ${{ secrets.SOCKS5_PROXY }}
 
