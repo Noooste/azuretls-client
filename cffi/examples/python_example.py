@@ -23,7 +23,11 @@ class AzureTLSResponse:
         self.error = None
 
         if c_response.contents.body:
-            self.body = ctypes.string_at(c_response.contents.body, c_response.contents.body_len).decode('utf-8')
+            body = ctypes.string_at(c_response.contents.body, c_response.contents.body_len)
+            try:
+                self.body = body.decode('utf-8')
+            except UnicodeDecodeError:
+                self.body = body
 
         if c_response.contents.headers:
             headers_str = ctypes.string_at(c_response.contents.headers).decode('utf-8')
@@ -40,7 +44,7 @@ class CFfiResponse(ctypes.Structure):
     """C structure for response"""
     _fields_ = [
         ("status_code", ctypes.c_int),
-        ("body", ctypes.c_char_p),
+        ("body", ctypes.c_void_p),
         ("body_len", ctypes.c_int),
         ("headers", ctypes.c_char_p),
         ("url", ctypes.c_char_p),
