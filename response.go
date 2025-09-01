@@ -16,26 +16,9 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 	response.Session = s
 
 	var (
-		wg      sync.WaitGroup
 		headers = make(http.Header, len(httpResponse.Header))
 		body    []byte
 	)
-
-	if !response.IgnoreBody {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
-			var readErr error
-			body, readErr = response.ReadBody(httpResponse.Body)
-
-			if readErr != nil {
-				err = readErr
-				return
-			}
-		}()
-	}
 
 	for key, value := range httpResponse.Header {
 		headers[key] = value
@@ -43,37 +26,93 @@ func (s *Session) buildResponse(response *Response, httpResponse *http.Response)
 
 	response.StatusCode = httpResponse.StatusCode
 	response.Status = httpResponse.Status
-
 	response.Header = headers
 
-	var u *url.URL
-	if response.Url == "" {
-		response.Url = httpResponse.Request.URL.String()
-		u = httpResponse.Request.URL
+	encoding := httpResponse.Header.Get("Content-Encoding")
+
+	if !response.IgnoreBody {
+		contentLength := httpResponse.ContentLength
+
+		// Use goroutine for large bodies or unknown size to overlap I/O with other processing
+		if contentLength < 0 || contentLength > 65536 { // 64KB threshold
+			var wg sync.WaitGroup
+			var readErr error
+
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				body, readErr = response.ReadBody(httpResponse.Body, encoding)
+			}()
+
+			// Process other response data while body reads
+			var u *url.URL
+			if response.Url == "" {
+				response.Url = httpResponse.Request.URL.String()
+				u = httpResponse.Request.URL
+			} else {
+				u, _ = url.Parse(response.Url)
+			}
+
+			if !response.Request.NoCookie {
+				cookies := httpResponse.Cookies()
+				s.CookieJar.SetCookies(u, cookies)
+				response.Cookies = GetCookiesMap(cookies)
+			}
+
+			response.ContentLength = httpResponse.ContentLength
+
+			wg.Wait()
+
+			if readErr != nil {
+				return readErr
+			}
+		} else {
+			// Small body - read synchronously to avoid goroutine overhead
+			body, err = response.ReadBody(httpResponse.Body, encoding)
+			if err != nil {
+				return err
+			}
+
+			var u *url.URL
+			if response.Url == "" {
+				response.Url = httpResponse.Request.URL.String()
+				u = httpResponse.Request.URL
+			} else {
+				u, _ = url.Parse(response.Url)
+			}
+
+			if !response.Request.NoCookie {
+				cookies := httpResponse.Cookies()
+				s.CookieJar.SetCookies(u, cookies)
+				response.Cookies = GetCookiesMap(cookies)
+			}
+
+			response.ContentLength = httpResponse.ContentLength
+		}
 	} else {
-		u, _ = url.Parse(response.Url)
-	}
+		// Handle case when body is ignored
+		var u *url.URL
+		if response.Url == "" {
+			response.Url = httpResponse.Request.URL.String()
+			u = httpResponse.Request.URL
+		} else {
+			u, _ = url.Parse(response.Url)
+		}
 
-	if !response.Request.NoCookie {
-		cookies := httpResponse.Cookies()
-		s.CookieJar.SetCookies(u, cookies)
-		response.Cookies = GetCookiesMap(cookies)
-	}
+		if !response.Request.NoCookie {
+			cookies := httpResponse.Cookies()
+			s.CookieJar.SetCookies(u, cookies)
+			response.Cookies = GetCookiesMap(cookies)
+		}
 
-	response.ContentLength = httpResponse.ContentLength
-
-	wg.Wait()
-
-	if err != nil {
-		return err
+		response.ContentLength = httpResponse.ContentLength
 	}
 
 	response.Body = body
-
-	return
+	return nil
 }
 
-func (r *Response) ReadBody(in io.ReadCloser) (out []byte, err error) {
+func (r *Response) ReadBody(in io.ReadCloser, encoding string) (out []byte, err error) {
 	defer func() {
 		_ = in.Close()
 	}()
@@ -82,9 +121,7 @@ func (r *Response) ReadBody(in io.ReadCloser) (out []byte, err error) {
 		return io.ReadAll(in)
 	}
 
-	ce := r.Header.Get("Content-Encoding")
-
-	return DecodeResponseBody(in, ce)
+	return DecodeResponseBody(in, encoding)
 }
 
 func (r *Response) CloseBody() error {
