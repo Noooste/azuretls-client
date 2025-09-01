@@ -372,3 +372,104 @@ class AzureTLSSession:
 
     def __del__(self):
         self.close()
+
+
+def main():
+    """Example usage"""
+    print("AzureTLS Python Example")
+    print("=" * 40)
+
+    # Create session with configuration
+    config = {
+        "browser": "chrome",
+        "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "timeout_ms": 30000,
+        "max_redirects": 10,
+    }
+
+    try:
+        with AzureTLSSession(config) as session:
+            # Example 1: Simple GET request
+            print("\n1. Simple GET request:")
+            response = session.get("https://httpbin.org/get")
+            if response.error:
+                print(f"Error: {response.error}")
+            else:
+                print(f"Status: {response.status_code}")
+                print(f"URL: {response.url}")
+                if response.body:
+                    body_json = json.loads(response.body)
+                    print(f"User-Agent: {body_json.get('headers', {}).get('User-Agent', 'N/A')}")
+
+            # Example 2: POST request with JSON body
+            print("\n2. POST request with JSON:")
+            post_data = json.dumps({"message": "Hello from AzureTLS Python!"})
+            response = session.post("https://httpbin.org/post", body=post_data, headers={
+                "Content-Type": "application/json"
+            })
+            if response.error:
+                print(f"Error: {response.error}")
+            else:
+                print(f"Status: {response.status_code}")
+                if response.body:
+                    body_json = json.loads(response.body)
+                    print(f"Received data: {body_json.get('json', {})}")
+
+            # Example 3: JA3 fingerprinting
+            print("\n3. Applying JA3 fingerprint:")
+            try:
+                ja3 = "771,4865-4866-4867-49195-49199-49196-49200-52393-52392-49171-49172-156-157-47-53,0-23-65281-10-11-35-16-5-13-18-51-45-43-27-17513,29-23-24,0"
+                session.apply_ja3(ja3, "chrome")
+                print("JA3 fingerprint applied successfully")
+
+                response = session.get("https://tls.peet.ws/api/all")
+                if response.error:
+                    print(f"Error: {response.error}")
+                else:
+                    print(f"TLS fingerprint test status: {response.status_code}")
+            except Exception as e:
+                print(f"JA3 error: {e}")
+
+            # Example 4: HTTP/2 fingerprinting
+            print("\n4. Applying HTTP/2 fingerprint:")
+            try:
+                http2_fp = "1:65536,2:0,3:1000,4:6291456,6:262144|15663105|0|m,s,a,p"
+                session.apply_http2(http2_fp)
+                print("HTTP/2 fingerprint applied successfully")
+            except Exception as e:
+                print(f"HTTP/2 error: {e}")
+
+            # print("\n5. Using proxy:")
+            # try:
+            #     session.set_proxy("http://proxy.example.com:8080")
+            #     response = session.get("https://httpbin.org/ip")
+            #     print(f"IP with proxy: {response.body}")
+            #     session.clear_proxy()
+            # except Exception as e:
+            #     print(f"Proxy error: {e}")
+
+            # Example 6: Custom headers with order
+            print("\n6. Custom ordered headers:")
+            ordered_headers = [
+                ["User-Agent", "Custom-Agent/1.0"],
+                ["Accept", "application/json"],
+                ["X-Custom-Header", "CustomValue"]
+            ]
+            response = session.get("https://tls.peet.ws/api/all", ordered_headers=ordered_headers)
+            if response.error:
+                print(f"Error: {response.error}")
+            else:
+                print(f"Status: {response.status_code}")
+                if response.body:
+                    body_json = json.loads(response.body)
+                    print(body_json)
+                    print(f"Headers received by server: {body_json.get('headers', {})}")
+
+            print("\nExample completed successfully!")
+
+    except Exception as e:
+        print(f"Error: {e}")
+
+
+if __name__ == "__main__":
+    main()
