@@ -4,66 +4,182 @@ import (
 	"bytes"
 	"compress/gzip"
 	"compress/zlib"
+	"fmt"
 	"io"
+	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Noooste/azuretls-client"
 	"github.com/andybalholm/brotli"
 	"github.com/klauspost/compress/zstd"
 )
 
+func init() {
+	go startServer()
+}
+
+const testServerURL = "http://localhost:8080"
+
+// startTestServer starts the local test server if it's not already running
+func startTestServer(t *testing.T) {
+	// Check if server is already running
+	resp, err := http.Get(testServerURL)
+	if err == nil {
+		resp.Body.Close()
+		return // Server is already running
+	}
+
+	// Wait for server to be ready
+	for i := 0; i < 10; i++ {
+		time.Sleep(100 * time.Millisecond)
+		resp, err := http.Get(testServerURL)
+		if err == nil {
+			resp.Body.Close()
+			return
+		}
+	}
+	t.Fatal("Test server failed to start")
+}
+
 func TestDecompressBody_Gzip(t *testing.T) {
+	startTestServer(t)
+
 	session := azuretls.NewSession()
 
 	session.OrderedHeaders = azuretls.OrderedHeaders{
 		{"Accept-Encoding", "gzip"},
 	}
 
-	response, err := session.Get("https://httpbingo.org/gzip")
+	response, err := session.Get(testServerURL + "/gzip")
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !strings.Contains(string(response.Body), "\"gzipped\": true") {
-		t.Fatal("TestDecompressBody_Gzip failed, expected: ", "\"gzipped\": true", ", got: ", string(response.Body))
+	if !strings.Contains(string(response.Body), "\"gzipped\":true") {
+		t.Fatal("TestDecompressBody_Gzip failed, expected: ", "\"gzipped\":true", ", got: ", string(response.Body))
+	}
+}
+
+func TestDecompressBody_GzipWithHTTP3Fingerprint(t *testing.T) {
+	startTestServer(t)
+
+	session := azuretls.NewSession()
+
+	session.OrderedHeaders = azuretls.OrderedHeaders{
+		{"Accept-Encoding", "gzip"},
+	}
+
+	if err := session.ApplyHTTP2("1:65536;2:0;4:6291456;6:262144|15663105|0|m,a,s,p"); err != nil {
+		t.Fatal(err)
+	}
+
+	response, err := session.Get(testServerURL + "/gzip")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(string(response.Body), "\"gzipped\":true") {
+		t.Fatal("TestDecompressBody_Gzip failed, expected: ", "\"gzipped\":true", ", got: ", string(response.Body))
 	}
 }
 
 func TestDecompressBody_Deflate(t *testing.T) {
+	startTestServer(t)
+
 	session := azuretls.NewSession()
 
 	session.OrderedHeaders = azuretls.OrderedHeaders{
 		{"Accept-Encoding", "deflate"},
 	}
 
-	response, err := session.Get("https://httpbingo.org/deflate")
+	response, err := session.Get(testServerURL + "/deflate")
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !strings.Contains(string(response.Body), "\"deflated\": true") {
-		t.Fatal("TestDecompressBody_Deflate failed, expected: ", "\"deflated\": true", ", got: ", string(response.Body))
+	if !strings.Contains(string(response.Body), "\"deflated\":true") {
+		t.Fatal("TestDecompressBody_Deflate failed, expected: ", "\"deflated\":true", ", got: ", string(response.Body))
 	}
 }
 
 func TestDecompressBody_Brotli(t *testing.T) {
+	startTestServer(t)
+
 	session := azuretls.NewSession()
 
 	session.OrderedHeaders = azuretls.OrderedHeaders{
 		{"Accept-Encoding", "br"},
 	}
 
-	response, err := session.Get("https://httpbin.org/brotli")
+	response, err := session.Get(testServerURL + "/brotli")
 
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !strings.Contains(string(response.Body), "\"brotli\": true") {
-		t.Fatal("TestDecompressBody_Brotli failed, expected: ", "\"brotli\": true", ", got: ", string(response.Body))
+	fmt.Println(response.HttpResponse.Proto)
+
+	if response.StatusCode != 200 {
+		t.Fatal("TestDecompressBody_Brotli failed, expected status code 200, got: ", response.StatusCode)
+	}
+
+	if !strings.Contains(string(response.Body), "\"brotli\":true") {
+		t.Fatal("TestDecompressBody_Brotli failed, expected: ", "\"brotli\":true", ", got: ", string(response.Body))
+	}
+
+}
+
+func TestDecompressBody_Zstd(t *testing.T) {
+	startTestServer(t)
+
+	session := azuretls.NewSession()
+
+	session.OrderedHeaders = azuretls.OrderedHeaders{
+		{"Accept-Encoding", "zstd"},
+	}
+
+	response, err := session.Get(testServerURL + "/zstd")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Fatal("TestDecompressBody_Zstd failed, expected status code 200, got: ", response.StatusCode)
+	}
+
+	if !strings.Contains(string(response.Body), "\"zstd\":true") {
+		t.Fatal("TestDecompressBody_Zstd failed, expected: ", "\"zstd\":true", ", got: ", string(response.Body))
+	}
+}
+
+func TestDecompressBody_Auto(t *testing.T) {
+	startTestServer(t)
+
+	session := azuretls.NewSession()
+
+	session.OrderedHeaders = azuretls.OrderedHeaders{
+		{"Accept-Encoding", "gzip, deflate, br, zstd"},
+	}
+
+	response, err := session.Get(testServerURL + "/auto")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Fatal("TestDecompressBody_Auto failed, expected status code 200, got: ", response.StatusCode)
+	}
+
+	// Le serveur devrait choisir brotli en priorité
+	if !strings.Contains(string(response.Body), "\"brotli\":true") {
+		t.Fatal("TestDecompressBody_Auto failed, expected brotli compression, got: ", string(response.Body))
 	}
 }
 

@@ -2,9 +2,10 @@ package azuretls
 
 import (
 	"fmt"
-	"github.com/Noooste/fhttp/http2"
 	"strconv"
 	"strings"
+
+	"github.com/Noooste/fhttp/http2"
 )
 
 const (
@@ -34,8 +35,7 @@ func (s *Session) ApplyHTTP2(fp string) error {
 		}
 
 		var err error
-		s.HTTP2Transport, err = http2.ConfigureTransports(s.Transport)
-		s.HTTP2Transport.StrictMaxConcurrentStreams = true
+		s.HTTP2Transport, err = s.getDefaultHTTP2Transport()
 
 		if err != nil {
 			return err

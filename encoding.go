@@ -29,7 +29,9 @@ func DecodeResponseBody(body io.ReadCloser, encoding string) ([]byte, error) {
 	case "gzip":
 		return decodeGzip(body)
 	case "br":
-		return decodeBrotli(body)
+		reader = &brReader{
+			body: body,
+		}
 	case "deflate":
 		reader = identifyDeflate(body)
 	case "zstd":
