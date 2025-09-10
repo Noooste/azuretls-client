@@ -37,9 +37,22 @@ func (s *Session) initHTTP1() {
 	}
 }
 
-func (s *Session) initHTTP2(browser string) error {
+func (s *Session) getDefaultHTTP2Transport() (*http2.Transport, error) {
 	tr, err := http2.ConfigureTransports(s.Transport) // upgrade to HTTP2, while keeping http.Transport
 
+	if err != nil {
+		return nil, err
+	}
+
+	tr.DisableCompression = s.Transport.DisableCompression
+	tr.StrictMaxConcurrentStreams = true
+	tr.PushHandler = &http2.DefaultPushHandler{}
+
+	return tr, nil
+}
+
+func (s *Session) initHTTP2(browser string) error {
+	tr, err := s.getDefaultHTTP2Transport()
 	if err != nil {
 		return err
 	}
@@ -47,17 +60,12 @@ func (s *Session) initHTTP2(browser string) error {
 	tr.Priorities = defaultStreamPriorities(browser)
 	tr.Settings, tr.SettingsOrder = defaultHeaderSettings(browser)
 	tr.ConnectionFlow = defaultWindowsUpdate(browser)
-	tr.DisableCompression = s.Transport.DisableCompression
 
 	if s.HeaderPriority != nil {
 		tr.HeaderPriority = s.HeaderPriority
 	} else {
 		tr.HeaderPriority = defaultHeaderPriorities(browser)
 	}
-
-	tr.StrictMaxConcurrentStreams = true
-
-	tr.PushHandler = &http2.DefaultPushHandler{}
 
 	for k, v := range tr.Settings {
 		switch k {
