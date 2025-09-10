@@ -345,3 +345,61 @@ func TestDecodeResponseBody_Local_UnsupportedEncoding(t *testing.T) {
 		t.Fatalf("Expected error %q, got %q", expectedError, err.Error())
 	}
 }
+
+func TestDecompressBody_GzipHTTP2(t *testing.T) {
+	session := azuretls.NewSession()
+
+	session.OrderedHeaders = azuretls.OrderedHeaders{
+		{"Accept-Encoding", "gzip"},
+	}
+
+	response, err := session.Get("https://httpbingo.org/gzip")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(string(response.Body), "\"gzipped\": true") {
+		t.Fatal("TestDecompressBody_Gzip failed, expected: ", "\"gzipped\": true", ", got: ", string(response.Body))
+	}
+}
+
+func TestDecompressBody_GzipWithHTTP2Fingerprint(t *testing.T) {
+	session := azuretls.NewSession()
+
+	session.OrderedHeaders = azuretls.OrderedHeaders{
+		{"Accept-Encoding", "gzip"},
+	}
+
+	if err := session.ApplyHTTP2("1:65536;2:0;4:6291456;6:262144|15663105|0|m,a,s,p"); err != nil {
+		t.Fatal(err)
+	}
+
+	response, err := session.Get("https://httpbingo.org/gzip")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(string(response.Body), "\"gzipped\": true") {
+		t.Fatal("TestDecompressBody_Gzip failed, expected: ", "\"gzipped\": true", ", got: ", string(response.Body))
+	}
+}
+
+func TestDecompressBody_DeflateHTTP2(t *testing.T) {
+	session := azuretls.NewSession()
+
+	session.OrderedHeaders = azuretls.OrderedHeaders{
+		{"Accept-Encoding", "deflate"},
+	}
+
+	response, err := session.Get("https://httpbingo.org/deflate")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(string(response.Body), "\"deflated\": true") {
+		t.Fatal("TestDecompressBody_Deflate failed, expected: ", "\"deflated\": true", ", got: ", string(response.Body))
+	}
+}
