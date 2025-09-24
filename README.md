@@ -24,7 +24,7 @@ fmt.Println(response.String())
 **⚡ Powerful When Needed**
 - Full TLS fingerprint control (JA3/JA4)
 - HTTP/2 and HTTP/3 support with custom settings
-- Advanced proxy support (HTTP/HTTPS/SOCKS5)
+- Advanced proxy support (HTTP/HTTPS/SOCKS4/SOCKS5)
 - Proxy chain support for multi-hop connections
 - Precise header ordering and control
 
