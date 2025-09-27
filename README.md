@@ -206,7 +206,7 @@ If AzureTLS Client helps you build something awesome, consider:
 
 ## 🛡️ Need Antibot Bypass?
 
-<a href="https://hypersolutions.co/?utm_source=github&utm_medium=readme&utm_campaign=azure-tls" target="_blank"><img src="https://raw.githubusercontent.com/Noooste/azuretls-client/main/.github/assets/hypersolutions.jpg" height="47" width="149"></a>
+<a href="https://hypersolutions.co/?utm_source=github&utm_medium=readme&utm_campaign=azure-tls" target="_blank"><img src="./.github/assets/hypersolutions.jpg" height="47" width="149"></a>
 
 TLS fingerprinting alone isn't enough for modern bot protection. **[Hyper Solutions](https://hypersolutions.co?utm_source=github&utm_medium=readme&utm_campaign=azure-tls)** provides the missing piece - API endpoints that generate valid antibot tokens for:
 
