@@ -7,11 +7,26 @@ import (
 
 type ImpersonateResponse struct {
 	Http3 struct {
-		PerkText string         `json:"perk_text"`
-		PerkHash string         `json:"perk_hash"`
-		Settings map[string]int `json:"settings"`
-		Headers  *OrderedMap    `json:"headers"`
+		PerkText string `json:"perk_text"`
+		PerkHash string `json:"perk_hash"`
+		Settings []struct {
+			Id    int    `json:"id"`
+			Name  string `json:"name"`
+			Value int    `json:"value"`
+		} `json:"settings"`
+		Headers *OrderedMap `json:"headers"`
 	} `json:"http3"`
+	Tls struct {
+		CipherSuites []struct {
+			Name  string `json:"name"`
+			Value int    `json:"value"`
+		} `json:"cipher_suites"`
+		Extensions []struct {
+			Id   int         `json:"id"`
+			Name string      `json:"name"`
+			Data interface{} `json:"data,omitempty"`
+		} `json:"extensions"`
+	} `json:"tls"`
 }
 
 // ValidateHTTP3HeaderOrder validates header order for HTTP/3 responses

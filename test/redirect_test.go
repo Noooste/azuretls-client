@@ -2,6 +2,7 @@ package azuretls_test
 
 import (
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 
@@ -86,11 +87,14 @@ func TestRedirectWithCheckRedirect(t *testing.T) {
 	session := azuretls.NewSession()
 	defer session.Close()
 
+	var called bool
+
 	session.CheckRedirect = func(req *azuretls.Request, via []*azuretls.Request) error {
 		if req.Response == nil {
 			t.Error("expected non-nil Request.Response")
 		}
 
+		called = true
 		return azuretls.ErrUseLastResponse
 	}
 
@@ -102,5 +106,30 @@ func TestRedirectWithCheckRedirect(t *testing.T) {
 
 	if response.StatusCode != 302 {
 		t.Fatal("TestRedirectWithCheckRedirect failed, expected: 200, got: ", response.StatusCode)
+	}
+
+	if !called {
+		t.Fatal("TestRedirectWithCheckRedirect failed, CheckRedirect was not called")
+	}
+}
+
+func TestRedirectWithDump(t *testing.T) {
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	session.Dump("./testdata/")
+
+	response, err := session.Get("https://httpbin.org/redirect/1")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Fatal("TestRedirectWithDump failed, expected: 200, got: ", response.StatusCode)
+	}
+
+	if _, err = os.Stat("./testdata/"); os.IsExist(err) {
+		t.Fatal("TestRedirectWithDump failed, expected dump file to exist, got error: ", err)
 	}
 }

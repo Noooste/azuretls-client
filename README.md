@@ -24,7 +24,7 @@ fmt.Println(response.String())
 **⚡ Powerful When Needed**
 - Full TLS fingerprint control (JA3/JA4)
 - HTTP/2 and HTTP/3 support with custom settings
-- Advanced proxy support (HTTP/HTTPS/SOCKS5)
+- Advanced proxy support (HTTP/HTTPS/SOCKS4/SOCKS5)
 - Proxy chain support for multi-hop connections
 - Precise header ordering and control
 
@@ -202,4 +202,17 @@ If AzureTLS Client helps you build something awesome, consider:
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/noste)
 
-*Ready to build powerful HTTP clients with ease? Let's get started! 🚀*
+---
+
+## 🛡️ Need Antibot Bypass?
+
+<a href="https://hypersolutions.co/?utm_source=github&utm_medium=readme&utm_campaign=azure-tls" target="_blank"><img src="./.github/assets/hypersolutions.jpg" height="47" width="149"></a>
+
+TLS fingerprinting alone isn't enough for modern bot protection. **[Hyper Solutions](https://hypersolutions.co?utm_source=github&utm_medium=readme&utm_campaign=azure-tls)** provides the missing piece - API endpoints that generate valid antibot tokens for:
+
+**Akamai** • **DataDome** • **Kasada** • **Incapsula**
+
+No browser automation. Just simple API calls that return the exact cookies and headers these systems require.
+
+🚀 **[Get Your API Key](https://hypersolutions.co?utm_source=github&utm_medium=readme&utm_campaign=azure-tls)** | 📖 **[Docs](https://docs.hypersolutions.co/)** | 💬 **[Discord](https://discord.gg/akamai)**
+

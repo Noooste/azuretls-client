@@ -164,3 +164,73 @@ func TestModifyDialer(t *testing.T) {
 		t.Fatal("TestHeader failed, expected: 200, got: ", response.StatusCode)
 	}
 }
+
+func TestInsecureSkipVerifySession(t *testing.T) {
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	session.InsecureSkipVerify = true
+
+	response, err := session.Get("https://expired.badssl.com/")
+
+	if err != nil {
+		t.Fatal("InsecureSkipVerify should allow expired certificates, got error:", err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Fatal("TestInsecureSkipVerifySession failed, expected: 200, got: ", response.StatusCode)
+	}
+}
+
+func TestInsecureSkipVerifyRequest(t *testing.T) {
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	response, err := session.Do(&azuretls.Request{
+		Method:             "GET",
+		Url:                "https://wrong.host.badssl.com/",
+		InsecureSkipVerify: true,
+	})
+
+	if err != nil {
+		t.Fatal("InsecureSkipVerify should allow wrong host certificates, got error:", err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Fatal("TestInsecureSkipVerifyRequest failed, expected: 200, got: ", response.StatusCode)
+	}
+}
+
+func TestInsecureSkipVerifyMultipleHosts(t *testing.T) {
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	session.InsecureSkipVerify = true
+
+	// Test expired certificate
+	response1, err1 := session.Get("https://expired.badssl.com/")
+	if err1 != nil {
+		t.Fatal("InsecureSkipVerify should allow expired certificates, got error:", err1)
+	}
+	if response1.StatusCode != 200 {
+		t.Fatal("TestInsecureSkipVerifyMultipleHosts (expired) failed, expected: 200, got: ", response1.StatusCode)
+	}
+
+	// Test self-signed certificate
+	response2, err2 := session.Get("https://self-signed.badssl.com/")
+	if err2 != nil {
+		t.Fatal("InsecureSkipVerify should allow self-signed certificates, got error:", err2)
+	}
+	if response2.StatusCode != 200 {
+		t.Fatal("TestInsecureSkipVerifyMultipleHosts (self-signed) failed, expected: 200, got: ", response2.StatusCode)
+	}
+
+	// Test wrong host
+	response3, err3 := session.Get("https://wrong.host.badssl.com/")
+	if err3 != nil {
+		t.Fatal("InsecureSkipVerify should allow wrong host certificates, got error:", err3)
+	}
+	if response3.StatusCode != 200 {
+		t.Fatal("TestInsecureSkipVerifyMultipleHosts (wrong host) failed, expected: 200, got: ", response3.StatusCode)
+	}
+}
