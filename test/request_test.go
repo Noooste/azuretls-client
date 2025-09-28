@@ -18,7 +18,7 @@ func TestRequest_SetContext(t *testing.T) {
 
 	req := &azuretls.Request{
 		Method: http.MethodGet,
-		Url:    "https://httpbingo.org/delay/5",
+		Url:    httpbinBaseURL + "/delay/5",
 	}
 
 	ctx := context.Background()
@@ -53,7 +53,7 @@ func TestRequest_NoCookies(t *testing.T) {
 
 	req := &azuretls.Request{
 		Method:   http.MethodGet,
-		Url:      "https://httpbingo.org/cookies",
+		Url:      httpbinBaseURL + "/cookies",
 		NoCookie: true,
 	}
 
@@ -80,7 +80,7 @@ func TestRequest_TooManyRedirects(t *testing.T) {
 
 	req := &azuretls.Request{
 		Method:       http.MethodGet,
-		Url:          "https://httpbingo.org/redirect/5",
+		Url:          httpbinBaseURL + "/redirect/5",
 		MaxRedirects: 1,
 	}
 
@@ -116,7 +116,7 @@ func TestRequestBody(t *testing.T) {
 	for _, v := range m {
 		req := &azuretls.Request{
 			Method: http.MethodPost,
-			Url:    "https://httpbingo.org/post",
+			Url:    httpbinBaseURL + "/post",
 			Body:   v,
 		}
 
@@ -142,7 +142,7 @@ func TestRequestBody(t *testing.T) {
 func TestRequest_BadBody(t *testing.T) {
 	req := &azuretls.Request{
 		Method: http.MethodPost,
-		Url:    "https://httpbingo.org/post",
+		Url:    httpbinBaseURL + "/post",
 		Body:   make(chan int),
 	}
 
@@ -174,7 +174,7 @@ func TestRequest_NoCookies2(t *testing.T) {
 
 	req := &azuretls.Request{
 		Method:   http.MethodGet,
-		Url:      "https://httpbingo.org/cookies",
+		Url:      httpbinBaseURL + "/cookies",
 		NoCookie: true,
 	}
 
@@ -239,7 +239,7 @@ func TestRequestNoDuplicateContentLength(t *testing.T) {
 
 	req := &azuretls.Request{
 		Method: http.MethodPost,
-		Url:    "https://httpbingo.org/post",
+		Url:    httpbinBaseURL + "/post",
 		Body:   "test",
 		OrderedHeaders: azuretls.OrderedHeaders{
 			{"content-length", "4"},

@@ -1,4 +1,4 @@
-package azuretls
+package azuretls_test
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ func TestDisableAutoDecompression_Enabled(t *testing.T) {
 	session.DisableAutoDecompression = true
 
 	// Test with a gzip endpoint
-	response, err := session.Get("https://httpbingo.org/gzip", azuretls.OrderedHeaders{
+	response, err := session.Get(httpbinBaseURL+"/gzip", azuretls.OrderedHeaders{
 		{"accept-encoding", "gzip"},
 	})
 	if err != nil {
@@ -56,7 +56,7 @@ func TestDisableAutoDecompression_Disabled(t *testing.T) {
 	// DisableAutoDecompression is false by default
 
 	// Test with a gzip endpoint
-	response, err := session.Get("https://httpbingo.org/gzip")
+	response, err := session.Get(httpbinBaseURL + "/gzip")
 	if err != nil {
 		t.Fatal("TestDisableAutoDecompression_Disabled failed:", err)
 	}
@@ -78,7 +78,7 @@ func TestDisableAutoDecompression_Brotli(t *testing.T) {
 	session.DisableAutoDecompression = true
 
 	// Test with brotli endpoint
-	response, err := session.Get("https://httpbingo.org/brotli", azuretls.OrderedHeaders{
+	response, err := session.Get(httpbinBaseURL+"/brotli", azuretls.OrderedHeaders{
 		{"Accept-Encoding", "br"},
 	})
 	if err != nil {

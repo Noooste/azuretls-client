@@ -20,7 +20,10 @@ func init() {
 	go startServer()
 }
 
-const testServerURL = "http://localhost:8080"
+const (
+	testServerURL  = "http://localhost:8080"
+	httpbinBaseURL = "https://httpbingo.org"
+)
 
 // startTestServer starts the local test server if it's not already running
 func startTestServer(t *testing.T) {
@@ -353,7 +356,7 @@ func TestDecompressBody_GzipHTTP2(t *testing.T) {
 		{"Accept-Encoding", "gzip"},
 	}
 
-	response, err := session.Get("https://httpbingo.org/gzip")
+	response, err := session.Get(httpbinBaseURL + "/gzip")
 
 	if err != nil {
 		t.Fatal(err)
@@ -375,7 +378,7 @@ func TestDecompressBody_GzipWithHTTP2Fingerprint(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	response, err := session.Get("https://httpbingo.org/gzip")
+	response, err := session.Get(httpbinBaseURL + "/gzip")
 
 	if err != nil {
 		t.Fatal(err)
@@ -393,7 +396,7 @@ func TestDecompressBody_DeflateHTTP2(t *testing.T) {
 		{"Accept-Encoding", "deflate"},
 	}
 
-	response, err := session.Get("https://httpbingo.org/deflate")
+	response, err := session.Get(httpbinBaseURL + "/deflate")
 
 	if err != nil {
 		t.Fatal(err)

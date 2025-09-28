@@ -238,7 +238,7 @@ func TestChainProxyHTTP1(t *testing.T) {
 	// Force HTTP/1.1
 	response, err := session.Do(&azuretls.Request{
 		Method:     "GET",
-		Url:        "https://httpbingo.org/ip",
+		Url:        httpbinBaseURL + "/ip",
 		ForceHTTP1: true,
 	})
 
@@ -274,7 +274,7 @@ func TestChainProxyHTTP2(t *testing.T) {
 	}
 
 	// Use HTTP/2
-	response, err := session.Get("https://httpbingo.org/ip")
+	response, err := session.Get(httpbinBaseURL + "/ip")
 
 	if err != nil {
 		t.Fatalf("Request failed: %v", err)
@@ -754,7 +754,7 @@ func TestChainProxyErrorHandling(t *testing.T) {
 	// Test that requests fail appropriately
 	session.SetTimeout(5 * time.Second)
 
-	resp, err := session.Get("https://httpbingo.org/ip")
+	resp, err := session.Get(httpbinBaseURL + "/ip")
 
 	// The test should expect either an error OR a 502 status code
 	if err == nil && resp.StatusCode == http.StatusOK {

@@ -15,7 +15,7 @@ func TestSession_EnableVerbose(t *testing.T) {
 
 	session := azuretls.NewSession()
 
-	_, err := session.Post("https://httpbingo.org/post", "ahhhhhh")
+	_, err := session.Post(httpbinBaseURL+"/post", "ahhhhhh")
 
 	if err != nil {
 		t.Error(err)
@@ -26,7 +26,7 @@ func TestSession_EnableVerbose(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = session.Get("https://httpbingo.org/get?t=v")
+	_, err = session.Get(httpbinBaseURL + "/get?t=v")
 
 	if err != nil {
 		t.Error(err)
@@ -60,7 +60,7 @@ func TestSession_EnableVerbose2(t *testing.T) {
 	session.DisableDump()
 	session.EnableDump()
 
-	_, err := session.Get("https://httpbingo.org/get")
+	_, err := session.Get(httpbinBaseURL + "/get")
 
 	if err != nil {
 		t.Error(err)
@@ -104,7 +104,7 @@ func TestSession_EnableVerbose2(t *testing.T) {
 		{"accept-language", "en-US,en;q=0.9"},
 	}
 
-	_, err = session.Get("https://httpbingo.org/anything/test/test2%2ftest/", headers)
+	_, err = session.Get(httpbinBaseURL+"/anything/test/test2%2ftest/", headers)
 
 	if err != nil {
 		t.Error(err)
@@ -133,9 +133,9 @@ func TestSession_Log(t *testing.T) {
 	session.DisableLog()
 	session.EnableLog()
 
-	session.Get("https://httpbingo.org/get")
-	session.Get("https://httpbingo.org/redirect")
-	session.Get("https://httpbingo.org/unkown")
+	session.Get(httpbinBaseURL + "/get")
+	session.Get(httpbinBaseURL + "/redirect")
+	session.Get(httpbinBaseURL + "/unkown")
 }
 
 func TestSession_DumpAndLog(t *testing.T) {
@@ -147,14 +147,14 @@ func TestSession_DumpAndLog(t *testing.T) {
 
 	session.DumpAndLog("./tmp", "/redirect")
 
-	if !session.LogIgnore("https://httpbingo.org/redirect") {
+	if !session.LogIgnore(httpbinBaseURL + "/redirect") {
 		t.Error("LogIgnore failed")
 		return
 	}
 
-	session.Get("https://httpbingo.org/get")
-	session.Get("https://httpbingo.org/redirect")
-	session.Get("https://httpbingo.org/unkown")
+	session.Get(httpbinBaseURL + "/get")
+	session.Get(httpbinBaseURL + "/redirect")
+	session.Get(httpbinBaseURL + "/unkown")
 
 	time.Sleep(50 * time.Millisecond)
 	f, err := os.ReadDir("./tmp")
