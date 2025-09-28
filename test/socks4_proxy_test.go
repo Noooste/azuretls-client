@@ -63,7 +63,7 @@ func TestSocks4ProxyServerHTTPS(t *testing.T) {
 	}
 
 	// Test HTTPS request through SOCKS4 proxy
-	response, err := session.Get("https://httpbin.org/ip")
+	response, err := session.Get("https://httpbingo.org/ip")
 	if err != nil {
 		t.Fatalf("Failed to make HTTPS request through SOCKS4 proxy: %v", err)
 	}

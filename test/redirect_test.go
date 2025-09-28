@@ -119,7 +119,7 @@ func TestRedirectWithDump(t *testing.T) {
 
 	session.Dump("./testdata/")
 
-	response, err := session.Get("https://httpbin.org/redirect/1")
+	response, err := session.Get("https://httpbingo.org/redirect/1")
 
 	if err != nil {
 		t.Fatal(err)
