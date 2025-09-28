@@ -11,6 +11,7 @@ import (
 
 func TestDefaultConfig(t *testing.T) {
 	session := azuretls.NewSession()
+	session.Browser = azuretls.Firefox
 
 	response, err := session.Get("https://tls.peet.ws/api/all")
 

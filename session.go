@@ -132,6 +132,10 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 		request.ctx = context.WithValue(request.ctx, forceHTTP1Key, true)
 	}
 
+	if request.InsecureSkipVerify {
+		request.ctx = context.WithValue(request.ctx, insecureSkipVerifyKey, true)
+	}
+
 	request.HttpRequest = request.HttpRequest.WithContext(request.ctx)
 
 	httpResponse, err = roundTripper.RoundTrip(request.HttpRequest)

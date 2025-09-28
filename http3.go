@@ -152,7 +152,7 @@ func (s *Session) DisableHTTP3() {
 
 // selectTransport chooses the appropriate transport for a request
 func (s *Session) selectTransport(req *Request) (rt http.RoundTripper, isHTTP3 bool, err error) {
-	// Check if HTTP/3 is forced for this request
+	// Check if HTTP/1 or HTTP/2 is forced for this request
 	if req.ForceHTTP1 {
 		return s.Transport, false, nil
 	}
@@ -169,7 +169,7 @@ func (s *Session) selectTransport(req *Request) (rt http.RoundTripper, isHTTP3 b
 		return s.HTTP3Config.transport, true, nil
 	}
 
-	// Check if HTTP/3 is available for this host
+	// Check if HTTP/3 is available for this host (only if not ignoring upgrades)
 	if s.shouldUseHTTP3(req.parsedUrl.Host) {
 		return s.HTTP3Config.transport, true, nil
 	}

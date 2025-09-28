@@ -21,7 +21,6 @@ func TestHTTP3Direct(t *testing.T) {
 		t.Fatalf("Failed to apply HTTP/3 settings: %v", err)
 	}
 
-	// Enable HTTP/3
 	session.Log()
 
 	// Test direct HTTP/3
@@ -49,8 +48,68 @@ func TestHTTP3Direct(t *testing.T) {
 	if resp.HttpResponse.Proto != "HTTP/3.0" {
 		t.Logf("Warning: Expected HTTP/3.0, got %s (server might not support HTTP/3)", resp.HttpResponse.Proto)
 	}
+}
 
-	t.Logf("Response body: %s", resp.String())
+func TestHTTP2ToHTTP3(t *testing.T) {
+	// Create session
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	session.Log()
+
+	session.EnableHTTP3()
+
+	// Test direct HTTP/2
+	resp, err := session.Do(&azuretls.Request{
+		Method:  "GET",
+		Url:     "https://fp.impersonate.pro/api/http3", // Cloudflare supports HTTP/3
+		TimeOut: 10 * time.Second,
+		OrderedHeaders: azuretls.OrderedHeaders{
+			{"Accept", "application/json"},
+			{"User-Agent", "AzureTLS-Client/1.0"},
+		},
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check response
+	if resp.StatusCode != 200 {
+		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	// Verify HTTP/3 was used
+	if resp.HttpResponse.Proto != "HTTP/2.0" {
+		t.Logf("Warning: Expected HTTP/3.0, got %s (server might not support HTTP/3)", resp.HttpResponse.Proto)
+	}
+
+	t.Log(resp.HttpResponse.Header.Get("Alt-Svc"))
+
+	// Test direct HTTP/2
+	resp, err = session.Do(&azuretls.Request{
+		Method:  "GET",
+		Url:     "https://fp.impersonate.pro/api/http3", // Cloudflare supports HTTP/3
+		TimeOut: 10 * time.Second,
+		OrderedHeaders: azuretls.OrderedHeaders{
+			{"Accept", "application/json"},
+			{"User-Agent", "AzureTLS-Client/1.0"},
+		},
+	})
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check response
+	if resp.StatusCode != 200 {
+		t.Fatalf("Expected status 200, got %d", resp.StatusCode)
+	}
+
+	// Verify HTTP/3 was used
+	if resp.HttpResponse.Proto != "HTTP/3.0" {
+		t.Logf("Warning: Expected HTTP/3.0, got %s (server might not support HTTP/3)", resp.HttpResponse.Proto)
+	}
 }
 
 func TestHTTP3WithSOCKS5(t *testing.T) {

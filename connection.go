@@ -51,52 +51,59 @@ func (s *Session) upgradeTLS(ctx context.Context, conn net.Conn, addr string) (n
 		return nil, errors.New("failed to split addr and port: " + err.Error())
 	}
 
-	if !s.InsecureSkipVerify {
+	var config tls.Config
+
+	// Check both session-level and request-level InsecureSkipVerify
+	requestInsecureSkipVerify, _ := ctx.Value(insecureSkipVerifyKey).(bool)
+	insecureSkipVerify := s.InsecureSkipVerify || requestInsecureSkipVerify
+
+	if insecureSkipVerify {
+		config = tls.Config{
+			ServerName:         hostname,
+			InsecureSkipVerify: true,
+		}
+	} else {
 		if err = s.PinManager.AddHost(addr); err != nil {
 			return nil, errors.New("failed to pin: " + err.Error())
 		}
-	}
 
-	config := tls.Config{
-		ServerName:         hostname,
-		InsecureSkipVerify: s.InsecureSkipVerify,
-		VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
-			if s.InsecureSkipVerify {
-				return nil
-			}
-
-			now := time.Now()
-			for _, chain := range verifiedChains {
-				for _, cert := range chain {
-					if now.Before(cert.NotBefore) {
-						return errors.New("certificate is not valid yet")
-					}
-					if now.After(cert.NotAfter) {
-						return errors.New("certificate is expired")
-					}
-					if cert.IsCA {
-						continue
-					}
-					if err = cert.VerifyHostname(hostname); err != nil {
-						return err
+		config = tls.Config{
+			ServerName:         hostname,
+			InsecureSkipVerify: false,
+			VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
+				now := time.Now()
+				for _, chain := range verifiedChains {
+					for _, cert := range chain {
+						if now.Before(cert.NotBefore) {
+							return errors.New("certificate is not valid yet")
+						}
+						if now.After(cert.NotAfter) {
+							return errors.New("certificate is expired")
+						}
+						if cert.IsCA {
+							continue
+						}
+						if err = cert.VerifyHostname(hostname); err != nil {
+							return err
+						}
 					}
 				}
-			}
 
-			pins := s.PinManager.GetHost(addr)
-			if pins == nil {
-				return errors.New("no pins found for " + addr)
-			}
+				pins := s.PinManager.GetHost(addr)
+				if pins == nil {
+					return errors.New("no pins found for " + addr)
+				}
 
-			for _, chain := range verifiedChains {
-				for _, cert := range chain {
-					if pins.Verify(cert) {
-						return nil
+				for _, chain := range verifiedChains {
+					for _, cert := range chain {
+						if pins.Verify(cert) {
+							return nil
+						}
 					}
 				}
-			}
-			return errors.New("pin verification failed")
-		},
+				return errors.New("pin verification failed")
+			},
+		}
 	}
 
 	if s.ModifyConfig != nil {
