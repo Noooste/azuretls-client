@@ -26,7 +26,11 @@ func GetBrowserClientHelloFunc(browser string) func() *tls.ClientHelloSpec {
 	}
 }
 
-func GetBrowserHTTP3ClientHelloFunc(browser string) func() *tls.ClientHelloSpec {
+func (s *Session) GetBrowserHTTP3ClientHelloFunc(browser string) func() *tls.ClientHelloSpec {
+	if s.GetClientHelloSpecHTTP3 != nil {
+		return s.GetClientHelloSpecHTTP3
+	}
+
 	switch browser {
 	case Chrome, Edge, Opera:
 		return GetLastChromeVersionForHTTP3
