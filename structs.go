@@ -52,6 +52,9 @@ type Session struct {
 	// Function to provide custom TLS handshake details.
 	GetClientHelloSpec func() *tls.ClientHelloSpec
 
+	// Function to provide custom TLS handshake details for HTTP/3 connections.
+	GetClientHelloSpecHTTP3 func() *tls.ClientHelloSpec
+
 	// Proxy address.
 	Proxy string
 	// If true, use HTTP2 for proxy connections.

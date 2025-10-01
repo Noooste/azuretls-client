@@ -250,7 +250,7 @@ func (s *Session) dialQUIC(ctx context.Context, addr string, tlsConf *tls.Config
 			Conn: udpConn,
 		},
 		QUICSpec: &quic.QUICSpec{
-			ClientHelloSpec:   GetBrowserHTTP3ClientHelloFunc(s.Browser)(),
+			ClientHelloSpec:   s.GetBrowserHTTP3ClientHelloFunc(s.Browser)(),
 			InitialPacketSpec: getInitialPacket(s.Browser),
 		},
 	}

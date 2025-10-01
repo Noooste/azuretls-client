@@ -612,7 +612,7 @@ func (s *Session) dialQUICViaSocks5(ctx context.Context, remoteAddr *net.UDPAddr
 			Conn: packetConn,
 		},
 		QUICSpec: &quic.QUICSpec{
-			ClientHelloSpec:   GetBrowserHTTP3ClientHelloFunc(s.Browser)(),
+			ClientHelloSpec:   s.GetBrowserHTTP3ClientHelloFunc(s.Browser)(),
 			InitialPacketSpec: getInitialPacket(s.Browser),
 		},
 	}
