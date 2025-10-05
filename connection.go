@@ -19,6 +19,10 @@ func (s *Session) dialTLS(ctx context.Context, network, addr string) (net.Conn, 
 }
 
 func (s *Session) dial(ctx context.Context, network, addr string) (net.Conn, error) {
+	if s.Dial != nil {
+		return s.Dial(ctx, network, addr)
+	}
+
 	if s.ProxyDialer != nil {
 		var userAgent = s.UserAgent
 		if ctx.Value(userAgentKey) != nil {
