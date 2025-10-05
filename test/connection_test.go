@@ -1,6 +1,7 @@
 package azuretls_test
 
 import (
+	"context"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -52,6 +53,32 @@ func concurrency(session *azuretls.Session, wg *sync.WaitGroup, ok *int64) bool 
 	atomic.AddInt64(ok, 1)
 
 	return true
+}
+
+func TestCustomDial(t *testing.T) {
+	session := azuretls.NewSession()
+	defer session.Close()
+
+	var called bool
+
+	session.Dial = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		called = true
+		dialer := &net.Dialer{
+			Timeout:   10 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}
+		return dialer.DialContext(ctx, network, addr)
+	}
+
+	_, err := session.Get("https://tls.peet.ws/api/all")
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !called {
+		t.Fatal("Custom dial function was not called")
+	}
 }
 
 func TestHighConcurrency(t *testing.T) {

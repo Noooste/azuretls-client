@@ -91,6 +91,9 @@ type Session struct {
 	// Function to modify the dialer used for establishing connections.
 	ModifyDialer func(dialer *net.Dialer) error
 
+	// Custom dial function for establishing connections.
+	Dial func(ctx context.Context, network, addr string) (net.Conn, error)
+
 	// Function to modify the TLS configuration before establishing a connection.
 	ModifyConfig func(config *tls.Config) error
 
