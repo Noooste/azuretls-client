@@ -3,12 +3,13 @@ package azuretls
 import (
 	"bytes"
 	"fmt"
-	http "github.com/Noooste/fhttp"
 	"net/url"
 	"os"
 	"path"
 	"regexp"
 	"strings"
+
+	http "github.com/Noooste/fhttp"
 )
 
 var nonAlphaNumeric = regexp.MustCompile(`([^a-zA-Z0-9*])`)
@@ -84,6 +85,26 @@ func (s *Session) DumpAndLog(dir string, uris ...string) error {
 	return nil
 }
 
+func (s *Session) DumpRequestResponsePair(request *Request, response *Response, err error, target_file string) error {
+	request.proxy = s.Proxy
+	requestPart := request.ToString()
+
+	var responsePart string
+	if response != nil {
+		responsePart = response.ToString()
+	} else {
+		responsePart = "error : " + err.Error()
+	}
+
+	if err2 := os.WriteFile(target_file, []byte(fmt.Sprintf(
+		"%s\n\n%s\n\n\n%s", requestPart, strings.Repeat("=", 80), responsePart,
+	)), 0755); err2 != nil {
+		return err2
+	}
+
+	return nil
+}
+
 func (s *Session) dumpRequest(request *Request, response *Response, err error) {
 	if !s.dump {
 		return
@@ -126,26 +147,12 @@ func (s *Session) dumpRequest(request *Request, response *Response, err error) {
 		iter++
 	}
 
-	request.proxy = s.Proxy
-	requestPart := request.toString()
-
-	var responsePart string
-	if response != nil {
-		responsePart = response.toString()
-	} else {
-		responsePart = "error : " + err.Error()
-	}
-
-	if err2 := os.WriteFile(fileName, []byte(fmt.Sprintf(
-		"%s\n\n%s\n\n\n%s", requestPart, strings.Repeat("=", 80), responsePart,
-	)), 0755); err2 != nil {
-		return
-	}
+	_ = s.DumpRequestResponsePair(request, response, err, fileName)
 }
 
 const newPart = "\n\n"
 
-func (r *Request) toString() string {
+func (r *Request) ToString() string {
 	var buffer bytes.Buffer
 	buffer.Grow(1024)
 
@@ -182,7 +189,7 @@ func (r *Request) toString() string {
 	return buffer.String()
 }
 
-func (r *Response) toString() string {
+func (r *Response) ToString() string {
 	var buffer bytes.Buffer
 	buffer.Grow(1024)
 
