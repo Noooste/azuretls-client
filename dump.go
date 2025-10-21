@@ -85,18 +85,20 @@ func (s *Session) DumpAndLog(dir string, uris ...string) error {
 	return nil
 }
 
-func (s *Session) DumpRequestResponsePair(request *Request, response *Response, err error, target_file string) error {
+func (s *Session) DumpRequestResponsePair(request *Request, response *Response, err error, targetFile string) error {
 	request.proxy = s.Proxy
-	requestPart := request.ToString()
+	requestPart := request.ToDumpString()
 
 	var responsePart string
 	if response != nil {
-		responsePart = response.ToString()
-	} else {
+		responsePart = response.ToDumpString()
+	} else if err != nil {
 		responsePart = "error : " + err.Error()
+	} else {
+		responsePart = "empty response"
 	}
 
-	if err2 := os.WriteFile(target_file, []byte(fmt.Sprintf(
+	if err2 := os.WriteFile(targetFile, []byte(fmt.Sprintf(
 		"%s\n\n%s\n\n\n%s", requestPart, strings.Repeat("=", 80), responsePart,
 	)), 0755); err2 != nil {
 		return err2
@@ -152,7 +154,7 @@ func (s *Session) dumpRequest(request *Request, response *Response, err error) {
 
 const newPart = "\n\n"
 
-func (r *Request) ToString() string {
+func (r *Request) ToDumpString() string {
 	var buffer bytes.Buffer
 	buffer.Grow(1024)
 
@@ -189,7 +191,7 @@ func (r *Request) ToString() string {
 	return buffer.String()
 }
 
-func (r *Response) ToString() string {
+func (r *Response) ToDumpString() string {
 	var buffer bytes.Buffer
 	buffer.Grow(1024)
 
