@@ -1,7 +1,9 @@
 package azuretls_test
 
 import (
+	"log"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/Noooste/azuretls-client"
@@ -413,4 +415,45 @@ func TestHeaderOrderHTTP3(t *testing.T) {
 	}
 
 	t.Logf("TestHeaderOrderHTTP3 passed - headers are in correct order")
+}
+
+func TestHeaderAcceptEncoding(t *testing.T) {
+	session := azuretls.NewSession()
+	defer session.Close()
+	session.Browser = azuretls.Chrome
+	session.Log()
+
+	orders := azuretls.HeaderOrder{"cache-control", "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform", "upgrade-insecure-requests", "user-agent", "accept", "sec-fetch-site", "sec-fetch-mode", "sec-fetch-user", "sec-fetch-dest", "accept-encoding", "accept-language"}
+	headers := http.Header{
+		"accept":                    {"text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"},
+		"accept-encoding":           {"gzip, deflate, br"},
+		"accept-language":           {"zh-HK,zh-TW;q=0.9,zh;q=0.8"},
+		"cache-control":             {"max-age=0"},
+		"sec-ch-ua":                 {`"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"`},
+		"sec-ch-ua-mobile":          {"?0"},
+		"sec-ch-ua-platform":        {`"Windows"`},
+		"sec-fetch-site":            {"none"},
+		"sec-fetch-mode":            {"navigate"},
+		"sec-fetch-user":            {"?1"},
+		"sec-fetch-dest":            {"document"},
+		"user-agent":                {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"},
+		"upgrade-insecure-requests": {"1"},
+	}
+	response, err := session.Do(&azuretls.Request{
+		Url:         "https://tls.peet.ws/api/all",
+		Header:      headers,
+		HeaderOrder: orders,
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if response.StatusCode != 200 {
+		log.Fatal("TestHeader failed, expected: 200, got: ", response.StatusCode)
+	}
+
+	if strings.Count(response.String(), "accept-encoding") != 1 {
+		log.Fatal("TestHeader failed, expected exactly one accept-encoding, got: ", strings.Count(response.String(), "accept-encoding"))
+	}
 }
