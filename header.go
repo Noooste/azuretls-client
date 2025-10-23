@@ -214,7 +214,9 @@ func (r *Request) formatHeader() {
 		for k := range r.Header {
 			if http.CanonicalHeaderKey(k) == "User-Agent" {
 				setUserAgent = false
-				break
+			}
+			if strings.ToLower(k) == "accept-encoding" {
+				setAcceptEncoding = false
 			}
 		}
 
