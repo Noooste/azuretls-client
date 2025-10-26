@@ -16,6 +16,7 @@ typedef struct {
     char* headers;
     char* url;
     char* error;
+    char* protocol;
 } CFfiResponse;
 
 // Session management functions
