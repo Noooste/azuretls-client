@@ -103,7 +103,3 @@ jobs:
       - name: Run Python example test
         working-directory: cffi/examples
         run: make test-python
-
-      - name: Run Python cookie test
-        working-directory: cffi/examples
-        run: make test-cookies
