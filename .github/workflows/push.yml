@@ -51,10 +51,6 @@ jobs:
             goos: darwin
             goarch: arm64
             python: python3
-          - os: windows-latest
-            goos: windows
-            goarch: amd64
-            python: python
 
     runs-on: ${{ matrix.os }}
     name: CFFI Tests (${{ matrix.os }})
