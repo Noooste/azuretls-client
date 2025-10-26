@@ -6,8 +6,10 @@ import (
 	"encoding/base64"
 	"errors"
 	tls "github.com/Noooste/utls"
+	"net"
 	"net/url"
 	"sync"
+	"time"
 )
 
 var DefaultPinManager *PinManager
@@ -85,14 +87,76 @@ func (p *PinHost) Verify(c *x509.Certificate) bool {
 // its SSL/TLS certificates, and pins their public keys in the
 // PinManager. This can be used initially to populate the PinManager
 // with pins from a trusted service.
-func (p *PinHost) New(addr string) (err error) {
-	dial, err := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
-	if err != nil {
-		return errors.New("failed to generate pins for " + addr + ": " + err.Error())
-	}
+//
+// If a Session is provided, it will use the same TLS configuration
+// (including ClientHello spec) as the actual connection to ensure
+// the same certificate chain is obtained.
+func (p *PinHost) New(addr string, s *Session) (err error) {
+	var cs tls.ConnectionState
 
-	cs := dial.ConnectionState()
-	_ = dial.Close()
+	if s != nil {
+		// Use the same TLS configuration as the actual connection
+		// Split addr and port to get hostname
+		hostname, _, err := net.SplitHostPort(addr)
+		if err != nil {
+			return errors.New("failed to split addr and port: " + err.Error())
+		}
+
+		// Create a raw TCP connection first (not TLS)
+		dialer := &net.Dialer{
+			Timeout:   s.TimeOut,
+			KeepAlive: 30 * time.Second,
+		}
+
+		conn, err := dialer.Dial("tcp", addr)
+		if err != nil {
+			return errors.New("failed to dial for pin generation: " + err.Error())
+		}
+
+		// Create TLS config
+		config := &tls.Config{
+			ServerName:         hostname,
+			InsecureSkipVerify: true,
+		}
+
+		if s.ModifyConfig != nil {
+			if err := s.ModifyConfig(config); err != nil {
+				conn.Close()
+				return err
+			}
+		}
+
+		// Use UClient with the same ClientHello spec as actual connections
+		tlsConn := tls.UClient(conn, config, tls.HelloCustom)
+
+		var fn = s.GetClientHelloSpec
+		if fn == nil {
+			fn = GetBrowserClientHelloFunc(s.Browser)
+		}
+
+		specs := fn()
+
+		if err = tlsConn.ApplyPreset(specs); err != nil {
+			conn.Close()
+			return errors.New("failed to apply preset for pin generation: " + err.Error())
+		}
+
+		if err = tlsConn.Handshake(); err != nil {
+			conn.Close()
+			return errors.New("failed to handshake for pin generation: " + err.Error())
+		}
+
+		cs = tlsConn.ConnectionState()
+		_ = tlsConn.Close()
+	} else {
+		// Fallback to simple dial if no Session is provided
+		dial, err := tls.Dial("tcp", addr, &tls.Config{InsecureSkipVerify: true})
+		if err != nil {
+			return errors.New("failed to generate pins for " + addr + ": " + err.Error())
+		}
+		cs = dial.ConnectionState()
+		_ = dial.Close()
+	}
 
 	var pins = make([]string, 0, len(cs.PeerCertificates))
 	for _, c := range cs.PeerCertificates {
@@ -132,14 +196,14 @@ func (p *PinManager) Clear(host string) {
 	delete(p.hosts, host)
 }
 
-func (p *PinManager) AddHost(host string) error {
+func (p *PinManager) AddHost(host string, s *Session) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if _, ok := p.hosts[host]; !ok {
 		ph := &PinHost{
 			m: make(map[string]bool),
 		}
-		if err := ph.New(host); err != nil {
+		if err := ph.New(host, s); err != nil {
 			return err
 		}
 		p.hosts[host] = ph
