@@ -36,3 +36,61 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: Noooste/azuretls-client
+
+  cffi-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            python: python3
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            python: python3
+
+    runs-on: ${{ matrix.os }}
+    name: CFFI Tests (${{ matrix.os }})
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.24'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies (Ubuntu)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc make
+
+      - name: Install dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          xcode-select --install 2>/dev/null || true
+
+      - name: Build CFFI library
+        working-directory: cffi
+        run: make
+
+      - name: Build C example
+        working-directory: cffi/examples
+        run: make
+
+      - name: Run C example test
+        working-directory: cffi/examples
+        run: make test-c
+
+      - name: Run Python example test
+        working-directory: cffi/examples
+        run: make test-python
