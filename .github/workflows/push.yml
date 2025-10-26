@@ -79,11 +79,6 @@ jobs:
         run: |
           xcode-select --install 2>/dev/null || true
 
-      - name: Install dependencies (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          choco install make -y
-
       - name: Build CFFI library
         working-directory: cffi
         run: make
