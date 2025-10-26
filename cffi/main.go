@@ -501,6 +501,74 @@ func azuretls_session_get_ip(sessionID uintptr) *C.char {
 	return goStringToCString(ip)
 }
 
+//export azuretls_session_get_cookies
+func azuretls_session_get_cookies(sessionID uintptr, urlStr *C.char) *C.char {
+	session, exists := sessionManager.getSession(sessionID)
+	if !exists {
+		return goStringToCString("error: session not found")
+	}
+
+	if session.CookieJar == nil {
+		return goStringToCString("[]")
+	}
+
+	urlString := cStringToGoString(urlStr)
+	parsedURL, err := url.Parse(urlString)
+	if err != nil {
+		return goStringToCString(fmt.Sprintf("error: invalid URL: %v", err))
+	}
+
+	cookies := session.CookieJar.Cookies(parsedURL)
+
+	// Convert cookies to a JSON array
+	type CookieInfo struct {
+		Name     string `json:"name"`
+		Value    string `json:"value"`
+		Path     string `json:"path,omitempty"`
+		Domain   string `json:"domain,omitempty"`
+		Expires  string `json:"expires,omitempty"`
+		Secure   bool   `json:"secure,omitempty"`
+		HttpOnly bool   `json:"http_only,omitempty"`
+		SameSite string `json:"same_site,omitempty"`
+	}
+
+	cookieList := make([]CookieInfo, 0, len(cookies))
+	for _, cookie := range cookies {
+		sameSite := ""
+		switch cookie.SameSite {
+		case 1:
+			sameSite = "Lax"
+		case 2:
+			sameSite = "Strict"
+		case 3:
+			sameSite = "None"
+		}
+
+		cookieInfo := CookieInfo{
+			Name:     cookie.Name,
+			Value:    cookie.Value,
+			Path:     cookie.Path,
+			Domain:   cookie.Domain,
+			Secure:   cookie.Secure,
+			HttpOnly: cookie.HttpOnly,
+			SameSite: sameSite,
+		}
+
+		if !cookie.Expires.IsZero() {
+			cookieInfo.Expires = cookie.Expires.Format(time.RFC3339)
+		}
+
+		cookieList = append(cookieList, cookieInfo)
+	}
+
+	cookiesJSON, err := json.Marshal(cookieList)
+	if err != nil {
+		return goStringToCString(fmt.Sprintf("error: failed to marshal cookies: %v", err))
+	}
+
+	return goStringToCString(string(cookiesJSON))
+}
+
 //export azuretls_free_string
 func azuretls_free_string(str *C.char) {
 	if str != nil {

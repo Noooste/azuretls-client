@@ -235,6 +235,34 @@ int main() {
     }
     printf("\n");
 
+    // Example 10: Cookie Management
+    printf("10. Cookie Management\n");
+    printf("---------------------\n");
+
+    // Make a request that sets cookies
+    const char* cookie_request = "{"
+        "\"method\": \"GET\","
+        "\"url\": \"https://httpbin.org/cookies/set?test_cookie=test_value\""
+    "}";
+
+    response = azuretls_session_do(session, (char*)cookie_request);
+    if (response && !response->error) {
+        printf("Set cookie status: %d\n", response->status_code);
+    }
+    azuretls_free_response(response);
+
+    // Get cookies for the domain
+    char* cookies = azuretls_session_get_cookies(session, "https://httpbin.org");
+    if (cookies) {
+        if (strncmp(cookies, "error:", 6) == 0) {
+            printf("Cookie Error: %s\n", cookies);
+        } else {
+            printf("Cookies for httpbin.org:\n%s\n", cookies);
+        }
+        azuretls_free_string(cookies);
+    }
+    printf("\n");
+
     // Clean up
     printf("Cleaning up...\n");
     azuretls_session_close(session);

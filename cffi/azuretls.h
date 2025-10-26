@@ -49,6 +49,7 @@ char* azuretls_session_clear_pins(uintptr_t session_id, char* url);
 
 // Utility functions
 char* azuretls_session_get_ip(uintptr_t session_id);
+char* azuretls_session_get_cookies(uintptr_t session_id, char* url);
 char* azuretls_version(void);
 
 // Library lifecycle functions

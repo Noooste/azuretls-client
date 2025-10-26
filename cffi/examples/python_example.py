@@ -138,19 +138,19 @@ class AzureTLSSession:
 
         # azuretls_session_apply_ja3
         self.lib.azuretls_session_apply_ja3.argtypes = [ctypes.c_ulong, ctypes.c_char_p, ctypes.c_char_p]
-        self.lib.azuretls_session_apply_ja3.restype = ctypes.c_char_p
+        self.lib.azuretls_session_apply_ja3.restype = ctypes.c_void_p
 
         # azuretls_session_apply_http2
         self.lib.azuretls_session_apply_http2.argtypes = [ctypes.c_ulong, ctypes.c_char_p]
-        self.lib.azuretls_session_apply_http2.restype = ctypes.c_char_p
+        self.lib.azuretls_session_apply_http2.restype = ctypes.c_void_p
 
         # azuretls_session_apply_http3
         self.lib.azuretls_session_apply_http3.argtypes = [ctypes.c_ulong, ctypes.c_char_p]
-        self.lib.azuretls_session_apply_http3.restype = ctypes.c_char_p
+        self.lib.azuretls_session_apply_http3.restype = ctypes.c_void_p
 
         # azuretls_session_set_proxy
         self.lib.azuretls_session_set_proxy.argtypes = [ctypes.c_ulong, ctypes.c_char_p]
-        self.lib.azuretls_session_set_proxy.restype = ctypes.c_char_p
+        self.lib.azuretls_session_set_proxy.restype = ctypes.c_void_p
 
         # azuretls_session_clear_proxy
         self.lib.azuretls_session_clear_proxy.argtypes = [ctypes.c_ulong]
@@ -158,18 +158,22 @@ class AzureTLSSession:
 
         # azuretls_session_add_pins
         self.lib.azuretls_session_add_pins.argtypes = [ctypes.c_ulong, ctypes.c_char_p, ctypes.c_char_p]
-        self.lib.azuretls_session_add_pins.restype = ctypes.c_char_p
+        self.lib.azuretls_session_add_pins.restype = ctypes.c_void_p
 
         # azuretls_session_clear_pins
         self.lib.azuretls_session_clear_pins.argtypes = [ctypes.c_ulong, ctypes.c_char_p]
-        self.lib.azuretls_session_clear_pins.restype = ctypes.c_char_p
+        self.lib.azuretls_session_clear_pins.restype = ctypes.c_void_p
 
         # azuretls_session_get_ip
         self.lib.azuretls_session_get_ip.argtypes = [ctypes.c_ulong]
-        self.lib.azuretls_session_get_ip.restype = ctypes.c_char_p
+        self.lib.azuretls_session_get_ip.restype = ctypes.c_void_p
+
+        # azuretls_session_get_cookies
+        self.lib.azuretls_session_get_cookies.argtypes = [ctypes.c_ulong, ctypes.c_char_p]
+        self.lib.azuretls_session_get_cookies.restype = ctypes.c_void_p
 
         # azuretls_free_string
-        self.lib.azuretls_free_string.argtypes = [ctypes.c_char_p]
+        self.lib.azuretls_free_string.argtypes = [ctypes.c_void_p]
         self.lib.azuretls_free_string.restype = None
 
         # azuretls_free_response
@@ -178,7 +182,7 @@ class AzureTLSSession:
 
         # azuretls_version
         self.lib.azuretls_version.argtypes = []
-        self.lib.azuretls_version.restype = ctypes.c_char_p
+        self.lib.azuretls_version.restype = ctypes.c_void_p
 
         # azuretls_init
         self.lib.azuretls_init.argtypes = []
@@ -349,6 +353,18 @@ class AzureTLSSession:
             return ip
         raise RuntimeError("Failed to get IP address")
 
+    def get_cookies(self, url: str) -> List[Dict[str, Any]]:
+        """Get cookies for a specific URL"""
+        url_bytes = url.encode('utf-8')
+        result = self.lib.azuretls_session_get_cookies(self.session_id, url_bytes)
+        if result:
+            cookies_str = ctypes.string_at(result).decode('utf-8')
+            self.lib.azuretls_free_string(result)
+            if cookies_str.startswith("error:"):
+                raise RuntimeError(cookies_str)
+            return json.loads(cookies_str)
+        raise RuntimeError("Failed to get cookies")
+
     def get_version(self) -> str:
         """Get library version"""
         result = self.lib.azuretls_version()
@@ -464,6 +480,21 @@ def main():
                     body_json = json.loads(response.body)
                     print(body_json)
                     print(f"Headers received by server: {body_json.get('headers', {})}")
+
+            # Example 7: Get cookies
+            print("\n7. Cookie management:")
+            try:
+                # Make a request that sets cookies
+                response = session.get("https://www.youtube.com/")
+                print(f"Set cookie status: {response.status_code}")
+
+                # Get cookies for the domain
+                cookies = session.get_cookies("https://www.youtube.com")
+                print(f"Cookies for httpbin.org: {len(cookies)} cookie(s)")
+                for cookie in cookies:
+                    print(f"  - {cookie['name']}: {cookie['value']}")
+            except Exception as e:
+                print(f"Cookie error: {e}")
 
             print("\nExample completed successfully!")
 
