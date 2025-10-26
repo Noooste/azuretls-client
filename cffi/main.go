@@ -169,10 +169,7 @@ func createCResponse(resp *azuretls.Response, err error) *C.CFfiResponse {
 			protocol = resp.HttpResponse.Proto
 		}
 	}
-	// HTTP/3 is detected separately via the isHTTP3 flag
-	// This is set by the session when using HTTP/3 transport
-	// We need to access this through reflection or add a public method
-	// For now, we'll just use the HttpResponse.Proto field
+
 	cResp.protocol = goStringToCString(protocol)
 
 	return cResp
