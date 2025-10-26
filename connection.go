@@ -67,13 +67,12 @@ func (s *Session) upgradeTLS(ctx context.Context, conn net.Conn, addr string) (n
 			InsecureSkipVerify: true,
 		}
 	} else {
-		if err = s.PinManager.AddHost(addr); err != nil {
+		if err = s.PinManager.AddHost(addr, s); err != nil {
 			return nil, errors.New("failed to pin: " + err.Error())
 		}
 
 		config = tls.Config{
-			ServerName:         hostname,
-			InsecureSkipVerify: false,
+			ServerName: hostname,
 			VerifyPeerCertificate: func(rawCerts [][]byte, verifiedChains [][]*x509.Certificate) error {
 				now := time.Now()
 				for _, chain := range verifiedChains {
@@ -105,7 +104,8 @@ func (s *Session) upgradeTLS(ctx context.Context, conn net.Conn, addr string) (n
 						}
 					}
 				}
-				return errors.New("pin verification failed")
+
+				return errors.New("pin verification failed for " + addr)
 			},
 		}
 	}

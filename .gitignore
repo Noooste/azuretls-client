@@ -26,3 +26,4 @@ go.work
 .idea
 .run
 /cffi/build/*
+testdata/
