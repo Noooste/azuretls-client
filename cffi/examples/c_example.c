@@ -16,6 +16,10 @@ void print_response(CFfiResponse* resp) {
 
     printf("Status Code: %d\n", resp->status_code);
 
+    if (resp->protocol) {
+        printf("Protocol: %s\n", resp->protocol);
+    }
+
     if (resp->url) {
         printf("URL: %s\n", resp->url);
     }

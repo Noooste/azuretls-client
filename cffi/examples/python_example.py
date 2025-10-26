@@ -21,6 +21,7 @@ class AzureTLSResponse:
         self.headers = None
         self.url = None
         self.error = None
+        self.protocol = None
 
         if c_response.contents.body:
             body = ctypes.string_at(c_response.contents.body, c_response.contents.body_len)
@@ -39,6 +40,9 @@ class AzureTLSResponse:
         if c_response.contents.error:
             self.error = ctypes.string_at(c_response.contents.error).decode('utf-8')
 
+        if c_response.contents.protocol:
+            self.protocol = ctypes.string_at(c_response.contents.protocol).decode('utf-8')
+
 
 class CFfiResponse(ctypes.Structure):
     """C structure for response"""
@@ -49,6 +53,7 @@ class CFfiResponse(ctypes.Structure):
         ("headers", ctypes.c_char_p),
         ("url", ctypes.c_char_p),
         ("error", ctypes.c_char_p),
+        ("protocol", ctypes.c_char_p),
     ]
 
 
@@ -391,11 +396,12 @@ def main():
         with AzureTLSSession(config) as session:
             # Example 1: Simple GET request
             print("\n1. Simple GET request:")
-            response = session.get("https://httpbin.org/get")
+            response = session.get("https://fp.impersonate.pro/api/http3", force_http3=True)
             if response.error:
                 print(f"Error: {response.error}")
             else:
                 print(f"Status: {response.status_code}")
+                print(f"Protocol: {response.protocol}")
                 print(f"URL: {response.url}")
                 if response.body:
                     body_json = json.loads(response.body)
@@ -411,6 +417,7 @@ def main():
                 print(f"Error: {response.error}")
             else:
                 print(f"Status: {response.status_code}")
+                print(f"Protocol: {response.protocol}")
                 if response.body:
                     body_json = json.loads(response.body)
                     print(f"Received data: {body_json.get('json', {})}")

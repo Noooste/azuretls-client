@@ -12,6 +12,7 @@ typedef struct {
     char* headers;
     char* url;
     char* error;
+    char* protocol;
 } CFfiResponse;
 
 // Request structure for C
@@ -133,6 +134,7 @@ func createCResponse(resp *azuretls.Response, err error) *C.CFfiResponse {
 	cResp.headers = nil
 	cResp.url = nil
 	cResp.error = nil
+	cResp.protocol = nil
 
 	if err != nil {
 		cResp.error = goStringToCString(err.Error())
@@ -157,6 +159,21 @@ func createCResponse(resp *azuretls.Response, err error) *C.CFfiResponse {
 	}
 
 	cResp.url = goStringToCString(resp.Url)
+
+	// Determine protocol from response
+	protocol := "HTTP/1.1"
+	if resp.HttpResponse != nil {
+		if resp.HttpResponse.ProtoMajor == 2 {
+			protocol = "HTTP/2"
+		} else if resp.HttpResponse.Proto != "" {
+			protocol = resp.HttpResponse.Proto
+		}
+	}
+	// HTTP/3 is detected separately via the isHTTP3 flag
+	// This is set by the session when using HTTP/3 transport
+	// We need to access this through reflection or add a public method
+	// For now, we'll just use the HttpResponse.Proto field
+	cResp.protocol = goStringToCString(protocol)
 
 	return cResp
 }
@@ -522,6 +539,9 @@ func azuretls_free_response(resp *C.CFfiResponse) {
 		}
 		if resp.error != nil {
 			C.free(unsafe.Pointer(resp.error))
+		}
+		if resp.protocol != nil {
+			C.free(unsafe.Pointer(resp.protocol))
 		}
 		C.free(unsafe.Pointer(resp))
 	}
