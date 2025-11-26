@@ -2,6 +2,7 @@
 package azuretls_test
 
 import (
+	"fmt"
 	"log"
 	"testing"
 	"time"
@@ -48,6 +49,8 @@ func TestHTTP3Direct(t *testing.T) {
 	if resp.HttpResponse.Proto != "HTTP/3.0" {
 		t.Logf("Warning: Expected HTTP/3.0, got %s (server might not support HTTP/3)", resp.HttpResponse.Proto)
 	}
+
+	fmt.Println(resp.String())
 }
 
 func TestHTTP2ToHTTP3(t *testing.T) {

@@ -6,6 +6,8 @@ github.com/Noooste/go-socks4 v0.0.2 h1:DwHCYiCEAdjfNrQOFIid7qgKCll7ubhGS1ji5O8FY
 github.com/Noooste/go-socks4 v0.0.2/go.mod h1:+oOgtOFRsU8FoK7NBOhHSjiH5pveY8LgYNF5XcqVgjE=
 github.com/Noooste/uquic-go v1.0.2 h1:Z3QXwznJUAjEB+GtQHr34J+0lBBmyqiFZ7zXbZXPcns=
 github.com/Noooste/uquic-go v1.0.2/go.mod h1:MxkrvgpNcbIOSQxqglC3e/798O/6zuL3mBhlFN+04w4=
+github.com/Noooste/uquic-go v1.0.3 h1:VP8npQmU4lkVLm9Ug5Q18SJ8ExFDfUZIzd13YjYaLHE=
+github.com/Noooste/uquic-go v1.0.3/go.mod h1:MxkrvgpNcbIOSQxqglC3e/798O/6zuL3mBhlFN+04w4=
 github.com/Noooste/utls v1.3.20 h1:QzBNGGJ184bNMLodOzvM9YWc4vZ36QodIjqFQOHoZ88=
 github.com/Noooste/utls v1.3.20/go.mod h1:XEy+VEbTxmH6krfSG5YT7wDbjHTEi2zUXTG33R0PAAg=
 github.com/Noooste/websocket v1.0.3 h1:drW7tvZ3YqzqI9wApnaH1Q0syFMXO7gbLlsBWjZvMNA=
@@ -67,6 +69,8 @@ github.com/txthinking/runnergroup v0.0.0-20250224021307-5864ffeb65ae h1:ArVM1jIC
 github.com/txthinking/runnergroup v0.0.0-20250224021307-5864ffeb65ae/go.mod h1:cldYm15/XHcGt7ndItnEWHwFZo7dinU+2QoyjfErhsI=
 github.com/txthinking/socks5 v0.0.0-20250803014457-d3594b14cf12 h1:L09KVukszx1o8Riju6mJZqEhcf3+9hifSU/tk60oSro=
 github.com/txthinking/socks5 v0.0.0-20250803014457-d3594b14cf12/go.mod h1:ntmMHL/xPq1WLeKiw8p/eRATaae6PiVRNipHFJxI8PM=
+github.com/txthinking/socks5 v0.0.0-20251011041537-5c31f201a10e h1:xA7GVlbz6teIF4FdvuqwbX6C4tiqNk2PH7FRPIDerao=
+github.com/txthinking/socks5 v0.0.0-20251011041537-5c31f201a10e/go.mod h1:ntmMHL/xPq1WLeKiw8p/eRATaae6PiVRNipHFJxI8PM=
 github.com/xyproto/randomstring v1.0.5 h1:YtlWPoRdgMu3NZtP45drfy1GKoojuR7hmRcnhZqKjWU=
 github.com/xyproto/randomstring v1.0.5/go.mod h1:rgmS5DeNXLivK7YprL0pY+lTuhNQW3iGxZ18UQApw/E=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
