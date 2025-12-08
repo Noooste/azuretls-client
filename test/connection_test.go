@@ -102,7 +102,7 @@ func TestHighConcurrency(t *testing.T) {
 	wait.Wait()
 
 	if atomic.LoadInt64(ok) < count-1 { //~1 request can fail
-		t.Fatal("TestHighConcurrency failed, expected: ", count, ", got: ", ok)
+		t.Fatal("TestHighConcurrency failed, expected: ", count, ", got: ", atomic.LoadInt64(ok))
 	}
 }
 
