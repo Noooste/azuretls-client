@@ -22,12 +22,12 @@ type Websocket struct {
 }
 
 // NewWebsocket returns a new websocket connection.
-func (s *Session) NewWebsocket(url string, readBufferSize, writeBufferSize int, args ...any) (*Websocket, error) {
-	return s.NewWebsocketWithContext(s.ctx, url, readBufferSize, writeBufferSize, args...)
+func (s *Session) NewWebsocket(url string, readBufferSize int, writeBufferSize int, subprotocols []string, enableCompression bool, args ...any) (*Websocket, error) {
+	return s.NewWebsocketWithContext(s.ctx, url, readBufferSize, writeBufferSize, subprotocols, enableCompression, args...)
 }
 
 // NewWebsocketWithContext returns a new websocket connection with a context.
-func (s *Session) NewWebsocketWithContext(ctx context.Context, url string, readBufferSize, writeBufferSize int, args ...any) (*Websocket, error) {
+func (s *Session) NewWebsocketWithContext(ctx context.Context, url string, readBufferSize, writeBufferSize int, subprotocols []string, enableCompression bool, args ...any) (*Websocket, error) {
 	if url == "" {
 		return nil, errors.New("url is empty")
 	}
@@ -86,7 +86,9 @@ func (s *Session) NewWebsocketWithContext(ctx context.Context, url string, readB
 			ctx = context.WithValue(ctx, forceHTTP1Key, true)
 			return s.dialTLS(ctx, network, addr)
 		},
-		NetDialContext: s.dial,
+		NetDialContext:    s.dial,
+		EnableCompression: enableCompression,
+		Subprotocols:      subprotocols,
 	}
 
 	c, resp, err := ws.dialer.DialContext(ctx, req.Url, req.HttpRequest.Header, req.HttpRequest.Header[http.HeaderOrderKey])
