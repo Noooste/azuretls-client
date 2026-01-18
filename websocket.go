@@ -3,10 +3,11 @@ package azuretls
 import (
 	"context"
 	"errors"
-	http "github.com/Noooste/fhttp"
-	"github.com/Noooste/websocket"
 	"net"
 	url2 "net/url"
+
+	http "github.com/Noooste/fhttp"
+	"github.com/Noooste/websocket"
 )
 
 type Websocket struct {

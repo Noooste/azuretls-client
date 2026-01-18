@@ -79,6 +79,7 @@ PRS=$(git log --pretty=format:"%s" "$PREVIOUS_TAG..$CURRENT_TAG" \
     | sed -E 's/Merge pull request #([0-9]+) from .*/\1/' \
     | sort -n -u)
 
+
 # Add pull requests section if there are any
 if [ ! -z "$PRS" ]; then
     echo "### 📋 Pull Requests"
@@ -110,24 +111,26 @@ if [ ! -z "$CONTRIBUTORS" ]; then
     echo ""
 fi
 
+VERSION="${CURRENT_TAG#v}"
+
 # Add installation section for HTTP client
 echo "### 📦 Installation"
 echo ""
 echo "Download the appropriate binary for your platform from the assets below:"
 echo ""
 echo "**Linux:**"
-echo "- \`azuretls-cffi-linux-amd64.so\` - 64-bit Intel/AMD"
-echo "- \`azuretls-cffi-linux-arm64.so\` - 64-bit ARM"
-echo "- \`azuretls-cffi-linux-386.so\` - 32-bit Intel/AMD"
-echo "- \`azuretls-cffi-linux-arm.so\` - 32-bit ARM"
+echo "- \`azuretls-${VERSION}-linux-amd64.so\` - 64-bit Intel/AMD"
+echo "- \`azuretls-${VERSION}-linux-arm64.so\` - 64-bit ARM"
+echo "- \`azuretls-${VERSION}-linux-386.so\` - 32-bit Intel/AMD"
+echo "- \`azuretls-${VERSION}-linux-arm.so\` - 32-bit ARM"
 echo ""
 echo "**Windows:**"
-echo "- \`azuretls-cffi-windows-amd64.dll\` - 64-bit Intel/AMD"
-echo "- \`azuretls-cffi-windows-386.dll\` - 32-bit Intel/AMD"
+echo "- \`azuretls-${VERSION}-windows-amd64.dll\` - 64-bit Intel/AMD"
+echo "- \`azuretls-${VERSION}-windows-386.dll\` - 32-bit Intel/AMD"
 echo ""
 echo "**macOS:**"
-echo "- \`azuretls-cffi-darwin-amd64.dylib\` - Intel Macs"
-echo "- \`azuretls-cffi-darwin-arm64.dylib\` - Apple Silicon Macs"
+echo "- \`azuretls-${VERSION}-darwin-amd64.dylib\` - Intel Macs"
+echo "- \`azuretls-${VERSION}-darwin-arm64.dylib\` - Apple Silicon Macs"
 echo ""
 
 # Add full changelog link

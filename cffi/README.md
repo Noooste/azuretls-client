@@ -22,6 +22,7 @@ This directory contains the C Foreign Function Interface (CFFI) for the AzureTLS
 - [Configuration](#-configuration)
 - [Advanced Usage](#-advanced-usage)
 - [Troubleshooting](#-troubleshooting)
+- [Contributing](#-contributing)
 
 ## 🚀 Quick Start
 
@@ -637,18 +638,30 @@ export CGO_ENABLED=1
 - Install build-essential: `sudo apt install build-essential`
 - Use `ldd` to check library dependencies
 
-## 📞 Support
+## 🤝 Contributing
 
-For issues and questions:
+**🌐 Community Language Bindings:**
 
-1. Check this README thoroughly
-2. Review the [main project documentation](../README.md)
-3. Check existing [GitHub issues](https://github.com/Noooste/azuretls-client/issues)
-4. Create a new issue with:
-   - Platform/architecture
-   - Build command used
-   - Complete error output
-   - Minimal reproduction case
+*We welcome language bindings! Create bindings for your favorite language and submit a PR to be featured here.*
+
+<!-- Add your language binding repository here via PR -->
+- 🔗 **[Your Language]** - [Your Repository](https://github.com/yourusername/azuretls-yourlang) by [@yourusername](https://github.com/yourusername)
+
+**We'd especially appreciate bindings for:**
+- 🐍 Python - ctypes/cffi implementation
+- 🟨 Node.js - ffi-napi integration
+- 📘 TypeScript - Type-safe Node.js bindings
+- ☕ Java - JNI bindings
+- 🔷 C# - P/Invoke implementation
+- 🦀 Rust - libc/bindgen bindings
+
+**How to contribute:**
+
+1. Create your own repository with language bindings using our CFFI
+2. Implement core functionality using our C API from [`cffi/`](./cffi/)
+3. Add comprehensive examples and documentation
+4. Include tests demonstrating the functionality
+5. Submit a pull request to add your repo link to this README
 
 ## 📄 License
 
