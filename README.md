@@ -5,195 +5,179 @@
 [![Go Report Card](https://goreportcard.com/badge/Noooste/azuretls-client)](https://goreportcard.com/report/Noooste/azuretls-client)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Noooste/azuretls-client/blob/master/LICENSE)
 
-## 🚀 Simple, Powerful HTTP Client for Go
+A powerful HTTP client for Go that's **simple to use** but gives you **full control** when you need it.
 
-AzureTLS Client is a high-performance HTTP client library for Go that combines **simplicity** with **unlimited customization**. Whether you're building a simple API client or need advanced features like TLS fingerprinting and HTTP/2 customization, AzureTLS Client has you covered.
+Perfect for API clients, web scraping, testing, and any situation where you need more than the standard library offers, without the complexity.
 
-### ✨ Why Choose AzureTLS Client?
+## Installation
 
-**🎯 Simple by Default**
-```go
-session := azuretls.NewSession()
-response, err := session.Get("https://www.google.com/")
-if err != nil {
-    panic(err)
-}
-fmt.Println(response.String())
+```bash
+go get github.com/Noooste/azuretls-client
 ```
 
-**⚡ Powerful When Needed**
-- Full TLS fingerprint control (JA3/JA4)
-- HTTP/2 and HTTP/3 support with custom settings
-- Advanced proxy support (HTTP/HTTPS/SOCKS4/SOCKS5)
-- Proxy chain support for multi-hop connections
-- Precise header ordering and control
+## Quick Start - 30 Seconds
 
-## 🌟 Key Features
+```go
+package main
 
-- **🌐 Modern Protocols** - HTTP/1.1, HTTP/2, and HTTP/3 support
-- **🔧 TLS Fingerprinting** - Full control over ClientHello (JA3/JA4)
-- **🎭 Browser Emulation** - Chrome, Firefox, Safari, Edge presets
-- **🔗 Advanced Proxy Support** - HTTP, HTTPS, SOCKS4, SOCKS5 with authentication.
-- **⛓️ Proxy Chaining** - Multi-hop proxy connections for enhanced anonymity
-- **📋 Header Control** - Precise ordering and custom headers
-- **🍪 Cookie Management** - Automatic handling with persistent jar
-- **🔒 SSL Pinning** - Enhanced security with certificate validation
-- **🐛 Debug Tools** - Request logging and dumping capabilities
+import (
+    "fmt"
+    "log"
+    "github.com/Noooste/azuretls-client"
+)
 
-## 🎯 Perfect For
+func main() {
+    session := azuretls.NewSession()
+    defer session.Close()
 
-- **API Integration** - Simple REST API clients
-- **Web Scraping** - Advanced bot detection evasion
-- **Security Testing** - Custom TLS fingerprinting
-- **Load Testing** - High-performance concurrent requests
-- **Proxy Management** - Multi-proxy rotation and testing
+    response, err := session.Get("https://api.github.com")
+    if err != nil {
+        log.Fatal(err)
+    }
 
-## 📋 Quick Examples
+    fmt.Printf("Status: %d\n", response.StatusCode)
+    fmt.Println(response.String())
+}
+```
 
-### Simple GET Request
+**That's it!** Just create a session and make requests. This automatically uses Chrome's TLS (JA3) and HTTP/2 fingerprint, making it look like a real browser to servers.
+
+> 💡 **New to Go?** AzureTLS uses a session-based API (similar to creating an `http.Client`). Each session automatically mimics Chrome by default, no fingerprint configuration needed. Advanced customization is completely optional.
+
+## Common Tasks
+
+### POST Request with JSON
+
 ```go
 session := azuretls.NewSession()
 defer session.Close()
 
-response, err := session.Get("https://api.github.com/user")
-if err != nil {
-    log.Fatal(err)
-}
-fmt.Printf("Status: %d\n", response.StatusCode)
-```
-
-### POST with JSON
-```go
 data := map[string]string{
     "name": "AzureTLS",
     "type": "HTTP Client",
 }
 
 response, err := session.Post("https://api.example.com/data", data)
-```
-
-### Browser Emulation
-```go
-session := azuretls.NewSession()
-session.Browser = azuretls.Firefox // Automatic JA3 + HTTP/2 fingerprinting
-
-response, err := session.Get("https://website.com")
-```
-
-### Custom Headers with Ordering
-```go
-session.OrderedHeaders = azuretls.OrderedHeaders{
-    {"User-Agent", "MyApp/1.0"},
-    {"Accept", "application/json"},
-    {"Authorization", "Bearer token"},
+if err != nil {
+    log.Fatal(err)
 }
+
+fmt.Printf("Status: %d\n", response.StatusCode)
 ```
 
-### Proxy Support
+### Using a Proxy
+
 ```go
 session := azuretls.NewSession()
+defer session.Close()
+
+// One line proxy setup: supports HTTP, HTTPS, SOCKS4, SOCKS5
 err := session.SetProxy("http://username:password@proxy.example.com:8080")
 if err != nil {
     log.Fatal(err)
 }
 
+response, err := session.Get("https://api.ipify.org")
+```
+
+### Browser Emulation
+
+```go
+session := azuretls.NewSession()
+defer session.Close()
+
+// Default: Chrome fingerprint (already active, no configuration needed!)
+
+// Want to mimic a different browser? Just change it:
+session.Browser = azuretls.Firefox  // or Safari, Edge, etc.
+
+response, err := session.Get("https://example.com")
+```
+
+### Custom Header Ordering
+
+```go
+session := azuretls.NewSession()
+defer session.Close()
+
+// Precise control over header order
+session.OrderedHeaders = azuretls.OrderedHeaders{
+    {"User-Agent", "MyApp/1.0"},
+    {"Accept", "application/json"},
+    {"Authorization", "Bearer token123"},
+}
+
 response, err := session.Get("https://api.example.com")
 ```
 
-## 🌍 Multi-Language Support via CFFI
+## Why AzureTLS vs Standard Library?
 
-AzureTLS Client can be used from **any programming language** that supports C Foreign Function Interface (FFI) through our comprehensive CFFI bindings.
+| Feature | net/http | AzureTLS                     |
+|---------|----------|------------------------------|
+| API Style | Package or Client-based | Session-based                |
+| Browser Fingerprint | ❌ Looks like Go | ✅ **Chrome by default**      |
+| Cookie Management | Manual setup | ✅ Automatic jar              |
+| Ordered Headers | ❌ | ✅ Built-in                   |
+| Proxy Support | Manual dialer setup | ✅ `session.SetProxy()`       |
+| Multiple Proxy Types | Manual | ✅ HTTP/SOCKS4/SOCKS5         |
+| Custom TLS (JA3/JA4) | ❌ | ✅ Easy                       |
+| HTTP/2 Customization | ❌ | ✅ Easy                   |
+| HTTP/3 Support | ❌ | ✅ Easy                   |
+| Browser Presets | ❌ | ✅ Chrome/Firefox/Safari/Edge |
 
-### 🔗 Available CFFI Implementation
 
-The core CFFI (C Foreign Function Interface) library is available in the [`cffi/`](./cffi/) directory, providing a C API that can be used from any language supporting C FFI.
+## 🌟 Key Features
 
-**📦 Pre-built libraries available for:**
-- **Linux** (amd64, arm64, 386, arm)
-- **Windows** (amd64, 386, arm64)
-- **macOS** (amd64, arm64)
+- **🌐 Modern Protocols**: HTTP/1.1, HTTP/2, and HTTP/3 support
+- **🔧 TLS Fingerprinting**: Full control over ClientHello (JA3/JA4)
+- **🎭 Browser Emulation**: Chrome, Firefox, Safari, Edge presets
+- **🔗 Advanced Proxy Support**: HTTP, HTTPS, SOCKS4, SOCKS5 with authentication.
+- **⛓️ Proxy Chaining**: Multi-hop proxy connections for enhanced anonymity
+- **📋 Header Control**: Precise ordering and custom headers
+- **🍪 Cookie Management**: Automatic handling with persistent jar
+- **🔒 SSL Pinning**: Enhanced security with certificate validation
+- **🐛 Debug Tools**: Request logging and dumping capabilities
 
-### 🌐 Community Language Bindings
+## Documentation
 
-*Community-maintained repositories for additional languages:*
+- 📖 **[Complete API Reference](./examples/README.md)**: Every feature, method, and option
+- 💬 **[Examples Directory](./examples/)**: Working code samples
+- 🌍 **[CFFI Documentation](./cffi/README.md)**: Use AzureTLS from other languages
 
-<!-- Add your language binding repository here via PR -->
-- 🔗 **[Your Language]** - [Your Repository](https://github.com/yourusername/azuretls-yourlang) by [@yourusername](https://github.com/yourusername)
+### Learn More
 
-*Want to see your language binding featured here? See the [Contributing Language Bindings](#-contributing-language-bindings) section below!*
+- **Making Requests**: GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS ([examples/README.md](./examples/README.md#make-requests))
+- **TLS Fingerprinting**: JA3/JA4 customization ([examples/README.md](./examples/README.md#modify-tls-client-hello-ja3))
+- **HTTP/2 & HTTP/3**: Protocol customization ([examples/README.md](./examples/README.md#modify-http2))
+- **Proxy Management**: Advanced proxy features ([examples/README.md](./examples/README.md#proxy))
+- **Websockets**: WebSocket support ([examples/README.md](./examples/README.md#websocket))
+- **SSL Pinning**: Certificate validation ([examples/README.md](./examples/README.md#ssl-pinning))
 
-### 📦 Getting Started with CFFI
+## Use Cases
 
-1. **Download** pre-built libraries from our [releases](https://github.com/Noooste/azuretls-client/releases)
-2. **Choose** your platform: Linux, Windows, macOS, FreeBSD
-3. **Pick** your architecture: amd64, arm64, 386, arm
-4. **Follow** language-specific examples in [`cffi/examples/`](./cffi/examples/)
+**Perfect for:**
+- 🔌 **API Integration**: REST clients that look like real browsers by default
+- 🌐 **Web Scraping**: Automatic browser fingerprinting without configuration
+- 🛡️ **Testing antibot systems**: Avoid bot detection with authentic browser signatures
+- 🔄 **Proxy Rotation**: Built-in support for multiple proxy types
+- 🧪 **Security Testing**: Custom TLS configurations for advanced testing
+- 📊 **Load Testing**: High-performance concurrent requests
 
-### 🛠️ Building CFFI Libraries
+## Multi-Language Support via CFFI
 
-```bash
-# Build for current platform
-cd cffi && make
+AzureTLS can be used from **any programming language** that supports C Foreign Function Interface.
+Read the [CFFI documentation](./cffi/README.md) for full details.
 
-# Build for all platforms
-cd cffi && make build-all
+## Community & Support
 
-# Build for specific platform
-cd cffi && make build-linux-amd64
-```
+- 💬 **[GitHub Discussions](https://github.com/Noooste/azuretls-client/discussions)**: Ask questions, share ideas
+- 🐛 **[GitHub Issues](https://github.com/Noooste/azuretls-client/issues)**: Report bugs, request features
+- 📖 **[Examples](./examples/)**: Code samples and tutorials
 
-### 📚 Comprehensive Documentation
+## Show Your Support
 
-Full CFFI documentation with API reference, examples, and troubleshooting guides is available at [`cffi/README.md`](./cffi/README.md).
+If AzureTLS helps you build something awesome:
 
-### 🤝 Contributing Language Bindings
-
-**We welcome and appreciate contributions for additional language support!**
-
-If you create bindings for a new programming language, we'd love to:
-- 📝 **Feature your repository** in this README
-- 🏆 **Credit you as a contributor**
-- 🔗 **Link to your implementation** for the community
-- 🚀 **Help promote** your language bindings
-
-**Language bindings we'd especially appreciate:**
-- 🐍 **Python** - ctypes/cffi implementation
-- 🟨 **Node.js** - ffi-napi integration
-- 📘 **TypeScript** - Type-safe Node.js bindings
-- ☕ **Java** - JNI bindings
-- 🔷 **C#** - P/Invoke implementation
-- 🦀 **Rust** - libc/bindgen bindings
-- And any others!
-
-**How to contribute language bindings:**
-
-1. 🏗️ **Create your own repository** with language bindings using our CFFI
-2. 🔧 **Implement the core functionality** using our C API from [`cffi/`](./cffi/)
-3. 📖 **Add comprehensive examples and documentation**
-4. 🧪 **Include tests** demonstrating the functionality
-5. 📬 **Submit a pull request** to this repository to **add your repo link** to this README
-
-**Repository Requirements:**
-- Use the AzureTLS CFFI libraries from our releases
-- Include clear installation instructions
-- Provide working examples
-- Add proper documentation
-- Follow your language's best practices
-
-## 🤝 Community & Support
-
-- **Issues**: [GitHub Issues](https://github.com/Noooste/azuretls-client/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Noooste/azuretls-client/discussions)
-- **Examples**: [examples/](./examples/)
-- **CFFI Documentation**: [cffi/README.md](./cffi/README.md)
-
-## 🙏 Acknowledgments
-
-AzureTLS Client is built with ❤️ by the open source community. Special thanks to all [contributors](https://github.com/Noooste/azuretls-client/graphs/contributors) who help make this project better.
-
-## ⭐ Show Your Support
-
-If AzureTLS Client helps you build something awesome, consider:
 - ⭐ **Star this repository**
 - 🐛 **Report bugs** or suggest features
 - 💡 **Share your use cases** in discussions
@@ -201,6 +185,10 @@ If AzureTLS Client helps you build something awesome, consider:
 - 🌍 **Create bindings** for your favorite programming language
 
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/noste)
+
+## Acknowledgments
+
+Built with ❤️ by the open source community. Special thanks to all [contributors](https://github.com/Noooste/azuretls-client/graphs/contributors).
 
 ---
 
@@ -215,4 +203,3 @@ TLS fingerprinting alone isn't enough for modern bot protection. **[Hyper Soluti
 No browser automation. Just simple API calls that return the exact cookies and headers these systems require.
 
 🚀 **[Get Your API Key](https://hypersolutions.co?utm_source=github&utm_medium=readme&utm_campaign=azure-tls)** | 📖 **[Docs](https://docs.hypersolutions.co/)** | 💬 **[Discord](https://discord.gg/akamai)**
-
