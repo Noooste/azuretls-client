@@ -10,7 +10,7 @@ require (
 	github.com/Noooste/websocket v1.0.3
 	github.com/andybalholm/brotli v1.2.0
 	github.com/fatih/color v1.18.0
-	github.com/klauspost/compress v1.18.2
+	github.com/klauspost/compress v1.18.3
 	github.com/txthinking/socks5 v0.0.0-20251011041537-5c31f201a10e
 	golang.org/x/net v0.48.0
 )
