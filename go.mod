@@ -6,7 +6,7 @@ require (
 	github.com/Noooste/fhttp v1.0.15
 	github.com/Noooste/go-socks4 v0.0.2
 	github.com/Noooste/uquic-go v1.0.5
-	github.com/Noooste/utls v1.3.20
+	github.com/Noooste/utls v1.3.21
 	github.com/Noooste/websocket v1.0.3
 	github.com/andybalholm/brotli v1.2.0
 	github.com/fatih/color v1.18.0
