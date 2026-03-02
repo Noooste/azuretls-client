@@ -1,6 +1,6 @@
 module github.com/Noooste/azuretls-client
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/Noooste/fhttp v1.0.15
@@ -12,7 +12,7 @@ require (
 	github.com/fatih/color v1.18.0
 	github.com/klauspost/compress v1.18.2
 	github.com/txthinking/socks5 v0.0.0-20251011041537-5c31f201a10e
-	golang.org/x/net v0.48.0
+	golang.org/x/net v0.51.0
 )
 
 require (
@@ -28,8 +28,8 @@ require (
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/refraction-networking/utls v1.8.1 // indirect
 	github.com/txthinking/runnergroup v0.0.0-20250224021307-5864ffeb65ae // indirect
-	golang.org/x/crypto v0.46.0 // indirect
+	golang.org/x/crypto v0.48.0 // indirect
 	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6 // indirect
-	golang.org/x/sys v0.39.0 // indirect
-	golang.org/x/text v0.32.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
 )
