@@ -42,11 +42,15 @@ func (s *Session) prepareRequest(request *Request, args ...any) error {
 
 	s.fillEmptyValues(request)
 
-	if s.PreHookWithContext != nil {
-		return s.PreHookWithContext(&Context{
-			Session: s,
-			Request: request,
-		})
+	if len(s.PreHooksWithContext) > 0 {
+		for _, hook := range s.PreHooksWithContext {
+			if err := hook(&Context{
+				Session: s,
+				Request: request,
+			}); err != nil {
+				return err
+			}
+		}
 	}
 
 	if s.PreHook != nil {

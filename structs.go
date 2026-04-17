@@ -80,13 +80,13 @@ type Session struct {
 	// Deprecated, use PreHookWithContext instead.
 	PreHook func(request *Request) error
 	// Function called before sending a request.
-	PreHookWithContext func(ctx *Context) error
+	PreHooksWithContext []func(ctx *Context) error
 
 	// Deprecated, use CallbackWithContext instead.
 	Callback func(request *Request, response *Response, err error)
 
 	// Function called after receiving a response.
-	CallbackWithContext func(ctx *Context)
+	CallbacksWithContext []func(ctx *Context)
 
 	// Function to modify the dialer used for establishing connections.
 	ModifyDialer func(dialer *net.Dialer) error

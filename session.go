@@ -98,7 +98,7 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 			s.Callback(request, response, err)
 		}
 
-		if s.CallbackWithContext != nil {
+		if len(s.CallbacksWithContext) > 0 {
 			c := &Context{
 				Session:          s,
 				Request:          request,
@@ -108,7 +108,13 @@ func (s *Session) send(request *Request) (response *Response, err error) {
 				RequestStartTime: request.startTime,
 			}
 
-			s.CallbackWithContext(c)
+			for _, callback := range s.CallbacksWithContext {
+				callback(c)
+
+				if c.Err != nil {
+					break
+				}
+			}
 
 			err = c.Err
 			response = c.Response
@@ -311,12 +317,14 @@ func (s *Session) do(req *Request, args ...any) (resp *Response, err error) {
 				req.OrderedHeaders.Del("Content-Type")
 			}
 
-			if s.PreHookWithContext != nil {
-				if err = s.PreHookWithContext(&Context{
-					Session: s,
-					Request: req,
-				}); err != nil {
-					return nil, err
+			if len(s.PreHooksWithContext) > 0 {
+				for _, hook := range s.PreHooksWithContext {
+					if err = hook(&Context{
+						Session: s,
+						Request: req,
+					}); err != nil {
+						return nil, err
+					}
 				}
 			}
 
