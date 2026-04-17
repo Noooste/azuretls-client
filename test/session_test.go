@@ -259,9 +259,9 @@ func TestSessionPrehookError(t *testing.T) {
 	}
 
 	session.PreHook = nil
-	session.PreHookWithContext = func(ctx *azuretls.Context) error {
+	session.UsePrehookWithContext(func(ctx *azuretls.Context) error {
 		return errors.New("test")
-	}
+	})
 
 	_, err = session.Do(req)
 	if err == nil {
@@ -287,13 +287,13 @@ func TestSessionCallback(t *testing.T) {
 		called = true
 	}
 
-	session.CallbackWithContext = func(ctx *azuretls.Context) {
+	session.UseCallbackWithContext(func(ctx *azuretls.Context) {
 		withContextCalled = true
 		if ctx.Response.Url == "https://www.google.com" {
 			response, _ := session.Get(httpbinBaseURL + "/get")
 			ctx.Response = response
 		}
-	}
+	})
 
 	response, err := session.Do(req)
 	if err != nil {
@@ -316,9 +316,9 @@ func TestSessionCallback(t *testing.T) {
 		return
 	}
 
-	session.CallbackWithContext = func(ctx *azuretls.Context) {
+	session.CallbacksWithContext = []func(ctx *azuretls.Context){func(ctx *azuretls.Context) {
 		ctx.Err = errors.New("test")
-	}
+	}}
 
 	_, err = session.Do(req)
 
@@ -586,7 +586,7 @@ func TestSession_ContextError(t *testing.T) {
 
 	session := azuretls.NewSessionWithContext(exampleContext)
 
-	session.CallbackWithContext = func(ctx *azuretls.Context) {
+	session.UseCallbackWithContext(func(ctx *azuretls.Context) {
 		exampleContextFromCtx := ctx.Context()
 		if exampleContextFromCtx == exampleContext {
 			fmt.Println("match")
@@ -599,7 +599,7 @@ func TestSession_ContextError(t *testing.T) {
 				log.Fatal(err)
 			}
 		}
-	}
+	})
 
 	_, _ = session.Get(httpbinBaseURL + "/headers")
 }
