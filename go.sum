@@ -6,8 +6,8 @@ github.com/Noooste/go-socks4 v0.0.2 h1:DwHCYiCEAdjfNrQOFIid7qgKCll7ubhGS1ji5O8FY
 github.com/Noooste/go-socks4 v0.0.2/go.mod h1:+oOgtOFRsU8FoK7NBOhHSjiH5pveY8LgYNF5XcqVgjE=
 github.com/Noooste/uquic-go v1.0.5 h1:HWfrxhxgB1a9Y2Au5mfFs2Y5Dy13OQIwa86D/kULPtE=
 github.com/Noooste/uquic-go v1.0.5/go.mod h1:1y+qiy23PqLKudi4kQiJ0b3zXXYcyctEBRfZPTuyBz4=
-github.com/Noooste/utls v1.3.20 h1:QzBNGGJ184bNMLodOzvM9YWc4vZ36QodIjqFQOHoZ88=
-github.com/Noooste/utls v1.3.20/go.mod h1:XEy+VEbTxmH6krfSG5YT7wDbjHTEi2zUXTG33R0PAAg=
+github.com/Noooste/utls v1.3.21 h1:5yEzTibikzF0/d0REfbjXURGHxJDKCrRghVAU/OQBko=
+github.com/Noooste/utls v1.3.21/go.mod h1:XEy+VEbTxmH6krfSG5YT7wDbjHTEi2zUXTG33R0PAAg=
 github.com/Noooste/websocket v1.0.3 h1:drW7tvZ3YqzqI9wApnaH1Q0syFMXO7gbLlsBWjZvMNA=
 github.com/Noooste/websocket v1.0.3/go.mod h1:Qhw0Rtuju/fPPbcb3R5XGq7poa51qPDL462jTltl9nQ=
 github.com/andybalholm/brotli v1.2.0 h1:ukwgCxwYrmACq68yiUqwIWnGY0cTPox/M94sVwToPjQ=
